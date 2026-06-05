@@ -1,0 +1,1047 @@
+/**
+ * HTML escape 처리
+ */
+function escapeHtml(value) {
+    if (value == null) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * JS 문자열 escape 처리
+ */
+function escapeJs(value) {
+    if (value == null) return '';
+    return String(value)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, '')
+        .replace(/\n/g, '\\n');
+}
+
+/*
+ * AJAX 페이지 전환 시 inbound.js가 다시 로드될 수 있으므로
+ * let으로 전역 변수를 재선언하지 않는다.
+ *
+ * 기존:
+ * let myWarehouseZones = null;
+ *
+ * 문제:
+ * 보세입고 처리 화면을 AJAX로 다시 로드하면
+ * 같은 스크립트가 다시 실행되면서
+ * Identifier 'myWarehouseZones' has already been declared 에러가 발생한다.
+ */
+var myWarehouseZones = window.myWarehouseZones || null;
+window.myWarehouseZones = myWarehouseZones;
+
+/**
+ * 담당 창고 정보 표시
+ */
+function setWarehouseInfo() {
+    const warehouseInput = document.getElementById('decl-warehouse');
+
+    if (!warehouseInput) return;
+
+    if (!myWarehouseZones || myWarehouseZones.length === 0) {
+        warehouseInput.value = '';
+        return;
+    }
+
+    const warehouse = myWarehouseZones[0];
+    warehouseInput.value = warehouse.whNm || '';
+}
+
+/**
+ * 로그인한 창고관리자의 창고 구역 목록 조회
+ */
+/**
+ * 로그인한 창고관리자의 창고 구역 목록 조회
+ */
+function loadMyWarehouseZones() {
+    if (myWarehouseZones) {
+        setWarehouseInfo();
+        return Promise.resolve(myWarehouseZones);
+    }
+
+    return fetch('/warehouse/inbound/zones.do')
+        .then(response => {
+            if (!response.ok) throw new Error('창고구역 조회 실패');
+            return response.json();
+        })
+        .then(data => {
+            myWarehouseZones = data || [];
+            window.myWarehouseZones = myWarehouseZones;
+
+            setWarehouseInfo();
+            return myWarehouseZones;
+        });
+}
+
+/**
+ * 창고구역 select option HTML 생성
+ */
+function makeZoneOptions(selectedWzNo) {
+    let html = '<option value="">구역선택</option>';
+
+    if (!myWarehouseZones || myWarehouseZones.length === 0) {
+        return html;
+    }
+
+    myWarehouseZones.forEach(zone => {
+        const wzNo = zone.wzNo || '';
+        const wzNm = zone.wzNm || wzNo;
+
+        html += `
+            <option value="${escapeHtml(wzNo)}" ${selectedWzNo === wzNo ? 'selected' : ''}>
+                ${escapeHtml(wzNm)}
+            </option>
+        `;
+    });
+
+    return html;
+}
+
+/**
+ * 구역번호로 구역명을 찾는다.
+ *
+ * 입고완료 건은 select가 아니라 읽기전용 박스로 보여주기 때문에
+ * WZ-001 같은 코드 대신 A구역-일반 같은 이름을 표시하기 위해 사용한다.
+ */
+function getZoneNameByNo(wzNo) {
+    if (!wzNo || !myWarehouseZones || myWarehouseZones.length === 0) {
+        return wzNo || '-';
+    }
+
+    const zone = myWarehouseZones.find(item => item.wzNo === wzNo);
+
+    return zone ? (zone.wzNm || zone.wzNo) : wzNo;
+}
+
+
+
+/**
+ * 검색 조건으로 입고 리스트 조회
+ */
+function loadInboundList(page) {
+	const startDate = document.getElementById('startDate')?.value || '';
+	const endDate = document.getElementById('endDate')?.value || '';
+	const type = document.getElementById('ioType')?.value || '';
+	const status = document.getElementById('inboundStatus')?.value || '';
+	const searchWord = document.getElementById('searchWord')?.value || '';
+
+    const tbody = document.getElementById('inboundTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="8" style="text-align:center; padding:50px 0;">조회 중...</td>
+        </tr>
+    `;
+
+	const url = `/warehouse/inbound/search.do?page=${page}`
+	    + `&startDate=${encodeURIComponent(startDate)}`
+	    + `&endDate=${encodeURIComponent(endDate)}`
+	    + `&type=${encodeURIComponent(type)}`
+	    + `&status=${encodeURIComponent(status)}`
+	    + `&searchWord=${encodeURIComponent(searchWord)}`;
+
+    fetch(url)
+        .then(response => {
+            if (!response.ok) throw new Error('입고 리스트 조회 실패');
+            return response.json();
+        })
+        .then(data => {
+            /*
+             * 서버에서 받은 현재 페이지 목록을 테이블에 출력한다.
+             */
+            renderInboundList(data.dataList, data.currentPage);
+
+            /*
+             * 서버에서 받은 PaginationInfoVO 정보를 이용해서
+             * 페이지 번호 버튼을 출력한다.
+             */
+            renderInboundPagination(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align:center; padding:50px 0; color:#ef4444;">
+                        입고 리스트 조회 실패
+                    </td>
+                </tr>
+            `;
+        });
+}
+
+/**
+ * 입고 리스트 테이블 렌더링
+ */
+function renderInboundList(list,currentPage) {
+    const tbody = document.getElementById('inboundTableBody');
+    if (!tbody) return;
+
+    let html = '';
+	
+	/*
+	    * 화면 순번 계산
+	    * 1페이지: 1, 2, 3...
+	    * 2페이지: 11, 12, 13...
+	    */
+	   const page = Number(currentPage || 1);
+	   const pageSize = 10;
+	   const startNo = (page - 1) * pageSize;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align:center; padding:50px 0; color:#94a3b8;">
+                    조회하신 목록이 없습니다.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    list.forEach((item,index) => {
+		let typeBadge = '<span class="badge">-</span>';
+
+		/*
+		 * 수입/수출 구분 코드 호환 처리
+		 *
+		 * 기존 데이터: IMP / EXP
+		 * 신규 통일 코드: IMPORT / EXPORT
+		 *
+		 * 팀 데이터가 섞여 있어도 화면 배지가 깨지지 않도록
+		 * 둘 다 같은 의미로 처리한다.
+		 */
+		if (item.wirIoSeCd === 'IMP' || item.wirIoSeCd === 'IMPORT') {
+		    typeBadge = '<span class="badge badge-success">수입</span>';
+		} else if (item.wirIoSeCd === 'EXP' || item.wirIoSeCd === 'EXPORT') {
+		    typeBadge = '<span class="badge badge-wait">수출</span>';
+		}
+
+        let itemName = '';
+
+        if (item.firstItemName) {
+            if (item.itemCnt && item.itemCnt > 1) {
+                itemName = escapeHtml(item.firstItemName) + ' 외 ' + (item.itemCnt - 1) + '건';
+            } else {
+                itemName = escapeHtml(item.firstItemName);
+            }
+        } else {
+            itemName = '-';
+        }
+
+		/*
+		 * 상태 배지 생성
+		 *
+		 * 앞으로 사용할 대표 상태 흐름:
+		 * - WAIT     : 입고요청
+		 * - REQ_FIX  : 보완요청
+		 * - REQ_SENT : 보완제출완료
+		 * - IN_DONE  : 입고완료
+		 *
+		 * wirStatusCd는 DB 코드값이고,
+		 * wirStatusNm은 XML/공통코드에서 내려온 화면 표시명이다.
+		 * 검색/페이징 AJAX 목록에서도 JSP와 동일하게 보이도록 여기서 한 번 더 맞춘다.
+		 */
+		let statusBadge = `<span class="badge badge-wait">${escapeHtml(item.wirStatusNm || '')}</span>`;
+
+		if (item.wirStatusCd === 'IN_DONE' || item.wirStatusNm === '입고완료') {
+		    statusBadge = `<span class="badge badge-success">입고완료</span>`;
+
+		} else if (item.wirStatusCd === 'REJECT' || item.wirStatusNm === '반려') {
+		    statusBadge = `<span class="badge badge-urgent">반려</span>`;
+
+		} else if (item.wirStatusCd === 'REQ_FIX' || item.wirStatusNm === '보완요청') {
+		    statusBadge = `
+		        <span class="badge"
+		              style="background: #f59e0b; color: #fff; border-color: #f59e0b;">
+		            보완요청
+		        </span>
+		    `;
+
+		} else if (item.wirStatusCd === 'REQ_SENT' || item.wirStatusNm === '보완제출완료') {
+		    statusBadge = `
+		        <span class="badge"
+		              style="background: #2563eb; color: #fff; border-color: #2563eb;">
+		            보완제출완료
+		        </span>
+		    `;
+
+		} else if (item.wirStatusCd === 'WAIT' || item.wirStatusNm === '입고대기' || item.wirStatusNm === '입고요청') {
+		    statusBadge = `<span class="badge badge-wait">입고요청</span>`;
+		}
+
+        html += `
+            <tr>
+				<td class="td-no">${startNo + index + 1}</td>
+			    <td class="td-id" style="text-align:left;">${escapeHtml(item.wirNo)}</td>
+                <td style="text-align:left;">${typeBadge}</td>
+                <td style="font-weight:600; text-align:left;">${escapeHtml(item.wirOwrNm)}</td>
+                <td style="text-align:left;">${itemName}</td>
+                <td style="text-align:left;">${escapeHtml(item.wirInPlanDt)}</td>
+                <td style="text-align:left;">${statusBadge}</td>
+                <td style="text-align:left;">
+                    <button class="mini mini-primary"
+                        onclick="openInboundModal(
+                            '${escapeJs(item.wirNo)}',
+                            '${escapeJs(item.wirGgNo)}',
+                            '${escapeJs(item.wirInvoiceNo)}',
+                            '${escapeJs(item.wirOwrNm)}',
+                            '${escapeJs(item.firstItemName)}',
+                            '${escapeJs(item.wirInPlanDt)}',
+                            '${escapeJs(item.wirCargoMgmtNo)}',
+                            '${escapeJs(item.wirIncoTermsCd)}',
+                            '${escapeJs(item.wirRqstCn)}',
+                            '${escapeJs(item.wirStatusCd)}',
+                            '${escapeJs(item.wirwzno)}',
+                            '${escapeJs(item.locationCode)}',
+							'${escapeJs(item.tmCpNm)}',
+							'${escapeJs(item.tmName)}',
+							'${escapeJs(item.tmCpTelno)}'
+                        )">
+                        상세보기
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 입고 리스트 페이지네이션 렌더링
+ *
+ * 서버에서 PaginationInfoVO 형태로 내려준 값을 사용한다.
+ *
+ * 필요한 값:
+ * - currentPage : 현재 페이지
+ * - startPage   : 현재 블록의 시작 페이지
+ * - endPage     : 현재 블록의 끝 페이지
+ * - totalPage   : 전체 페이지 수
+ */
+function renderInboundPagination(paging) {
+    const pagination = document.getElementById('inboundPagination');
+
+    if (!pagination) {
+        return;
+    }
+
+    /*
+     * 전체 페이지가 없거나 1페이지 이하이면 페이지 버튼을 숨긴다.
+     * 예: 전체 데이터가 10건 이하라서 1페이지뿐인 경우
+     */
+	if (!paging || !paging.totalPage) {
+	    pagination.innerHTML = '';
+	    return;
+	}
+
+    const currentPage = Number(paging.currentPage || 1);
+    const startPage = Number(paging.startPage || 1);
+    const endPage = Number(paging.endPage || paging.totalPage);
+    const totalPage = Number(paging.totalPage || 1);
+
+    let html = '';
+
+    /*
+     * 이전 페이지 버튼
+     * 현재 페이지가 1페이지면 비활성화한다.
+     */
+    if (currentPage > 1) {
+        html += `
+            <button type="button"
+                    class="page-btn"
+                    onclick="loadInboundList(${currentPage - 1})">
+                &lt;
+            </button>
+        `;
+    } else {
+        html += `
+            <button type="button"
+                    class="page-btn disabled"
+                    disabled>
+                &lt;
+            </button>
+        `;
+    }
+
+    /*
+     * 페이지 번호 버튼
+     */
+    for (let i = startPage; i <= endPage; i++) {
+        html += `
+            <button type="button"
+                    class="page-btn ${i === currentPage ? 'active' : ''}"
+                    onclick="loadInboundList(${i})">
+                ${i}
+            </button>
+        `;
+    }
+
+    /*
+     * 다음 페이지 버튼
+     * 현재 페이지가 마지막 페이지면 비활성화한다.
+     */
+    if (currentPage < totalPage) {
+        html += `
+            <button type="button"
+                    class="page-btn"
+                    onclick="loadInboundList(${currentPage + 1})">
+                &gt;
+            </button>
+        `;
+    } else {
+        html += `
+            <button type="button"
+                    class="page-btn disabled"
+                    disabled>
+                &gt;
+            </button>
+        `;
+    }
+
+    pagination.innerHTML = html;
+}
+
+/**
+ * 상세 버튼 클릭 시 모달 오픈 및 데이터 세팅
+ */
+function openInboundModal(
+    wirNo,
+    wirGgNo,
+    invoiceNo,
+    owrNm,
+    targetCn,
+    inPlanDt,
+    cargoNo,
+    incoTerms,
+    rqstCn,
+    wirStatusCd,
+    wirwzno,
+    locationCode,
+	tmCpNm,
+	tmName,
+	tmCpTelno
+) {
+    const form = document.getElementById('inboundActionForm');
+    if (form) form.reset();
+
+    document.getElementById('modal-wir-no').value = wirNo;
+    document.getElementById('modal-wir-gg-no').value = wirGgNo;
+    document.getElementById('decl-wir-no').value = wirNo;
+    document.getElementById('decl-invoice').value = invoiceNo;
+    document.getElementById('decl-shipper').value = owrNm;
+    document.getElementById('decl-item').value = targetCn;
+    document.getElementById('decl-date').value = inPlanDt;
+    document.getElementById('decl-cargo').value = cargoNo;
+    document.getElementById('decl-inco').value = incoTerms;
+    document.getElementById('decl-rqst').value = rqstCn;
+	document.getElementById('decl-tm-cp-nm').value = tmCpNm || '';
+	document.getElementById('decl-tm-name').value = tmName || '';
+	document.getElementById('decl-tm-cp-telno').value = tmCpTelno || '';
+
+
+   loadInboundGoodsList(wirNo, wirStatusCd);
+
+   /*
+    * 입고완료 건은 이미 처리가 끝난 건이므로
+    * 승인 / 반려 / 보완요청 버튼을 모두 숨긴다.
+    *
+    * WAIT 상태의 입고요청 건만
+    * 승인 / 반려 / 보완요청 처리가 가능하다.
+    */
+   if (wirStatusCd === 'IN_DONE') {
+       document.getElementById('approveBtn').style.display = 'none';
+       document.getElementById('rejectBtn').style.display = 'none';
+       document.getElementById('suppBtn').style.display = 'none';
+   } else {
+       document.getElementById('approveBtn').style.display = '';
+       document.getElementById('rejectBtn').style.display = '';
+       document.getElementById('suppBtn').style.display = '';
+   }
+
+    document.getElementById('inboundModal').classList.add('open');
+}
+
+/**
+ * 보완요청 모달 보장
+ *
+ * JSP에 supplementModal이 이미 있으면 그대로 사용한다.
+ * 현재 화면 DOM에 없으면 JS에서 임시로 생성한다.
+ *
+ * 이유:
+ * - sidebar/navigation.js 또는 개발 중 서버 재기동 상황에서
+ *   현재 브라우저 DOM이 최신 JSP를 반영하지 못할 수 있다.
+ * - 그래도 보완요청 버튼 클릭 시 기능이 막히지 않도록 방어한다.
+ */
+function ensureSupplementModal() {
+    let modal = document.getElementById('supplementModal');
+
+    if (modal) {
+        return modal;
+    }
+
+    const modalHtml = `
+        <div class="modal-overlay" id="supplementModal">
+            <div class="modal-box" style="width: 520px; border: 2px solid #0f172a;">
+                <div class="modal-head" style="background: #0f172a; padding: 15px 24px;">
+                    <div>
+                        <div class="modal-title" style="color: #fff;">
+                            보완요청 사유 입력
+                        </div>
+                        <div class="modal-subtitle" style="color: rgba(255, 255, 255, 0.7);">
+                            SUPPLEMENT REQUEST
+                        </div>
+                    </div>
+
+                    <button type="button" class="modal-close-btn" onclick="$('#supplementModal').removeClass('open')">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <div style="padding: 24px; background: #fff;">
+                    <input type="hidden" id="supp-wir-no">
+
+                    <div style="border: 1px solid #000; padding: 15px; margin-bottom: 16px;">
+                        <label style="font-size: 11px; font-weight: 700;">입고의뢰번호</label>
+                        <input id="supp-wir-no-view" type="text" readonly style="width: 100%; margin-top: 6px;">
+                    </div>
+
+                    <div style="border: 1px solid #000; padding: 15px; margin-bottom: 16px;">
+                        <label style="font-size: 11px; font-weight: 700;">보완유형</label>
+                        <select id="supp-type" style="width: 100%; margin-top: 6px;">
+                            <option value="DATA">데이터수정</option>
+                            <option value="FILE">파일재제출</option>
+                        </select>
+                    </div>
+
+                    <div style="border: 1px solid #000; padding: 15px;">
+                        <label style="font-size: 11px; font-weight: 700;">보완요청 사유</label>
+                        <textarea id="supp-reason"
+                                  placeholder="운송업체가 확인할 보완요청 사유를 입력하세요."
+                                  style="width: 100%; height: 110px; margin-top: 6px;"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="gap: 10px; flex-shrink: 0; background: #fff; border-top: 1px solid #e2e8f0;">
+                    <button type="button" onclick="$('#supplementModal').removeClass('open')">취소</button>
+                    <button type="button" onclick="submitSupplementRequest()" style="background: #f59e0b; color: #fff;">
+                        보완요청 등록
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    return document.getElementById('supplementModal');
+}
+
+/**
+ * 보완요청 모달 열기
+ *
+ * 현재 열린 입고 상세 모달에서 입고의뢰번호를 가져와서
+ * 보완요청 모달에 세팅한다.
+ *
+ * 아직 DB 저장은 하지 않는다.
+ * 지금 단계의 목적은:
+ * - 보완요청 버튼 클릭
+ * - 보완요청 사유 입력 모달 열기
+ * - 입고의뢰번호가 정상 세팅되는지 확인
+ */
+function openSupplementModal() {
+    const wirNo = document.getElementById('modal-wir-no')?.value || '';
+
+    if (!wirNo) {
+        alert('입고의뢰번호를 찾을 수 없습니다.');
+        return;
+    }
+
+    const supplementModal = ensureSupplementModal();
+    const suppWirNo = document.getElementById('supp-wir-no');
+    const suppWirNoView = document.getElementById('supp-wir-no-view');
+    const suppReason = document.getElementById('supp-reason');
+    const suppType = document.getElementById('supp-type');
+
+    if (!supplementModal || !suppWirNo || !suppWirNoView || !suppReason || !suppType) {
+        alert('보완요청 모달을 생성하지 못했습니다.');
+        return;
+    }
+
+    /*
+     * hidden 값:
+     * 나중에 서버로 보낼 실제 입고의뢰번호
+     */
+    suppWirNo.value = wirNo;
+
+    /*
+     * 화면 표시용 입고의뢰번호
+     */
+    suppWirNoView.value = wirNo;
+
+    /*
+     * 이전에 입력했던 사유가 남아있지 않도록 초기화
+     */
+    suppReason.value = '';
+
+    /*
+     * 보완유형 기본값은 데이터수정으로 초기화한다.
+     */
+    suppType.value = 'DATA';
+
+    /*
+     * 보완요청 모달 열기
+     */
+    supplementModal.classList.add('open');
+}
+
+/**
+ * 보완요청 등록 버튼 클릭
+ *
+ * 현재 단계에서는 서버 저장 전 단계다.
+ * 먼저 화면에서 입력값이 정상적으로 넘어오는지 확인한다.
+ *
+ * 다음 단계에서:
+ * - /warehouse/inbound/supplement.do API 호출
+ * - SUPP_RQST INSERT
+ * - SUPP_RQST_ITEM INSERT
+ * 로 연결한다.
+ */
+/**
+ * 보완요청 등록 버튼 클릭
+ *
+ * 입력값:
+ * - wirNo   : 입고의뢰번호
+ * - sriTyCd : 보완유형(DATA / FILE)
+ * - reason  : 보완요청 사유
+ *
+ * 서버 처리:
+ * - /warehouse/inbound/supplement.do
+ * - SUPP_RQST / SUPP_RQST_ITEM 등록
+ */
+function submitSupplementRequest() {
+    const wirNo = document.getElementById('supp-wir-no')?.value || '';
+    const sriTyCd = document.getElementById('supp-type')?.value || '';
+    const reason = document.getElementById('supp-reason')?.value.trim() || '';
+
+    if (!wirNo) {
+        alert('입고의뢰번호가 없습니다.');
+        return;
+    }
+
+    if (!sriTyCd) {
+        alert('보완유형을 선택하세요.');
+        document.getElementById('supp-type')?.focus();
+        return;
+    }
+
+    if (sriTyCd !== 'DATA' && sriTyCd !== 'FILE') {
+        alert('올바르지 않은 보완유형입니다.');
+        return;
+    }
+
+    if (!reason) {
+        alert('보완요청 사유를 입력하세요.');
+        document.getElementById('supp-reason')?.focus();
+        return;
+    }
+
+    if (!confirm('보완요청을 등록하시겠습니까?')) {
+        return;
+    }
+
+    /*
+     * @RequestParam 방식으로 Controller가 받기 때문에
+     * application/x-www-form-urlencoded 형태로 전송한다.
+     */
+    const requestBody = new URLSearchParams();
+    requestBody.append('wirNo', wirNo);
+    requestBody.append('reason', reason);
+    requestBody.append('sriTyCd', sriTyCd);
+
+    /*
+     * CSRF 토큰 추가
+     *
+     * Spring Security가 POST 요청을 검사하기 때문에
+     * JSP에 숨겨둔 CSRF parameterName/token을 같이 전송한다.
+     */
+    const csrfParameterName = document.getElementById('csrfParameterName')?.value || '';
+    const csrfToken = document.getElementById('csrfToken')?.value || '';
+
+    if (!csrfParameterName || !csrfToken) {
+        alert('CSRF 토큰을 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도하세요.');
+        return;
+    }
+    requestBody.append(csrfParameterName, csrfToken);
+
+    fetch('/warehouse/inbound/supplement.do', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        body: requestBody.toString()
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('보완요청 등록 실패');
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert(data.message);
+
+        if (data.result === 'success') {
+            document.getElementById('supplementModal')?.classList.remove('open');
+            document.getElementById('inboundModal')?.classList.remove('open');
+
+            /*
+             * 목록/상태 갱신을 위해 새로고침한다.
+             * 나중에 AJAX 목록 갱신으로 바꿀 수 있다.
+             */
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('보완요청 등록 중 오류가 발생했습니다.');
+    });
+}
+
+/**
+ * 물품 상세 리스트 조회
+ */
+/**
+ * 물품 상세 리스트 조회
+ */
+function loadInboundGoodsList(wirNo, wirStatusCd) {
+    const tbody = document.getElementById('goodsTableBody');
+
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="6" style="text-align:center;">조회 중...</td>
+        </tr>
+    `;
+
+    fetch('/warehouse/inbound/goodsList?wirNo=' + encodeURIComponent(wirNo))
+        .then(response => {
+            if (!response.ok) throw new Error('물품 조회 실패');
+            return response.json();
+        })
+        .then(data => {
+            return loadMyWarehouseZones().then(() => data);
+        })
+        .then(data => {
+            let html = '';
+
+            if (!data || data.length === 0) {
+                html = `
+                    <tr>
+                        <td colspan="6" style="text-align:center;">데이터 없음</td>
+                    </tr>
+                `;
+            } else {
+				data.forEach(goods => {
+
+				    const isDone = wirStatusCd === 'IN_DONE';
+
+				    const selectedWzNo = isDone ? (goods.wzNo || '') : '';
+				    const selectedLocationCode = isDone ? (goods.locationCode || '') : '';
+
+				    /*
+				     * 입고완료 건의 위치 상태 표시
+				     *
+				     * Y : 현재 그 위치에 보관 중
+				     * N : 반출완료되어 과거에 배치되었던 위치
+				     * 그 외 : 위치 미배정
+				     */
+				    let locationStatusClass = 'empty';
+				    let locationStatusText = '위치 미배정';
+
+				    if (goods.wiUseYn === 'Y') {
+				        locationStatusClass = 'current';
+				        locationStatusText = '현재 보관중';
+				    } else if (goods.wiUseYn === 'N') {
+				        locationStatusClass = 'released';
+				        locationStatusText = '반출완료 위치';
+				    }
+
+                    html += `
+                        <tr>
+                            <td>${escapeHtml(goods.goodsName)}</td>
+                            <td>${escapeHtml(goods.cgQty)}</td>
+                            <td>${escapeHtml(goods.cgWeight)}</td>
+                            <td>${escapeHtml(goods.cgOrigin)}</td>
+
+							<td>
+							    ${
+							        isDone
+							            ? `
+							                <div class="readonly-location-box">
+							                    <div class="readonly-location-main">
+							                        ${escapeHtml(getZoneNameByNo(selectedWzNo))}
+							                    </div>
+							                </div>
+							              `
+							            : `
+							                <select class="goods-zone"
+							                        data-cg-no="${escapeHtml(goods.cgNo)}"
+							                        data-goods-name="${escapeHtml(goods.goodsName)}">
+							                    ${makeZoneOptions(selectedWzNo)}
+							                </select>
+							              `
+							    }
+							</td>
+
+							<td>
+							    ${
+							        isDone
+							            ? `
+							                <div class="readonly-location-box ${locationStatusClass}">
+							                    <div class="readonly-location-main">
+							                        ${escapeHtml(selectedLocationCode || '-')}
+							                    </div>
+							                    <div class="readonly-location-sub">
+							                        ${escapeHtml(locationStatusText)}
+							                    </div>
+							                </div>
+							              `
+							            : `
+							                <select class="goods-location">
+							                    <option value="">위치선택</option>
+							                </select>
+							              `
+							    }
+							</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            tbody.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align:center;">물품 조회 실패</td>
+                </tr>
+            `;
+        });
+}
+
+/**
+ * 창고 구역 선택 시 빈 위치 목록 조회
+ */
+
+/**
+ * 승인/반려 버튼 클릭 시 서버로 전송
+ */
+function submitApproval(status) {
+    const wirNo = document.getElementById('modal-wir-no').value;
+    const wirGgNo = document.getElementById('modal-wir-gg-no').value;
+    const replyStatus = status;
+
+    const goodsList = [];
+    const selectedLocationSet = new Set();
+
+    document.querySelectorAll('#goodsTableBody tr').forEach(row => {
+
+        const zoneSelect = row.querySelector('.goods-zone');
+
+        const cgNo = zoneSelect?.dataset.cgNo || '';
+        const goodsName = zoneSelect?.dataset.goodsName || '';
+
+        const wzNo =
+            row.querySelector('.goods-zone')?.value || '';
+
+        const locationCode =
+            row.querySelector('.goods-location')?.value || '';
+
+        if (status === 'APPROVE') {
+
+            if (!wzNo) {
+                alert(goodsName + '의 창고구역을 선택하세요.');
+                throw new Error('창고구역 미선택');
+            }
+
+            if (!locationCode) {
+                alert(goodsName + '의 창고위치를 선택하세요.');
+                throw new Error('창고위치 미선택');
+            }
+        }
+
+        if (status === 'APPROVE') {
+            if (selectedLocationSet.has(locationCode)) {
+                alert('같은 창고위치를 중복 선택할 수 없습니다: ' + locationCode);
+                throw new Error('창고위치 중복 선택');
+            }
+
+            selectedLocationSet.add(locationCode);
+        }
+
+        goodsList.push({
+            cgNo: cgNo,
+            goodsName: goodsName,
+            wzNo: wzNo,
+            locationCode: locationCode
+        });
+    });
+
+    if (!confirm(status === 'APPROVE' ? '입고 승인하시겠습니까?' : '요청을 반려하시겠습니까?')) {
+        return;
+    }
+
+    const requestData = {
+        wirNo: wirNo,
+        wirGgNo: wirGgNo,
+        wirStatusCd: replyStatus,
+        goodsList: goodsList
+    };
+
+    fetch('/warehouse/approveInbound.do', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('네트워크 응답 오류');
+        return response.json();
+    })
+    .then(data => {
+        alert(data.message);
+
+        if (data.result === 'success') {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('서버 통신 중 오류가 발생했습니다.');
+    });
+}
+
+/**
+ * 검색 버튼 클릭
+ */
+document.addEventListener('click', function (e) {
+    const searchBtn = e.target.closest('#searchBtn');
+
+    if (searchBtn) {
+        loadInboundList(1);
+    }
+});
+
+/**
+ * 검색어 Enter
+ */
+document.addEventListener('keydown', function (e) {
+    if (e.target && e.target.id === 'searchWord' && e.key === 'Enter') {
+        e.preventDefault();
+        loadInboundList(1);
+    }
+});
+
+document.addEventListener('change', function (e) {
+
+    if (e.target && e.target.classList.contains('goods-zone')) {
+
+        const zone = e.target.value;
+
+        const currentRow = e.target.closest('tr');
+
+        const locationSelect = currentRow.querySelector('.goods-location');
+
+        if (!zone) {
+            locationSelect.innerHTML =
+                '<option value="">위치선택</option>';
+            return;
+        }
+
+        locationSelect.innerHTML =
+            '<option value="">조회 중...</option>';
+
+        fetch('/warehouse/inbound/emptyLocations.do?zone=' + encodeURIComponent(zone))
+            .then(response => {
+                if (!response.ok) throw new Error('빈 위치 조회 실패');
+                return response.json();
+            })
+            .then(data => {
+
+                let html = '<option value="">위치선택</option>';
+
+                if (!data || data.length === 0) {
+
+                    html = '<option value="">빈 위치 없음</option>';
+
+                } else {
+
+                    data.forEach(item => {
+                        const locationCode = item.locationCode || '';
+
+                        html += `
+                            <option value="${escapeHtml(locationCode)}">
+                                ${escapeHtml(locationCode)}
+                            </option>
+                        `;
+                    });
+                }
+
+                locationSelect.innerHTML = html;
+            })
+            .catch(error => {
+                console.error(error);
+
+                locationSelect.innerHTML =
+                    '<option value="">조회 실패</option>';
+            });
+    }
+});
+
+/**
+ * 페이지 최초 진입 시 1페이지 목록 조회
+ *
+ * 기존 JSP가 서버에서 전체 목록을 뿌리던 방식에서
+ * AJAX 페이징 목록 방식으로 바꾸기 위해
+ * 화면 로딩 후 자동으로 1페이지를 조회한다.
+ */
+/**
+ * 보세입고 처리 화면 초기화
+ *
+ * 일반 새로고침으로 들어온 경우:
+ * - DOMContentLoaded 시점에 실행
+ *
+ * 사이드바 AJAX 전환으로 들어온 경우:
+ * - DOMContentLoaded가 이미 끝난 상태라서 즉시 실행
+ */
+function initInboundPage() {
+    const tbody = document.getElementById('inboundTableBody');
+
+    /*
+     * 현재 화면이 보세입고 처리 화면이 아니면 실행하지 않는다.
+     */
+    if (!tbody) {
+        return;
+    }
+
+    loadInboundList(1);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initInboundPage);
+} else {
+    initInboundPage();
+}
+
+console.log('Inbound management system ready.');

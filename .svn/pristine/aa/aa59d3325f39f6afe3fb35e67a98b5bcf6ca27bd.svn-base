@@ -1,0 +1,1126 @@
+/* import-main.js
+ * 수입운송 split JS 로더 + 단일 라우터.
+ * 각 탭은 클릭 시 해당 화면 1개만 렌더링합니다.
+ */
+(function () {
+  if (window.__TACS_IMPORT_SPLIT_LOADER_V4) return;
+  window.__TACS_IMPORT_SPLIT_LOADER_V4 = true;
+  window.__TACS_IMPORT_SPLIT_BOOTED = false;
+
+  var resolveSplitReady;
+  window.__TACS_IMPORT_SPLIT_READY = new Promise(function (resolve) {
+    resolveSplitReady = resolve;
+  });
+
+  window.TRANSPORT_DEFER_PAGE_BOOT = true;
+
+  var scripts = [
+    'import-common.js',
+    'import-request.js',
+    'import-arrival.js',
+    'import-inbound.js',
+    'import-do.js',
+    'import-release.js',
+    'import-inland.js',
+    'import-ui.js',
+    'import-gate-fix.js',
+    'import-manifest.js'
+  ];
+
+  function currentBasePath() {
+    var current = document.currentScript && document.currentScript.getAttribute('src');
+    if (!current) {
+      var all = document.querySelectorAll('script[src]');
+      for (var i = all.length - 1; i >= 0; i--) {
+        var src = all[i].getAttribute('src') || '';
+        if (src.indexOf('import-main.js') !== -1) { current = src; break; }
+      }
+    }
+    if (!current) return '';
+    return current.slice(0, current.lastIndexOf('/') + 1);
+  }
+
+  function alreadyLoaded(file) {
+    return !!document.querySelector('script[src$="' + file + '"], script[src*="' + file + '?"], script[src*="' + file + '&"]');
+  }
+
+  function installUnifiedImportUiStyle() {
+    if (document.getElementById('tacs-import-unified-ui-style-20260518')) return;
+    var style = document.createElement('style');
+    style.id = 'tacs-import-unified-ui-style-20260518';
+    style.textContent = [
+      '#detail-body{font-family:Pretendard,"Noto Sans KR","Malgun Gothic",Arial,sans-serif!important;color:#0f172a!important;font-size:12px!important;}',
+      '#detail-body *{letter-spacing:0!important;box-sizing:border-box!important;}',
+      '#detail-body .section-card,#detail-body .import-ui-tabs,#detail-body .import-ui-request-detail,#detail-body .import-ui-section,#detail-body .import-ui-card,#detail-body #importManifestListOnlyPanel{border:1px solid #cbd5e1!important;border-radius:0!important;box-shadow:none!important;background:#fff!important;overflow:hidden!important;}',
+      '#detail-body .section-card>.bg-slate-50,#detail-body .import-release-request-panel>.bg-slate-50,#detail-body .section-card>div:first-child.bg-slate-50{height:52px!important;min-height:52px!important;display:flex!important;align-items:center!important;padding:0 24px!important;background:#f8fafc!important;border-bottom:1px solid #cbd5e1!important;}',
+      '#detail-body h4,#detail-body h5{font-size:12px!important;font-weight:900!important;color:#0f172a!important;line-height:1.2!important;letter-spacing:0!important;}',
+      '#detail-body .field-label,#detail-body .list-search-grid label,#detail-body .release-search-grid label,#detail-body .inland-search-grid label,#detail-body .import-ui-field label{display:block!important;margin:0 0 6px!important;font-size:11px!important;font-weight:900!important;line-height:1.2!important;color:#334155!important;}',
+      '#detail-body .field-input,#detail-body .field-select,#detail-body input[type="text"],#detail-body input[type="date"],#detail-body input[type="datetime-local"],#detail-body input[type="number"],#detail-body select,#detail-body textarea{width:100%!important;min-height:40px!important;height:40px!important;padding:0 10px!important;border:1px solid #cbd5e1!important;border-radius:0!important;background:#fff!important;color:#0f172a!important;font-size:12px!important;font-weight:700!important;line-height:40px!important;outline:0!important;box-shadow:none!important;}',
+      '#detail-body textarea,#detail-body .field-textarea{height:auto!important;min-height:76px!important;line-height:1.5!important;padding:10px!important;}',
+      '#detail-body input[readonly],#detail-body textarea[readonly],#detail-body select[disabled],#detail-body input:disabled,#detail-body .bg-slate-50,#detail-body .bg-slate-100,#detail-body .bg-gray-100{background:#e5e7eb!important;color:#334155!important;-webkit-text-fill-color:#334155!important;opacity:1!important;}',
+      '#detail-body .list-search-grid,#detail-body .release-search-grid,#detail-body .inland-search-grid,#detail-body .do-list-search-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(170px,1fr)) 52px!important;gap:10px!important;align-items:end!important;margin:0 0 14px 0!important;}',
+      '#detail-body .btn,#detail-body a.btn,#detail-body .btn-search,#detail-body .bonded-search-btn,#detail-body .bonded-row-select,#detail-body .js-import-request-refresh,#detail-body #importManifestSearchBtn,#detail-body #importManifestResetBtn,#detail-body #importManifestReloadBtn,#detail-body #importArrivalSearchBtn,#detail-body #importInboundSearchBtn,#detail-body #doListSearchBtn,#detail-body #importReleaseSearchBtn,#detail-body #importInlandDispatchSearchBtn,#detail-body .import-ui-btn,#detail-body .import-ui-doc-select{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:52px!important;height:40px!important;min-height:40px!important;padding:0 14px!important;border:1px solid #334155!important;border-radius:0!important;background:#334155!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-size:12px!important;font-weight:900!important;line-height:1!important;text-decoration:none!important;white-space:nowrap!important;box-shadow:none!important;cursor:pointer!important;}',
+      '#detail-body .btn,#detail-body .btn *,#detail-body a.btn,#detail-body a.btn *,#detail-body .btn-search,#detail-body .btn-search *,#detail-body .bonded-search-btn,#detail-body .bonded-search-btn *,#detail-body .bonded-row-select,#detail-body .bonded-row-select *,#detail-body .import-ui-btn,#detail-body .import-ui-btn *,#detail-body .import-ui-doc-select,#detail-body .import-ui-doc-select *,#detail-body .js-import-request-refresh,#detail-body .js-import-request-refresh *,#detail-body .import-manifest-link-btn,#detail-body .import-manifest-link-btn *,#detail-body .import-manifest-arrival-action-btn,#detail-body .import-manifest-arrival-action-btn *,#detail-body .import-request-detail-btn,#detail-body .import-request-detail-btn *{color:#fff!important;}',
+      '#detail-body .btn:hover,#detail-body a.btn:hover,#detail-body .btn-search:hover,#detail-body .bonded-search-btn:hover,#detail-body .bonded-row-select:hover,#detail-body .import-ui-btn:hover,#detail-body .import-ui-doc-select:hover{background:#334155!important;color:#fff!important;}',
+      '#detail-body .btn:disabled,#detail-body .import-ui-btn:disabled{background:#e2e8f0!important;border-color:#cbd5e1!important;color:#64748b!important;opacity:1!important;cursor:not-allowed!important;}',
+      '#detail-body .list-search-grid>button,#detail-body .release-search-grid>button,#detail-body .inland-search-grid>button,#detail-body .do-list-search-grid>button,#detail-body .do-list-search-grid>div>button{width:52px!important;min-width:52px!important;max-width:52px!important;padding:0!important;}',
+      '#detail-body .js-import-request-refresh,#detail-body .import-request-detail-btn,#detail-body .import-manifest-link-btn,#detail-body .import-request-reject-reason-btn{min-width:52px!important;width:auto!important;height:40px!important;min-height:40px!important;padding:0 10px!important;background:#334155!important;border-color:#334155!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-size:11px!important;font-weight:900!important;}',
+      '#detail-body .import-manifest-arrival-status-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:74px!important;min-width:74px!important;max-width:74px!important;height:30px!important;min-height:30px!important;padding:0!important;border-radius:0!important;font-family:Pretendard,"Noto Sans KR","Malgun Gothic",Arial,sans-serif!important;font-size:11px!important;font-weight:900!important;line-height:30px!important;letter-spacing:0!important;text-align:center!important;text-decoration:none!important;text-indent:0!important;white-space:nowrap!important;box-sizing:border-box!important;vertical-align:middle!important;cursor:pointer!important;user-select:none!important;box-shadow:none!important;transition:none!important;}',
+      '#detail-body .import-manifest-arrival-status-btn.is-issued{border-color:#86efac!important;background:#ecfdf5!important;color:#047857!important;-webkit-text-fill-color:#047857!important;}',
+      '#detail-body .import-manifest-arrival-status-btn.is-pending{border-color:#cbd5e1!important;background:#f8fafc!important;color:#334155!important;-webkit-text-fill-color:#334155!important;}',
+      '#detail-body .import-manifest-arrival-action-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:74px!important;height:30px!important;min-height:30px!important;padding:0 10px!important;border:1px solid #334155!important;border-radius:0!important;background:#334155!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-family:Pretendard,"Noto Sans KR","Malgun Gothic",Arial,sans-serif!important;font-size:11px!important;font-weight:900!important;line-height:30px!important;letter-spacing:0!important;white-space:nowrap!important;box-sizing:border-box!important;box-shadow:none!important;transition:none!important;}',
+      '#detail-body .js-import-request-refresh:hover,#detail-body .import-request-detail-btn:hover,#detail-body .import-manifest-link-btn:hover{background:#334155!important;border-color:#334155!important;color:#fff!important;}',
+      '#detail-body .import-request-reject-reason-btn{background:#991b1b!important;border-color:#991b1b!important;color:#fff!important;}',
+      '#detail-body .import-ui-btn.secondary,#detail-body .bonded-row-select{background:#fff!important;color:#0f172a!important;border-color:#94a3b8!important;}',
+      '#detail-body .import-ui-btn.secondary:hover,#detail-body .bonded-row-select:hover{background:#f8fafc!important;color:#0f172a!important;}',
+      '#detail-body .import-ui-doc-select,#detail-body .import-ui-doc-upload-btn,#detail-body .import-ui-do-settle-btn,#detail-body .import-ui-do-issue-btn,#detail-body .import-ui-do-deliver-btn,#detail-body .import-ui-do-settle-btn:disabled,#detail-body .import-ui-do-issue-btn:disabled,#detail-body .import-ui-do-deliver-btn:disabled{background:#475569!important;border-color:#334155!important;color:#fff!important;-webkit-text-fill-color:#fff!important;opacity:1!important;}',
+      '#detail-body .import-ui-btn.danger,#detail-body .request-reject-btn{background:#991b1b!important;border-color:#991b1b!important;color:#fff!important;}',
+      '#detail-body .info-chip,#detail-body .status-chip,#detail-body [class*="status-chip"]{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:58px!important;min-height:28px!important;height:28px!important;padding:0 10px!important;border:1px solid #cbd5e1!important;border-radius:0!important;background:#f8fafc!important;color:#0f172a!important;font-size:11px!important;font-weight:900!important;line-height:1!important;white-space:nowrap!important;}',
+      '#detail-body table,#detail-body .tbl,#detail-body .import-ui-goods-table,#detail-body .import-ui-doc-table{width:100%!important;border-collapse:collapse!important;border-spacing:0!important;font-size:12px!important;color:#0f172a!important;}',
+      '#detail-body table th,#detail-body .tbl th,#detail-body table td,#detail-body .tbl td,#detail-body .import-ui-goods-table th,#detail-body .import-ui-goods-table td,#detail-body .import-ui-doc-table th,#detail-body .import-ui-doc-table td{border-left:1px solid #e2e8f0!important;border-right:1px solid #e2e8f0!important;border-bottom:1px solid #e2e8f0!important;font-size:12px!important;line-height:1.35!important;vertical-align:middle!important;}',
+      '#detail-body table th:first-child,#detail-body .tbl th:first-child,#detail-body table td:first-child,#detail-body .tbl td:first-child{border-left:0!important;}',
+      '#detail-body table th:last-child,#detail-body .tbl th:last-child,#detail-body table td:last-child,#detail-body .tbl td:last-child{border-right:0!important;}',
+      '#detail-body table th,#detail-body .tbl th,#detail-body .import-ui-goods-table th,#detail-body .import-ui-doc-table th{height:42px!important;padding:10px 12px!important;background:#f8fafc!important;color:#334155!important;font-weight:900!important;text-align:center!important;}',
+      '#detail-body table td,#detail-body .tbl td,#detail-body .import-ui-goods-table td,#detail-body .import-ui-doc-table td{height:44px!important;padding:10px 12px!important;background:#fff!important;color:#0f172a!important;font-weight:700!important;text-align:center!important;}',
+      '#detail-body table td:first-child,#detail-body .tbl td:first-child{font-weight:900!important;}',
+      '#detail-body .overflow-x-auto,#detail-body .import-ui-doc-table-wrap,#detail-body .import-ui-goods-table-wrap{border:1px solid #cbd5e1!important;border-radius:0!important;background:#fff!important;}',
+      '#detail-body .section-card-action-footer,#detail-body .import-ui-actions{display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:8px!important;min-height:56px!important;padding:10px 16px!important;border-top:1px solid #cbd5e1!important;background:#fff!important;}',
+      '#detail-body .import-ui-tab{height:48px!important;border-radius:0!important;border-right:1px solid #cbd5e1!important;background:#fff!important;color:#334155!important;font-size:12px!important;font-weight:900!important;}',
+      '#detail-body .import-ui-tab:hover{background:#f8fafc!important;color:#0f172a!important;}',
+      '#detail-body .import-ui-tab.is-active{background:#e8eef7!important;color:#0f172a!important;box-shadow:none!important;}',
+      '#detail-body .import-inline-tabs-0513,#detail-body .import-ui-tabs{width:100%!important;min-width:0!important;background:#fff!important;}',
+      '#detail-body .import-ui-tab-bar{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;border-bottom:1px solid #cbd5e1!important;background:#fff!important;}',
+      '#detail-body .import-ui-panel{display:none!important;min-height:0!important;height:0!important;padding:0!important;background:#fff!important;border:0!important;}',
+      '#detail-body .import-ui-panel.is-active{display:block!important;height:auto!important;min-height:0!important;padding:16px!important;border-bottom:1px solid #cbd5e1!important;}',
+      '#detail-body .import-ui-grid3{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:16px!important;padding:16px!important;}',
+      '#detail-body .import-ui-two-col{display:grid!important;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr)!important;gap:16px!important;}',
+      '@media(max-width:1300px){#detail-body .list-search-grid,#detail-body .release-search-grid,#detail-body .inland-search-grid,#detail-body .do-list-search-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr)) 52px!important;}}',
+      '@media(max-width:1200px){#detail-body .import-ui-grid3,#detail-body .import-ui-two-col{grid-template-columns:1fr!important;}}',
+      '@media(max-width:760px){#detail-body .list-search-grid,#detail-body .release-search-grid,#detail-body .inland-search-grid,#detail-body .do-list-search-grid{grid-template-columns:1fr!important;}#detail-body .import-ui-tab-bar{grid-template-columns:1fr!important;}#detail-body .btn,#detail-body .btn-search,#detail-body .bonded-search-btn,#detail-body #importManifestSearchBtn,#detail-body #importArrivalSearchBtn,#detail-body #importInboundSearchBtn,#detail-body #doListSearchBtn,#detail-body #importReleaseSearchBtn,#detail-body #importInlandDispatchSearchBtn{width:100%!important;}}'
+    ].join('');
+    document.head.appendChild(style);
+  }
+
+  function setCurrentItem(itemId) {
+    window.TRANSPORT_INITIAL_VIEW = { group: 'import', item: itemId };
+    try { currentGroupKey = 'import'; currentItemId = itemId; } catch (e) {}
+    if (typeof setSavedLastItemId === 'function') setSavedLastItemId('import', itemId);
+  }
+
+  function clearSidebarActiveState() {
+    document.querySelectorAll('.menu-item,.sub-item').forEach(function (el) {
+      el.classList.remove('active', 'active-sub');
+    });
+  }
+
+  function setDashboardActiveState() {
+    clearSidebarActiveState();
+    document.querySelectorAll('[data-group="dashboard"], .menu-item[href$="/transport/dashboard.do"], a[href$="/transport/dashboard.do"]').forEach(function (el) {
+      el.classList.add('active');
+    });
+  }
+
+  function getTransportDashboardUrl() {
+    var ctx = typeof getContextPath === 'function' ? getContextPath() : '';
+    return ctx + '/transport/dashboard.do';
+  }
+
+  function isTransportDashboardPage() {
+    return /\/transport\/dashboard\.do(?:$|[?#])/.test((window.location.pathname || '') + (window.location.search || ''));
+  }
+
+  function moveToTransportDashboard() {
+    if (!isTransportDashboardPage()) {
+      window.location.href = getTransportDashboardUrl();
+      return true;
+    }
+    return false;
+  }
+
+  function showDashboard(event) {
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (moveToTransportDashboard()) return false;
+
+    var dashboard = document.getElementById('dashboard-view');
+    var detail = document.getElementById('detail-view');
+    var body = document.getElementById('detail-body');
+    var title = document.getElementById('page-title');
+    var crumb = document.getElementById('breadcrumb');
+
+    window.TRANSPORT_INITIAL_VIEW = { group: 'dashboard', item: '' };
+    try { currentGroupKey = 'dashboard'; currentItemId = ''; } catch (e) {}
+    window.__TACS_IMPORT_ACTIVE_ITEM_ID = '';
+    window.__TACS_IMPORT_ACTIVE_ROUTE_TOKEN = '';
+
+    if (dashboard) dashboard.classList.remove('hidden');
+    if (detail) detail.classList.add('hidden');
+    if (body) {
+      body.dataset.currentGroup = 'dashboard';
+      body.dataset.currentItem = '';
+      body.dataset.importViewMode = '';
+      body.dataset.importRouteToken = '';
+    }
+    if (!dashboard) {
+      window.location.href = getTransportDashboardUrl();
+      return false;
+    }
+    if (title) title.textContent = '대시보드';
+    if (crumb) crumb.innerHTML = '<span class="font-semibold text-slate-900">대시보드</span>';
+    setDashboardActiveState();
+    return false;
+  }
+
+  window.showDashboard = showDashboard;
+
+  function setBaseLayout(titleText, itemId) {
+    var dashboard = document.getElementById('dashboard-view');
+    var detail = document.getElementById('detail-view');
+    var body = document.getElementById('detail-body');
+    var title = document.getElementById('page-title');
+    var crumb = document.getElementById('breadcrumb');
+    var back = document.getElementById('backBtn');
+
+    setCurrentItem(itemId);
+    if (typeof toggleMenuGroup === 'function') toggleMenuGroup('import', true);
+    if (typeof setActiveNav === 'function') setActiveNav('import', itemId);
+
+    document.querySelectorAll('.sub-item[data-group="import"]').forEach(function (a) {
+      var active = a.dataset && a.dataset.itemId === itemId;
+      a.classList.toggle('active-sub', active);
+      a.classList.toggle('active', active);
+    });
+
+    if (dashboard) dashboard.classList.add('hidden');
+    if (detail) detail.classList.remove('hidden');
+    if (title) title.textContent = titleText;
+    if (crumb) crumb.innerHTML = '수입운송 &gt; <span class="font-semibold text-slate-900">' + titleText + '</span>';
+    if (back) {
+      back.innerHTML = '<span class="material-symbols-outlined text-lg">arrow_back</span><span>대시보드로</span>';
+      back.onclick = typeof showDashboard === 'function' ? showDashboard : null;
+    }
+    if (body) {
+      body.dataset.currentGroup = 'import';
+      body.dataset.currentItem = itemId;
+      body.dataset.importViewMode = IMPORT_LEFT_LIST_ITEMS[itemId] ? 'left-list' : 'detail';
+      body.dataset.importRouteToken = window.__TACS_IMPORT_ACTIVE_ROUTE_TOKEN || nextImportRouteToken(itemId);
+      window.detailBody = body;
+      // 새 사이드바 화면 진입 시 이전 화면 DOM을 먼저 비운다.
+      // 비우지 않으면 이전 상세 탭/옛 리스트가 비동기 렌더와 섞여 보인다.
+      if (!(itemId === 'TACS-FW-015' && body.querySelector('.js-import-request-tbody'))) {
+        body.innerHTML = '';
+      }
+    }
+    return body;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function pickValue(row, keys, fallback) {
+    row = row || {};
+    for (var i = 0; i < keys.length; i++) {
+      var value = row[keys[i]];
+      if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+    }
+    return fallback == null ? '' : fallback;
+  }
+
+
+  var IMPORT_LEFT_LIST_ITEMS = {
+    'TACS-FW-015': true, // 운송의뢰 리스트
+    'TACS-FW-023': true, // 적하목록 리스트
+    'TACS-FW-025': true, // 보세입고관리 리스트
+    'TACS-FW-030': true, // D/O 관리 리스트
+    'TACS-FW-033': true, // 보세반출관리 리스트
+    'TACS-FW-035': true  // 내륙운송 리스트
+  };
+  var IMPORT_REMOVED_LEFT_ITEMS = {
+    'TACS-FW-020': 'TACS-FW-023' // 도착/입항/도착통지서 단독 리스트는 사용하지 않는다.
+  };
+  var IMPORT_DEFAULT_ITEM_ID = 'TACS-FW-015';
+  var IMPORT_DETAIL_ITEM_ID = 'TACS-FW-016';
+  var importRouteSeq = 0;
+  var importRouteRendering = false;
+  var IMPORT_TARGET_STORAGE_KEY = 'TACS_IMPORT_TARGET_ITEM';
+
+  function markUserSelectedImportItem(itemId, persist) {
+    itemId = normalizeImportItemId(itemId);
+    window.__TACS_IMPORT_LAST_USER_ITEM_ID = itemId;
+    window.__TACS_IMPORT_LAST_USER_ITEM_AT = Date.now();
+    if (persist === false) return;
+    try { sessionStorage.setItem(IMPORT_TARGET_STORAGE_KEY, itemId); } catch (e) {}
+  }
+
+  function normalizeImportItemId(itemId) {
+    itemId = IMPORT_REMOVED_LEFT_ITEMS[itemId] || itemId;
+    return itemId || IMPORT_DEFAULT_ITEM_ID;
+  }
+
+  function consumeStoredImportItemId() {
+    try {
+      var rawItemId = sessionStorage.getItem(IMPORT_TARGET_STORAGE_KEY);
+      sessionStorage.removeItem(IMPORT_TARGET_STORAGE_KEY);
+      if (!rawItemId) return '';
+      var itemId = normalizeImportItemId(rawItemId);
+      return IMPORT_LEFT_LIST_ITEMS[itemId] ? itemId : '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function syncImportUrl(itemId, push) {
+    if (!window.history || !window.history.pushState) return;
+    itemId = normalizeImportItemId(itemId);
+    var url = new URL(window.location.href);
+    url.pathname = (typeof getContextPath === 'function' ? getContextPath() : '') + '/transport/import.do';
+    if (IMPORT_LEFT_LIST_ITEMS[itemId]) {
+      url.search = '';
+    } else if (itemId) {
+      url.searchParams.set('page', itemId);
+    } else {
+      url.search = '';
+    }
+    url.hash = '';
+    if (itemId !== IMPORT_DETAIL_ITEM_ID) url.searchParams.delete('trcNo');
+    var method = push ? 'pushState' : 'replaceState';
+    window.history[method]({ group: 'import', item: itemId }, '', url.pathname + url.search + url.hash);
+  }
+
+  function nextImportRouteToken(itemId) {
+    importRouteSeq += 1;
+    window.__TACS_IMPORT_ACTIVE_ROUTE_TOKEN = String(importRouteSeq);
+    window.__TACS_IMPORT_ACTIVE_ITEM_ID = itemId || '';
+    return window.__TACS_IMPORT_ACTIVE_ROUTE_TOKEN;
+  }
+
+  function isCurrentImportRoute(token, itemId) {
+    return String(window.__TACS_IMPORT_ACTIVE_ROUTE_TOKEN || '') === String(token || '')
+      && (!itemId || String(window.__TACS_IMPORT_ACTIVE_ITEM_ID || '') === String(itemId));
+  }
+
+  function sanitizeImportLeftListDom(itemId) {
+    var body = document.getElementById('detail-body');
+    if (!body || body.dataset.currentGroup !== 'import' || body.dataset.currentItem !== itemId) return;
+    body.dataset.importViewMode = IMPORT_LEFT_LIST_ITEMS[itemId] ? 'left-list' : 'detail';
+
+    if (IMPORT_LEFT_LIST_ITEMS[itemId]) {
+      // 왼쪽 사이드바 리스트 화면에는 운송의뢰 상세 내부 탭/이전 상세 DOM이 남으면 안 된다.
+      body.querySelectorAll('.import-inline-tabs-0513,.import-ui-tabs,.import-ui-main-request-detail,.import-ui-request-detail[data-work-type]').forEach(function (el) {
+        el.remove();
+      });
+      body.querySelectorAll('[data-import-detail-only="true"]').forEach(function (el) { el.remove(); });
+    }
+  }
+
+  function normalizeImportMenuText(text) {
+    return String(text || '').replace(/\s+/g, '').trim();
+  }
+
+  function resolveImportSidebarItemId(item) {
+    if (!item) return '';
+
+    // JSP/autoBuildNav 쪽 data-item-id가 꼬이면 적하목록 클릭이 보세구역 입고관리/내륙배차로 들어온다.
+    // 그래서 data-id보다 메뉴 표시 문구를 우선해서 라우팅한다.
+    var text = normalizeImportMenuText(item.textContent || item.innerText || '');
+    if (text.indexOf('운송의뢰') >= 0) return 'TACS-FW-015';
+    if (text.indexOf('적하목록') >= 0) return 'TACS-FW-023';
+    if (text.indexOf('보세구역입고관리') >= 0 || text.indexOf('입고관리') >= 0) return 'TACS-FW-025';
+    if (text.indexOf('D/O관리') >= 0 || text.indexOf('DO관리') >= 0 || text.indexOf('D.O관리') >= 0) return 'TACS-FW-030';
+    if (text.indexOf('보세구역반출관리') >= 0 || text.indexOf('반출관리') >= 0) return 'TACS-FW-033';
+    if (text.indexOf('내륙운송배차처리') >= 0 || text.indexOf('내륙운송') >= 0 || text.indexOf('배차처리') >= 0) return 'TACS-FW-035';
+
+    var directId = item.dataset.itemId || item.dataset.id || item.dataset.page || item.getAttribute('data-item-id') || item.getAttribute('data-id') || '';
+    if (IMPORT_REMOVED_LEFT_ITEMS[directId]) directId = IMPORT_REMOVED_LEFT_ITEMS[directId];
+    if (IMPORT_LEFT_LIST_ITEMS[directId]) return directId;
+
+    var href = item.getAttribute('href') || '';
+    if (href) {
+      try {
+        var url = new URL(href, window.location.origin);
+        var pageId = url.searchParams.get('page') || url.searchParams.get('item') || '';
+        if (IMPORT_REMOVED_LEFT_ITEMS[pageId]) pageId = IMPORT_REMOVED_LEFT_ITEMS[pageId];
+        if (IMPORT_LEFT_LIST_ITEMS[pageId]) return pageId;
+      } catch (e) {}
+    }
+
+    return directId;
+  }
+
+  function isImportSidebarItem(target) {
+    if (!target || !target.closest) return null;
+    var item = target.closest('.sub-item, .menu-item, a, button, [data-group][data-item-id], [data-group][data-id]');
+    if (!item) return null;
+
+    var group = item.dataset ? (item.dataset.group || '') : '';
+    var href = item.getAttribute ? (item.getAttribute('href') || '') : '';
+    var text = normalizeImportMenuText(item.textContent || item.innerText || '');
+    var looksLikeImport = group === 'import'
+      || href.indexOf('/transport/import.do') >= 0
+      || href.indexOf('group=import') >= 0
+      || text.indexOf('수입운송') >= 0
+      || text.indexOf('적하목록') >= 0
+      || text.indexOf('보세구역입고관리') >= 0
+      || text.indexOf('D/O관리') >= 0
+      || text.indexOf('DO관리') >= 0
+      || text.indexOf('보세구역반출관리') >= 0
+      || text.indexOf('내륙운송배차처리') >= 0;
+
+    if (!looksLikeImport) return null;
+
+    var itemId = resolveImportSidebarItemId(item);
+    if (IMPORT_REMOVED_LEFT_ITEMS[itemId]) itemId = IMPORT_REMOVED_LEFT_ITEMS[itemId];
+    if (!IMPORT_LEFT_LIST_ITEMS[itemId]) return null;
+    return itemId;
+  }
+
+  function installImportSidebarCapture() {
+    if (window.__TACS_IMPORT_LEFT_SIDEBAR_CAPTURE) return;
+    window.__TACS_IMPORT_LEFT_SIDEBAR_CAPTURE = true;
+    document.addEventListener('click', function (event) {
+      var itemId = isImportSidebarItem(event.target);
+      if (!itemId) return;
+      markUserSelectedImportItem(itemId);
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+      renderPanel(itemId, event);
+      confirmImportRouteStable(itemId);
+    }, true);
+  }
+
+  function isDashboardSidebarItem(target) {
+    if (!target || !target.closest) return null;
+    return target.closest('[data-group="dashboard"], .menu-item[href$="/transport/dashboard.do"], a[href$="/transport/dashboard.do"]');
+  }
+
+  function installDashboardSidebarCapture() {
+    if (window.__TACS_DASHBOARD_SIDEBAR_CAPTURE) return;
+    window.__TACS_DASHBOARD_SIDEBAR_CAPTURE = true;
+    document.addEventListener('click', function (event) {
+      var item = isDashboardSidebarItem(event.target);
+      if (!item) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+      window.location.href = getTransportDashboardUrl();
+    }, true);
+  }
+
+  function installImportListDomGuard() {
+    if (window.__TACS_IMPORT_LEFT_LIST_DOM_GUARD) return;
+    window.__TACS_IMPORT_LEFT_LIST_DOM_GUARD = true;
+    var target = document.getElementById('detail-body');
+    if (!target || !window.MutationObserver) return;
+    var timer = null;
+    var observer = new MutationObserver(function () {
+      if (importRouteRendering) return;
+      var body = document.getElementById('detail-body');
+      if (!body || body.dataset.currentGroup !== 'import') return;
+      var itemId = body.dataset.currentItem || '';
+      if (!IMPORT_LEFT_LIST_ITEMS[itemId]) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () {
+        sanitizeImportLeftListDom(itemId);
+      }, 0);
+    });
+    observer.observe(target, { childList: true, subtree: true });
+  }
+
+  function hideRemovedImportSidebarItems() {
+    Object.keys(IMPORT_REMOVED_LEFT_ITEMS).forEach(function (itemId) {
+      document.querySelectorAll('.sub-item[data-group="import"][data-item-id="' + itemId + '"], [data-group="import"][data-item-id="' + itemId + '"]').forEach(function (el) {
+        el.style.display = 'none';
+        el.setAttribute('aria-hidden', 'true');
+      });
+    });
+  }
+
+  function normalizeStableInboundKeyValue(value) {
+    return String(value == null ? '' : value)
+      .trim()
+      .replace(/\s+/g, '')
+      .toUpperCase();
+  }
+
+  function stableInboundRowKey(row) {
+    if (!row) return '';
+    var inboundNo = normalizeStableInboundKeyValue(pickValue(row, ['inboundRequestNo', 'wirNo', 'WIR_NO', 'unloadingNo'], ''));
+    if (inboundNo && inboundNo !== '-') return 'WIR:' + inboundNo;
+
+    var requestNo = normalizeStableInboundKeyValue(pickValue(row, ['trcNo', 'requestNo', 'TRC_NO', 'transportRequestNo'], ''));
+    var cargoNo = normalizeStableInboundKeyValue(pickValue(row, ['cargoMgmtNo', 'listParty', 'wirCargoMgmtNo', 'WIR_CARGO_MGMT_NO', 'cargoNo'], ''));
+    var mblNo = normalizeStableInboundKeyValue(pickValue(row, ['masterBlNo', 'mblNo', 'blNo', 'BI_MBL_NO', 'ICM_MBL_NO'], ''));
+    var status = normalizeStableInboundKeyValue(pickValue(row, ['listStatus', 'requestStatus', 'statusNm', 'statusCd', 'warehouseStatus'], ''));
+
+    var joined = [requestNo, cargoNo, mblNo, status].filter(Boolean).join('|');
+    return joined ? ('DISPLAY:' + joined) : '';
+  }
+
+  function dedupeStableInboundRows(rows) {
+    var seen = Object.create(null);
+    var deduped = [];
+    (Array.isArray(rows) ? rows : []).forEach(function (row) {
+      if (!row) return;
+      var key = stableInboundRowKey(row);
+      if (!key) {
+        deduped.push(row);
+        return;
+      }
+      if (seen[key]) return;
+      seen[key] = true;
+      deduped.push(row);
+    });
+    return deduped;
+  }
+
+  function stableInboundRows() {
+    if (typeof getImportInboundAllRowsForView === 'function') {
+      var fromHelper = getImportInboundAllRowsForView();
+      if (Array.isArray(fromHelper)) return dedupeStableInboundRows(fromHelper);
+    }
+    var merged = [];
+    [
+      window.__TACS_IMPORT_INBOUND_REGISTERED_ROWS,
+      window.__TACS_IMPORT_INBOUND_MANIFEST_ROWS,
+      window.TRANSPORT_IMPORT_INBOUND_LIST,
+      window.TRANSPORT_IMPORT_WAREHOUSE_IN_LIST,
+      window.IMPORT_INBOUND_LIST
+    ].forEach(function (list) {
+      if (Array.isArray(list)) {
+        list.forEach(function (row) {
+          if (row) merged.push(row);
+        });
+      }
+    });
+    return dedupeStableInboundRows(merged);
+  }
+
+  function stableInboundDisplay(row) {
+    return {
+      requestNo: pickValue(row, ['trcNo', 'requestNo', 'TRC_NO', 'transportRequestNo'], '-'),
+      inboundNo: pickValue(row, ['inboundRequestNo', 'wirNo', 'WIR_NO', 'unloadingNo'], '-'),
+      owner: pickValue(row, ['owner', 'ownerNm', 'owrNm', 'consignee', 'OWR_NM', 'shipperName'], '-'),
+      cargo: pickValue(row, ['cargoMgmtNo', 'listParty', 'wirCargoMgmtNo', 'WIR_CARGO_MGMT_NO', 'cargoNo'], '-'),
+      mbl: pickValue(row, ['masterBlNo', 'mblNo', 'blNo', 'BI_MBL_NO', 'ICM_MBL_NO'], '-'),
+      inAt: pickValue(row, ['inboundPlanDt', 'inPlanDt', 'listAt', 'WIR_IN_PLAN_DT', 'requestDt'], '-'),
+      status: pickValue(row, ['listStatus', 'requestStatus', 'statusNm', 'statusCd', 'warehouseStatus'], '입고대기')
+    };
+  }
+
+
+  function isStableInboundRegisteredRow(row) {
+    if (!row) return false;
+    var inboundNo = pickValue(row, ['inboundRequestNo', 'wirNo', 'WIR_NO', 'unloadingNo'], '');
+    inboundNo = String(inboundNo || '').trim();
+    if (!inboundNo || inboundNo === '-') return false;
+    // 적하목록 제출완료만 된 대기행은 보세구역 입고관리 목록에 노출하지 않는다.
+    // 실제 WH_IN_RPT 입고의뢰번호(WIR_NO)가 생긴 행만 목록에 표시한다.
+    return true;
+  }
+
+  function buildStableInboundListRows(rows, loading) {
+    if (loading) {
+      return '<tr><td colspan="7" class="text-center text-slate-500 py-6">보세구역 입고관리 목록을 불러오는 중입니다.</td></tr>';
+    }
+
+    var req = String(window.__TACS_IMPORT_INBOUND_REQ_FILTER || '').trim().toLowerCase();
+    var owner = String(window.__TACS_IMPORT_INBOUND_OWNER_FILTER || '').trim().toLowerCase();
+    var cargo = String(window.__TACS_IMPORT_INBOUND_CARGO_FILTER || '').trim().toLowerCase();
+    var mbl = String(window.__TACS_IMPORT_INBOUND_MBL_FILTER || '').trim().toLowerCase();
+    var date = String(window.__TACS_IMPORT_INBOUND_DATE_FILTER || '').trim();
+    var status = String(window.__TACS_IMPORT_INBOUND_LIST_STATUS_FILTER || '').trim();
+
+    var displaySeen = Object.create(null);
+    var filtered = (Array.isArray(rows) ? rows : []).filter(function (row) {
+      return isStableInboundRegisteredRow(row);
+    }).map(function (row) {
+      return stableInboundDisplay(row);
+    }).filter(function (row) {
+      return (!req || String(row.requestNo).toLowerCase().indexOf(req) >= 0 || String(row.inboundNo).toLowerCase().indexOf(req) >= 0)
+        && (!owner || String(row.owner).toLowerCase().indexOf(owner) >= 0)
+        && (!cargo || String(row.cargo).toLowerCase().indexOf(cargo) >= 0)
+        && (!mbl || String(row.mbl).toLowerCase().indexOf(mbl) >= 0)
+        && (!date || String(row.inAt).indexOf(date) >= 0)
+        && (!status || String(row.status) === status);
+    }).filter(function (row) {
+      var key = [row.requestNo, row.inboundNo, row.cargo, row.mbl, row.status]
+        .map(normalizeStableInboundKeyValue)
+        .join('|');
+      if (!key || displaySeen[key]) return false;
+      displaySeen[key] = true;
+      return true;
+    });
+
+    if (!filtered.length) {
+      return '<tr><td colspan="7" class="text-center text-slate-500 py-6">조건에 맞는 보세구역 입고관리 목록이 없습니다.</td></tr>';
+    }
+
+    return filtered.map(function (row) {
+      return '<tr>'
+        + '<td class="font-bold">' + escapeHtml(row.requestNo) + '</td>'
+        + '<td class="font-bold">' + escapeHtml(row.inboundNo) + '</td>'
+        + '<td>' + escapeHtml(row.owner) + '</td>'
+        + '<td>' + escapeHtml(row.cargo) + '</td>'
+        + '<td>' + escapeHtml(row.mbl) + '</td>'
+        + '<td>' + escapeHtml(row.inAt) + '</td>'
+        + '<td><span class="info-chip">' + escapeHtml(row.status) + '</span></td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function buildStableInboundListPanel() {
+    if (!window.__TACS_IMPORT_INBOUND_MANIFEST_LOADED && !window.__TACS_IMPORT_INBOUND_MANIFEST_LOADING && typeof loadImportInboundManifestRows === 'function') {
+      loadImportInboundManifestRows();
+    }
+    if (!window.__TACS_IMPORT_WAREHOUSE_MANAGERS_LOADED && !window.__TACS_IMPORT_WAREHOUSE_MANAGERS_LOADING && typeof loadImportWarehouseManagers === 'function') {
+      loadImportWarehouseManagers();
+    }
+
+    var rows = stableInboundRows();
+    var loading = !!window.__TACS_IMPORT_INBOUND_MANIFEST_LOADING;
+    var val = function (key) { return escapeHtml(window[key] || ''); };
+    var selected = function (value) { return String(window.__TACS_IMPORT_INBOUND_LIST_STATUS_FILTER || '') === value ? ' selected' : ''; };
+
+    return ''
+      + '<div class="space-y-6 import-inbound-manage-panel" data-item-id="TACS-FW-025" data-view-mode="list">'
+      + '<div class="section-card import-left-list-card overflow-hidden">'
+      + '  <div class="bg-slate-50 px-6 py-4 border-b border-slate-200"><h4 class="text-sm font-bold text-slate-900">보세구역 입고관리 목록</h4></div>'
+      + '  <div class="p-5 space-y-4">'
+      + '    <div class="list-search-grid">'
+      + '      <div><label class="field-label">의뢰번호</label><input id="importInboundReqFilter" class="field-input" value="' + val('__TACS_IMPORT_INBOUND_REQ_FILTER') + '" placeholder="의뢰/입고번호"></div>'
+      + '      <div><label class="field-label">화주명</label><input id="importInboundOwnerFilter" class="field-input" value="' + val('__TACS_IMPORT_INBOUND_OWNER_FILTER') + '" placeholder="화주명"></div>'
+      + '      <div><label class="field-label">화물관리번호</label><input id="importInboundCargoFilter" class="field-input" value="' + val('__TACS_IMPORT_INBOUND_CARGO_FILTER') + '" placeholder="화물관리번호"></div>'
+      + '      <div><label class="field-label">Master B/L</label><input id="importInboundMblFilter" class="field-input" value="' + val('__TACS_IMPORT_INBOUND_MBL_FILTER') + '" placeholder="Master B/L"></div>'
+      + '      <div><label class="field-label">입고일시</label><input id="importInboundDateFilter" class="field-input" type="date" value="' + val('__TACS_IMPORT_INBOUND_DATE_FILTER') + '"></div>'
+      + '      <div><label class="field-label">상태</label><select id="importInboundStatusFilter" class="field-select"><option value="">전체</option><option value="입고대기"' + selected('입고대기') + '>입고대기</option><option value="입고요청완료"' + selected('입고요청완료') + '>입고요청완료</option><option value="입고완료"' + selected('입고완료') + '>입고완료</option><option value="보완요청"' + selected('보완요청') + '>보완요청</option></select></div>'
+      + '      <button type="button" id="importInboundSearchBtn" class="btn-search">조회</button>'
+      + '    </div>'
+      + '    <div class="overflow-x-auto border border-slate-200"><table class="w-full tbl min-w-[1050px] text-xs"><thead><tr><th>의뢰번호</th><th>입고의뢰번호</th><th>화주명</th><th>화물관리번호</th><th>Master B/L</th><th>입고일시</th><th>상태</th></tr></thead><tbody>' + buildStableInboundListRows(rows, loading) + '</tbody></table></div>'
+      + '  </div>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function bindStableInboundListActions() {
+    var root = document.querySelector('.import-inbound-manage-panel[data-item-id="TACS-FW-025"]');
+    if (!root) return;
+    var apply = function () {
+      window.__TACS_IMPORT_INBOUND_REQ_FILTER = document.getElementById('importInboundReqFilter')?.value || '';
+      window.__TACS_IMPORT_INBOUND_OWNER_FILTER = document.getElementById('importInboundOwnerFilter')?.value || '';
+      window.__TACS_IMPORT_INBOUND_CARGO_FILTER = document.getElementById('importInboundCargoFilter')?.value || '';
+      window.__TACS_IMPORT_INBOUND_MBL_FILTER = document.getElementById('importInboundMblFilter')?.value || '';
+      window.__TACS_IMPORT_INBOUND_DATE_FILTER = document.getElementById('importInboundDateFilter')?.value || '';
+      window.__TACS_IMPORT_INBOUND_LIST_STATUS_FILTER = document.getElementById('importInboundStatusFilter')?.value || '';
+      var body = document.getElementById('detail-body');
+      if (body && body.dataset.currentItem === 'TACS-FW-025') {
+        body.innerHTML = '<div class="space-y-6">' + buildStableInboundListPanel() + '</div>';
+        bindStableInboundListActions();
+        if (typeof normalizeDetailActionButtons === 'function') normalizeDetailActionButtons();
+      }
+    };
+    var btn = document.getElementById('importInboundSearchBtn');
+    if (btn) btn.addEventListener('click', apply);
+    root.querySelectorAll('input,select').forEach(function (el) {
+      el.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') apply();
+      });
+      if (el.tagName === 'SELECT') el.addEventListener('change', apply);
+    });
+  }
+
+
+  function normalizeStableDoKeyValue(value) {
+    return String(value == null ? '' : value)
+      .trim()
+      .replace(/\s+/g, '')
+      .toUpperCase();
+  }
+
+  function jsonRowsForStableDoList(json) {
+    if (Array.isArray(json)) return json;
+    if (!json || typeof json !== 'object') return [];
+    var candidates = [
+      json.data,
+      json.list,
+      json.rows,
+      json.result,
+      json.results,
+      json.items,
+      json.doList,
+      json.doRows,
+      json.importDoList,
+      json.importDoRows
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      var value = candidates[i];
+      if (Array.isArray(value)) return value;
+      if (value && typeof value === 'object') {
+        var nested = jsonRowsForStableDoList(value);
+        if (nested.length) return nested;
+      }
+    }
+    return [];
+  }
+
+  function normalizeStableDoSettlementStatus(value) {
+    var raw = String(value == null ? '' : value).trim();
+    var code = normalizeStableDoKeyValue(raw);
+    if (!raw || raw === '-') return '미정산';
+    if (code === 'TRC_STL_PAID' || code === 'PAID' || raw.indexOf('완료') >= 0 || raw.indexOf('납부') >= 0) return '정산완료';
+    if (code === 'TRC_STL_REQ' || code === 'STL_REQ' || code === 'REQ' || raw.indexOf('요청') >= 0) return '정산요청';
+    if (code === 'UNPAID' || code === 'UNSETTLED' || code === 'TRC_STL_WAIT' || raw.indexOf('미정산') >= 0) return '미정산';
+    return raw;
+  }
+
+  function normalizeStableDoStatus(value, doNo) {
+    var raw = String(value == null ? '' : value).trim();
+    var code = normalizeStableDoKeyValue(raw);
+    if (code === 'TRC_DO_REQ' || code === 'DELIVERED' || raw.indexOf('전달') >= 0) return 'D/O전달완료';
+    if (code === 'TRC_DO_ISSUED' || code === 'ISSUED' || raw.indexOf('발급완료') >= 0) return 'D/O발급완료';
+    if (code === 'TRC_DO_READY' || code === 'READY' || raw.indexOf('발급대기') >= 0) return 'D/O발급대기';
+    if (doNo && doNo !== '-') return 'D/O발급완료';
+    return raw || 'D/O발급대기';
+  }
+
+  function stableDoRowKey(row) {
+    if (!row) return '';
+    var requestNo = normalizeStableDoKeyValue(pickValue(row, ['trcNo', 'requestNo', 'transportRequestNo', 'diTrcNo', 'tcsTrcNo', 'treNo', 'TRC_NO', 'DI_TRC_NO', 'TCS_TRC_NO'], ''));
+    var doNo = normalizeStableDoKeyValue(pickValue(row, ['doNo', 'diDoNo', 'DI_DO_NO'], ''));
+    if (requestNo) return 'TRC:' + requestNo;
+    if (doNo) return 'DO:' + doNo;
+    var mbl = normalizeStableDoKeyValue(pickValue(row, ['mblNo', 'masterBlNo', 'blNo', 'icmMblNo', 'tcsMblNo', 'ICM_MBL_NO', 'TCS_MBL_NO'], ''));
+    var owner = normalizeStableDoKeyValue(pickValue(row, ['ownerNm', 'owrNm', 'owner', 'shipperName', 'TRC_OWR_ID', 'TCS_OWR_ID'], ''));
+    var status = normalizeStableDoKeyValue(pickValue(row, ['doStatusNm', 'doStatusCd', 'doStatus', 'diStatusCd', 'statusNm', 'DI_STATUS_CD'], ''));
+    var joined = [mbl, owner, status].filter(Boolean).join('|');
+    return joined ? ('DISPLAY:' + joined) : '';
+  }
+
+  function dedupeStableDoRows(rows) {
+    var seen = Object.create(null);
+    var deduped = [];
+    (Array.isArray(rows) ? rows : []).forEach(function (row) {
+      if (!row) return;
+      var key = stableDoRowKey(row);
+      if (!key) {
+        deduped.push(row);
+        return;
+      }
+      if (seen[key]) return;
+      seen[key] = true;
+      deduped.push(row);
+    });
+    return deduped;
+  }
+
+  function stableDoRows() {
+    var merged = [];
+    [
+      window.TRANSPORT_IMPORT_DO_LIST,
+      window.__TACS_IMPORT_DO_ROWS,
+      window.IMPORT_DO_LIST,
+      window.IMPORT_DO_ROWS
+    ].forEach(function (list) {
+      if (Array.isArray(list)) {
+        list.forEach(function (row) {
+          if (row) merged.push(row);
+        });
+      }
+    });
+    return dedupeStableDoRows(merged);
+  }
+
+  function stableDoDisplay(row) {
+    var doNo = pickValue(row, ['doNo', 'diDoNo', 'DI_DO_NO'], '-');
+    var settlement = normalizeStableDoSettlementStatus(pickValue(row, ['settlementStatusNm', 'settlementStatusCd', 'settlementStatus', 'stlStatus', 'stlStatusCd', 'tcsStlStatusNm', 'tcsStlStatusCd', 'tcsStlStatus', 'TCS_STL_STATUS_CD', 'TCS_STL_STATUS'], ''));
+    var doStatus = normalizeStableDoStatus(pickValue(row, ['doStatusNm', 'doStatusCd', 'doStatus', 'statusNm', 'diStatusCd', 'DI_STATUS_CD'], ''), doNo);
+    return {
+      requestNo: pickValue(row, ['trcNo', 'requestNo', 'transportRequestNo', 'diTrcNo', 'tcsTrcNo', 'treNo', 'TRC_NO', 'DI_TRC_NO', 'TCS_TRC_NO'], '-'),
+      doNo: doNo,
+      owner: pickValue(row, ['ownerNm', 'owrNm', 'owner', 'shipperName', 'ownerId', 'tcsOwrId', 'owrId', 'TRC_OWR_ID', 'TCS_OWR_ID'], '-'),
+      mbl: pickValue(row, ['mblNo', 'masterBlNo', 'blNo', 'icmMblNo', 'tcsMblNo', 'IR_BL_AWB_NO', 'ICM_MBL_NO', 'TCS_MBL_NO'], '-'),
+      settlement: settlement,
+      doStatus: doStatus,
+      requestAt: pickValue(row, ['doReqDt', 'diReqDt', 'requestDt', 'reqDt', 'DI_REQ_DT', 'TCS_REGIST_DT'], '-'),
+      issueAt: pickValue(row, ['doIssueDt', 'issueDt', 'diIssueDt', 'registDt', 'DI_ISSUE_DT', 'DI_REGIST_DT'], '-'),
+      deliveryAt: pickValue(row, ['doDeliveryDt', 'deliveryDt', 'diDlvryDt', 'diReceiveDt', 'receiveDt', 'DI_DLVRY_DT', 'DI_RECEIVE_DT'], '-')
+    };
+  }
+
+  function requestStableDoRowsReload() {
+    if (window.__TACS_IMPORT_DO_LOADING) return Promise.resolve(stableDoRows());
+    window.__TACS_IMPORT_DO_LOADING = true;
+
+    var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timeoutId = controller ? window.setTimeout(function () {
+      try { controller.abort(); } catch (e) { /* noop */ }
+    }, 8000) : null;
+
+    return fetch('/transport/import/do/list.do?_=' + Date.now(), {
+        credentials: 'same-origin',
+        signal: controller ? controller.signal : undefined
+      })
+      .then(function (response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json();
+      })
+      .then(function (json) {
+        var rows = dedupeStableDoRows(jsonRowsForStableDoList(json));
+        window.TRANSPORT_IMPORT_DO_LIST = rows;
+        window.__TACS_IMPORT_DO_ROWS = rows;
+        window.__TACS_IMPORT_DO_LOADED = true;
+        window.__TACS_IMPORT_DO_LAST_LOADED_AT = Date.now();
+        return rows;
+      })
+      .catch(function (error) {
+        window.__TACS_IMPORT_DO_LOAD_ERROR = error && error.message ? error.message : String(error || '');
+        window.__TACS_IMPORT_DO_LOADED = true;
+        console.error('[D/O 관리 목록 조회 실패]', error);
+        return stableDoRows();
+      })
+      .finally(function () {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        window.__TACS_IMPORT_DO_LOADING = false;
+        var body = document.getElementById('detail-body');
+        if (body && body.dataset.currentGroup === 'import' && body.dataset.currentItem === 'TACS-FW-030') {
+          body.innerHTML = '<div class="space-y-6">' + buildStableDoListPanel() + '</div>';
+          bindStableDoListActions();
+          sanitizeImportLeftListDom('TACS-FW-030');
+          if (typeof normalizeDetailActionButtons === 'function') normalizeDetailActionButtons();
+        }
+      });
+  }
+
+  function buildStableDoListRows(rows, loading) {
+    if (loading) {
+      return '<tr><td colspan="6" class="text-center text-slate-500 py-6">D/O 관리 목록을 불러오는 중입니다.</td></tr>';
+    }
+
+    var req = String(window.__TACS_IMPORT_DO_REQ_FILTER || '').trim().toLowerCase();
+    var owner = String(window.__TACS_IMPORT_DO_OWNER_FILTER || '').trim().toLowerCase();
+    var mbl = String(window.__TACS_IMPORT_DO_MBL_FILTER || '').trim().toLowerCase();
+    var settlement = String(window.__TACS_IMPORT_DO_SETTLEMENT_FILTER || '').trim();
+    var doStatus = String(window.__TACS_IMPORT_DO_STATUS_FILTER || '').trim();
+
+    var displaySeen = Object.create(null);
+    var filtered = (Array.isArray(rows) ? rows : []).map(function (row) {
+      return stableDoDisplay(row);
+    }).filter(function (row) {
+      return (!req || String(row.requestNo).toLowerCase().indexOf(req) >= 0 || String(row.doNo).toLowerCase().indexOf(req) >= 0)
+        && (!owner || String(row.owner).toLowerCase().indexOf(owner) >= 0)
+        && (!mbl || String(row.mbl).toLowerCase().indexOf(mbl) >= 0)
+        && (!settlement || String(row.settlement) === settlement)
+        && (!doStatus || String(row.doStatus) === doStatus);
+    }).filter(function (row) {
+      var key = [row.requestNo, row.doNo, row.owner, row.mbl, row.settlement, row.doStatus]
+        .map(normalizeStableDoKeyValue)
+        .join('|');
+      if (!key || displaySeen[key]) return false;
+      displaySeen[key] = true;
+      return true;
+    });
+
+    if (!filtered.length) {
+      var error = window.__TACS_IMPORT_DO_LOAD_ERROR;
+      if (error) {
+        return '<tr><td colspan="6" class="text-center text-rose-600 py-6">D/O 관리 목록 조회에 실패했습니다. 콘솔 또는 서버 로그를 확인하세요. (' + escapeHtml(error) + ')</td></tr>';
+      }
+      return '<tr><td colspan="6" class="text-center text-slate-500 py-6">조건에 맞는 D/O 관리 목록이 없습니다.</td></tr>';
+    }
+
+    return filtered.map(function (row) {
+      return '<tr>'
+        + '<td class="font-bold">' + escapeHtml(row.requestNo) + '</td>'
+        + '<td class="font-bold">' + escapeHtml(row.doNo) + '</td>'
+        + '<td>' + escapeHtml(row.owner) + '</td>'
+        + '<td>' + escapeHtml(row.mbl) + '</td>'
+        + '<td><span class="info-chip">' + escapeHtml(row.settlement) + '</span></td>'
+        + '<td><span class="info-chip">' + escapeHtml(row.doStatus) + '</span></td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function buildStableDoListPanel() {
+    if (!window.__TACS_IMPORT_DO_LOADED && !window.__TACS_IMPORT_DO_LOADING) {
+      setTimeout(function () { requestStableDoRowsReload(); }, 0);
+    }
+
+    var rows = stableDoRows();
+    var loading = !!window.__TACS_IMPORT_DO_LOADING || (!window.__TACS_IMPORT_DO_LOADED && !rows.length);
+    var val = function (key) { return escapeHtml(window[key] || ''); };
+    var selectedSettlement = function (value) { return String(window.__TACS_IMPORT_DO_SETTLEMENT_FILTER || '') === value ? ' selected' : ''; };
+    var selectedDo = function (value) { return String(window.__TACS_IMPORT_DO_STATUS_FILTER || '') === value ? ' selected' : ''; };
+
+    return ''
+      + '<div class="space-y-6 import-do-manage-panel" data-item-id="TACS-FW-030" data-view-mode="list">'
+      + '<div class="section-card import-left-list-card overflow-hidden">'
+      + '  <div class="bg-slate-50 px-6 py-4 border-b border-slate-200"><h4 class="text-sm font-bold text-slate-900">D/O 관리 목록</h4></div>'
+      + '  <div class="p-5 space-y-4">'
+      + '    <div class="list-search-grid">'
+      + '      <div><label class="field-label">의뢰번호</label><input id="importDoReqFilter" class="field-input" value="' + val('__TACS_IMPORT_DO_REQ_FILTER') + '" placeholder="의뢰/D/O번호"></div>'
+      + '      <div><label class="field-label">화주명</label><input id="importDoOwnerFilter" class="field-input" value="' + val('__TACS_IMPORT_DO_OWNER_FILTER') + '" placeholder="화주명"></div>'
+      + '      <div><label class="field-label">Master B/L</label><input id="importDoMblFilter" class="field-input" value="' + val('__TACS_IMPORT_DO_MBL_FILTER') + '" placeholder="Master B/L"></div>'
+      + '      <div><label class="field-label">정산상태</label><select id="importDoSettlementFilter" class="field-select"><option value="">전체</option><option value="미정산"' + selectedSettlement('미정산') + '>미정산</option><option value="정산요청"' + selectedSettlement('정산요청') + '>정산요청</option><option value="정산완료"' + selectedSettlement('정산완료') + '>정산완료</option></select></div>'
+      + '      <div><label class="field-label">D/O 상태</label><select id="importDoStatusFilter" class="field-select"><option value="">전체</option><option value="D/O발급대기"' + selectedDo('D/O발급대기') + '>D/O발급대기</option><option value="D/O발급완료"' + selectedDo('D/O발급완료') + '>D/O발급완료</option><option value="D/O전달완료"' + selectedDo('D/O전달완료') + '>D/O전달완료</option></select></div>'
+      + '    </div>'
+      + '    <div class="overflow-x-auto"><table class="min-w-full import-left-list-table"><thead><tr><th>의뢰번호</th><th>D/O번호</th><th>화주명</th><th>Master B/L</th><th>정산상태</th><th>D/O상태</th></tr></thead><tbody>' + buildStableDoListRows(rows, loading) + '</tbody></table></div>'
+      + '  </div>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function bindStableDoListActions() {
+    var root = document.querySelector('.import-do-manage-panel[data-item-id="TACS-FW-030"]');
+    if (!root) return;
+    var apply = function () {
+      window.__TACS_IMPORT_DO_REQ_FILTER = document.getElementById('importDoReqFilter')?.value || '';
+      window.__TACS_IMPORT_DO_OWNER_FILTER = document.getElementById('importDoOwnerFilter')?.value || '';
+      window.__TACS_IMPORT_DO_MBL_FILTER = document.getElementById('importDoMblFilter')?.value || '';
+      window.__TACS_IMPORT_DO_SETTLEMENT_FILTER = document.getElementById('importDoSettlementFilter')?.value || '';
+      window.__TACS_IMPORT_DO_STATUS_FILTER = document.getElementById('importDoStatusFilter')?.value || '';
+      var body = document.getElementById('detail-body');
+      if (body && body.dataset.currentItem === 'TACS-FW-030') {
+        body.innerHTML = '<div class="space-y-6">' + buildStableDoListPanel() + '</div>';
+        bindStableDoListActions();
+        if (typeof normalizeDetailActionButtons === 'function') normalizeDetailActionButtons();
+      }
+    };
+    root.querySelectorAll('input,select').forEach(function (el) {
+      el.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') apply();
+      });
+      if (el.tagName === 'SELECT') {
+        el.addEventListener('change', apply);
+      } else {
+        el.addEventListener('input', apply);
+      }
+    });
+  }
+
+  function confirmImportRouteStable(itemId) {
+    itemId = normalizeImportItemId(itemId);
+    if (!IMPORT_LEFT_LIST_ITEMS[itemId]) return;
+    [40, 160, 420].forEach(function (delay) {
+      setTimeout(function () {
+        var lastItem = window.__TACS_IMPORT_LAST_USER_ITEM_ID || '';
+        if (lastItem !== itemId) return;
+        var body = document.getElementById('detail-body');
+        if (!body || body.dataset.currentItem === itemId) return;
+        renderPanel(itemId);
+      }, delay);
+    });
+  }
+
+  function shouldIgnoreLateDefaultImportRoute(itemId, event) {
+    if (event || itemId !== IMPORT_DEFAULT_ITEM_ID) return false;
+    var lastItem = window.__TACS_IMPORT_LAST_USER_ITEM_ID || '';
+    var lastAt = Number(window.__TACS_IMPORT_LAST_USER_ITEM_AT || 0);
+    if (!lastItem || lastItem === IMPORT_DEFAULT_ITEM_ID || !IMPORT_LEFT_LIST_ITEMS[lastItem]) return false;
+    if (Date.now() - lastAt > 1500) return false;
+    var body = document.getElementById('detail-body');
+    return !!(body && body.dataset.currentGroup === 'import' && body.dataset.currentItem === lastItem);
+  }
+
+  function renderPanel(itemId, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+    }
+
+    itemId = normalizeImportItemId(itemId);
+    if (shouldIgnoreLateDefaultImportRoute(itemId, event)) return true;
+    if (event) markUserSelectedImportItem(itemId);
+    syncImportUrl(itemId, !!event);
+    var routeToken = nextImportRouteToken(itemId);
+    importRouteRendering = true;
+
+    if (itemId === IMPORT_DETAIL_ITEM_ID) {
+      try {
+        if (typeof window.renderImportRequestDetailPage === 'function') {
+          window.renderImportRequestDetailPage();
+          return true;
+        }
+      } finally {
+        importRouteRendering = false;
+      }
+      importRouteRendering = false;
+      return false;
+    }
+
+    if (itemId === 'TACS-FW-015') {
+      setBaseLayout('\uC6B4\uC1A1\uC758\uB8B0', itemId);
+      var result = false;
+      try {
+        if (typeof renderCurrentImportRequestList === 'function') {
+          result = renderCurrentImportRequestList(event);
+        } else if (typeof openDetail === 'function' && window.openDetail !== renderOpenDetail) {
+          result = window.openDetail('import', itemId);
+        }
+      } finally {
+        setTimeout(function () {
+          if (isCurrentImportRoute(routeToken, itemId)) {
+            var body = document.getElementById('detail-body');
+            if (body) {
+              body.dataset.currentGroup = 'import';
+              body.dataset.currentItem = itemId;
+              body.dataset.importViewMode = 'left-list';
+              body.dataset.importRouteToken = routeToken;
+            }
+            sanitizeImportLeftListDom(itemId);
+            if (typeof normalizeDetailActionButtons === 'function') normalizeDetailActionButtons();
+          }
+        }, 0);
+        setTimeout(function () { if (isCurrentImportRoute(routeToken, itemId)) sanitizeImportLeftListDom(itemId); }, 80);
+        importRouteRendering = false;
+      }
+      return result;
+    }
+
+    var config = {
+      'TACS-FW-023': {
+        title: '적하목록 조회',
+        build: 'buildImportManifestListOnlyPanel',
+        bind: function () { if (typeof bindImportManifestWorkflowActions === 'function') bindImportManifestWorkflowActions('import', 'TACS-FW-023'); }
+      },
+      'TACS-FW-025': {
+        title: '보세구역 입고관리',
+        build: buildStableInboundListPanel,
+        bind: bindStableInboundListActions
+      },
+      'TACS-FW-030': {
+        title: 'D/O 관리',
+        build: buildStableDoListPanel,
+        bind: bindStableDoListActions
+      },
+      'TACS-FW-033': {
+        title: '보세구역 반출관리',
+        build: 'buildInlandDispatchListPanel',
+        bind: function () { if (typeof bindImportReleaseRequestActions === 'function') bindImportReleaseRequestActions('import', 'TACS-FW-033'); }
+      },
+      'TACS-FW-035': {
+        title: '내륙운송 배차처리',
+        build: 'buildImportInlandTransportPanel',
+        bind: function () { if (typeof bindImportInlandTransportActions === 'function') bindImportInlandTransportActions('import', 'TACS-FW-035'); }
+      }
+    }[itemId];
+
+    if (!config) {
+      importRouteRendering = false;
+      return false;
+    }
+
+    var body = setBaseLayout(config.title, itemId);
+    var builder = typeof config.build === 'function'
+      ? config.build
+      : (window[config.build] || (typeof globalThis !== 'undefined' ? globalThis[config.build] : null));
+    if (body && isCurrentImportRoute(routeToken, itemId)) {
+      var panelHtml = '';
+      try {
+        panelHtml = typeof builder === 'function'
+          ? builder()
+          : '<div class="section-card"><div class="p-6 text-sm text-slate-600">' + config.title + ' 화면을 불러올 수 없습니다.</div></div>';
+      } catch (e) {
+        console.error('[TACS import router] build failed:', itemId, e);
+        panelHtml = '<div class="section-card"><div class="p-6 text-sm text-rose-600">' + config.title + ' 화면 생성 중 오류가 발생했습니다. 콘솔 로그를 확인해 주세요.</div></div>';
+      }
+      body.innerHTML = '<div class="space-y-6">' + panelHtml + '</div>';
+      body.dataset.importRouteToken = routeToken;
+      sanitizeImportLeftListDom(itemId);
+    }
+
+    try { if (isCurrentImportRoute(routeToken, itemId)) config.bind(); } catch (e) { console.error('[TACS import router] bind failed:', itemId, e); }
+    if (typeof normalizeDetailActionButtons === 'function') normalizeDetailActionButtons();
+
+    if (itemId === 'TACS-FW-035' && typeof refreshImportInlandDispatch === 'function') {
+      setTimeout(function () { if (isCurrentImportRoute(routeToken, itemId)) refreshImportInlandDispatch(); }, 0);
+    }
+    setTimeout(function () { if (isCurrentImportRoute(routeToken, itemId)) sanitizeImportLeftListDom(itemId); }, 0);
+    setTimeout(function () { if (isCurrentImportRoute(routeToken, itemId)) sanitizeImportLeftListDom(itemId); }, 120);
+    importRouteRendering = false;
+    return true;
+  }
+
+  function renderOpenDetail(groupKey, itemId) {
+    if (groupKey === 'import' && IMPORT_REMOVED_LEFT_ITEMS[itemId]) {
+      return renderPanel(IMPORT_REMOVED_LEFT_ITEMS[itemId]);
+    }
+    if (groupKey === 'import' && itemId === IMPORT_DETAIL_ITEM_ID) {
+      return renderPanel(IMPORT_DETAIL_ITEM_ID);
+    }
+    if (groupKey === 'import') return renderPanel(itemId);
+    if (typeof window.__TACS_IMPORT_PREV_OPEN_DETAIL === 'function') {
+      return window.__TACS_IMPORT_PREV_OPEN_DETAIL.apply(this, arguments);
+    }
+    return false;
+  }
+
+  function installUnifiedImportRouter() {
+    window.__TACS_IMPORT_UNIFIED_ROUTER = true;
+    if (typeof window.openDetail === 'function' && window.openDetail !== renderOpenDetail) {
+      window.__TACS_IMPORT_PREV_OPEN_DETAIL = window.openDetail;
+    }
+    window.openDetail = renderOpenDetail;
+    try { openDetail = window.openDetail; } catch (e) {}
+  }
+
+  function bootAfterAllModules() {
+    // import.css에서 통합 관리하므로 JS 주입 스타일은 실행하지 않음.
+    installUnifiedImportRouter();
+    installDashboardSidebarCapture();
+    installImportSidebarCapture();
+    installImportListDomGuard();
+    hideRemovedImportSidebarItems();
+    window.TRANSPORT_DEFER_PAGE_BOOT = false;
+    window.__TACS_IMPORT_SPLIT_BOOTED = true;
+    window.TRANSPORT_PAGE_READY = window.TRANSPORT_PAGE_READY || {};
+    window.TRANSPORT_PAGE_READY.import = true;
+    if (typeof resolveSplitReady === 'function') resolveSplitReady();
+    try {
+      var storedItemId = consumeStoredImportItemId();
+      if (storedItemId) markUserSelectedImportItem(storedItemId, false);
+      if (typeof autoBuildNav === 'function') autoBuildNav();
+      var initial = window.TRANSPORT_INITIAL_VIEW || {};
+      if (storedItemId && (!initial.group || initial.group !== 'import' || !initial.item || initial.item === IMPORT_DEFAULT_ITEM_ID)) {
+        initial = { group: 'import', item: storedItemId };
+      }
+      if (initial.group === 'import') {
+        renderPanel(initial.item || IMPORT_DEFAULT_ITEM_ID);
+        if (storedItemId) confirmImportRouteStable(storedItemId);
+      } else if (typeof openInitialTransportView === 'function') {
+        openInitialTransportView();
+      }
+    } catch (e) {
+      console.error('[TACS import split] boot failed:', e);
+    }
+  }
+
+  function loadNext(index, basePath) {
+    if (index >= scripts.length) {
+      bootAfterAllModules();
+      return;
+    }
+    var file = scripts[index];
+    if (alreadyLoaded(file)) {
+      loadNext(index + 1, basePath);
+      return;
+    }
+    var script = document.createElement('script');
+    script.src = basePath + file + '?v=20260530-do-list-route-stable1';
+    script.async = false;
+    script.onload = function () { loadNext(index + 1, basePath); };
+    script.onerror = function () {
+      console.error('[TACS import split] script load failed:', script.src);
+      loadNext(index + 1, basePath);
+    };
+    document.head.appendChild(script);
+  }
+
+  loadNext(0, currentBasePath());
+})();

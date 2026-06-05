@@ -1,0 +1,20 @@
+package kr.or.tacs.owner.dashboard.service;
+
+import kr.or.tacs.dto.owner.OwnerDashboardDTO;
+import kr.or.tacs.owner.dashboard.mapper.IDashboardMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class DashBoardServiceImpl implements IDashboardService{
+
+    @Autowired
+    private IDashboardMapper mapper;
+
+    @Override
+    public List<OwnerDashboardDTO> list() {
+        return mapper.list();
+    }
+}

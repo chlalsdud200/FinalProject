@@ -1,0 +1,39 @@
+// exportAndFulfillment.js - 이행·반출 관리 전용
+(function () {
+
+  function toggleFulfillmentDetail(btn, type) {
+    var panelId = 'detail-' + type;
+    var panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    var allPanels = document.querySelectorAll('.detail-panel');
+    var isOpen = panel.style.display !== 'none';
+
+    // 모든 패널 닫기
+    allPanels.forEach(function (p) {
+      p.style.display = 'none';
+    });
+
+    // 같은 버튼이면 닫기만 하고 종료
+    if (isOpen) return;
+
+    // 행 데이터 읽어서 input에 반영
+    var row = btn.closest('tr');
+    if (row) {
+      var cells = row.querySelectorAll('td');
+      panel.querySelectorAll('.form-input[data-field]').forEach(function (input) {
+        var field = input.dataset.field;
+        var idx = parseInt(field.replace('col', ''), 10);
+        if (cells[idx]) {
+          input.value = cells[idx].textContent.trim();
+        }
+      });
+    }
+
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  window.toggleFulfillmentDetail = toggleFulfillmentDetail;
+
+})();

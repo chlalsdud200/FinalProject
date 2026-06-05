@@ -1,0 +1,35 @@
+package kr.or.tacs.owner.trace.service;
+
+import kr.or.tacs.dto.owner.AisVslLatestDTO;
+
+import java.util.List;
+
+public interface IAisVesselService {
+
+    /**
+     * AIS 수신 데이터 저장 또는 갱신
+     */
+    void saveLatestVessel(AisVslLatestDTO aisDTO);
+
+    /**
+     * 한국 입항 대상 여부 판단
+     */
+    boolean isIncomingToKorea(String destination, String mmsi);
+
+    /**
+     * 항구 별칭 캐시 새로고침
+     */
+    void refreshPortAliases();
+
+    /**
+     * 한국 입항 대상 선박 목록 조회
+     */
+    List<AisVslLatestDTO> retrieveIncomingVesselList();
+
+    /**
+     * 특정 MMSI 선박 최신 위치 조회
+     */
+    AisVslLatestDTO retrieveVesselLatest(String mmsi);
+
+    List<AisVslLatestDTO> retrieveRecentVesselList();
+}

@@ -1,0 +1,470 @@
+@charset "UTF-8";
+
+/* dashboard.css - 대시보드 전용 CSS */
+
+/* 대시보드는 main.css의 .page-section.active 규칙으로만 표시 */
+#page-dashboard {
+  width: 100% !important;
+}
+
+#page-dashboard > div {
+  width: 100%;
+}
+
+/* === 페이지 표시 상태 보정 === */
+#page-dashboard.page-section:not(.active) {
+  display: none !important;
+}
+
+#page-dashboard.page-section.active {
+  display: block !important;
+  padding-top: 28px !important;
+}
+
+/* ════════════════════════════════════════════
+   1. 대시보드 전용 오버라이드
+   ════════════════════════════════════════════ */
+
+#page-dashboard .info-card {
+  padding: 20px 24px !important;
+}
+
+#page-dashboard .mb-0 {
+  margin-bottom: 0 !important;
+}
+
+#page-dashboard .mb-4 {
+  margin-bottom: 1rem !important;
+}
+
+#page-dashboard .mb-8 {
+  margin-bottom: 2rem !important;
+}
+
+#page-dashboard .section-title {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  text-transform: none !important;
+  color: #0f172a !important;
+  margin-bottom: 4px !important;
+}
+
+#page-dashboard .section-title::before {
+  display: none !important;
+}
+
+/* 테이블: 대시보드만 14px */
+#page-dashboard .data-table th,
+#page-dashboard .data-table td,
+#page-dashboard table th,
+#page-dashboard table td {
+  font-size: 14px !important;
+}
+
+#page-dashboard .data-table th,
+#page-dashboard table th {
+  padding: 10px 12px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: #334155 !important;
+  font-weight: 900 !important;
+}
+
+#page-dashboard .data-table tbody td,
+#page-dashboard table tbody td {
+  padding: 14px 12px !important;
+}
+
+/* btn-sm: 대시보드 테이블 버튼 */
+#page-dashboard .btn-sm {
+  padding: 0 16px !important;
+  height: 36px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  min-width: 82px !important;
+}
+
+/* 바로가기 버튼 */
+#page-dashboard .grid .btn-secondary {
+  height: 44px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+/* 단, 테이블 안 버튼은 작게 */
+#page-dashboard table .btn-secondary {
+  height: 32px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  min-width: auto !important;
+}
+
+/* ════════════════════════════════════════════
+   2. 통계 카드 그리드
+   ════════════════════════════════════════════ */
+
+.dashboard-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 0 !important;
+  margin-bottom: 24px;
+}
+
+.dashboard-stat-card {
+  background: #fff;
+  border: 1px solid #d9eafc;
+  border-left: 4px solid #565e74;
+  padding: 18px;
+  min-height: 112px;
+}
+
+.stat-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.dashboard-stat-card strong {
+  display: block;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.04em;
+}
+
+.stat-sub {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ════════════════════════════════════════════
+   3. 카드 레이아웃
+   ════════════════════════════════════════════ */
+
+/* 기본은 아래쪽 영역 기준: 보완관리 / 검사 결과대기 = 50:50 */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin-bottom: 24px;
+}
+
+/* 위쪽 영역: 통계 카드 바로 다음의 신규 신고접수 / 자주하는 업무 = 70:30 */
+#page-dashboard .dashboard-stat-grid + .dashboard-layout,
+#page-dashboard .dashboard-layout-top {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr) !important;
+  gap: 22px;
+  margin-bottom: 24px;
+}
+
+/* 아래쪽 영역: 보완관리 / 검사 결과대기 = 50:50 */
+#page-dashboard .dashboard-stat-grid + .dashboard-layout + .dashboard-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.dashboard-card {
+  background: #fff;
+  border: 1px solid #d9eafc;
+  border-left: 4px solid #565e74;
+  padding: 20px 24px;
+  min-width: 0;
+}
+
+.dashboard-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.dashboard-card-head.compact {
+  align-items: center;
+}
+
+.dashboard-card-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.dashboard-card-head h2::before {
+  display: none;
+}
+
+.dashboard-card-head p {
+  margin: 7px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.dashboard-head-tag {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 800;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* ════════════════════════════════════════════
+   4. 대시보드 테이블
+   ════════════════════════════════════════════ */
+
+.dashboard-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-top: 1px solid #d9eafc;
+}
+
+.dashboard-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.dashboard-table thead tr {
+  background: #ecf4ff;
+}
+
+.dashboard-table th {
+  padding: 10px 12px;
+  border-bottom: 2px solid #d9eafc;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dashboard-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #d9eafc;
+  font-size: 14px;
+  color: #203444;
+  vertical-align: middle;
+}
+
+.dashboard-table tbody tr {
+  transition: background .15s;
+}
+
+.dashboard-table tbody tr:hover {
+  background: #ecf4ff;
+}
+
+/* NEW 배지 */
+.new-line-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  padding: 2px 7px;
+  border: 1px solid #fca5a5;
+  border-radius: 999px;
+  background: transparent;
+  color: #fb0000;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+/* ════════════════════════════════════════════
+   5. 바로가기 그리드
+   ════════════════════════════════════════════ */
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dash-btn {
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #565e74;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash-btn:hover {
+  background: #dae2fd;
+  border-color: #a0b4c8;
+}
+
+.dash-btn.small {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+.danger-text {
+  color: #b91c1c !important;
+}
+
+/* ════════════════════════════════════════════
+   6. 상단 안내 문구 영역 보정
+   ════════════════════════════════════════════ */
+
+#page-dashboard > div:first-child,
+#page-dashboard .dashboard-head {
+  margin: 0 0 34px 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  max-width: 760px !important;
+}
+
+#page-dashboard > div:first-child > p:first-child,
+#page-dashboard .dashboard-kicker {
+  margin: 0 0 8px 0 !important;
+  padding: 0 !important;
+  font-size: 10px !important;
+  line-height: 1.3 !important;
+  font-weight: 900 !important;
+  color: #243b60 !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+}
+
+#page-dashboard > div:first-child > h1,
+#page-dashboard > div:first-child > h2,
+#page-dashboard .dashboard-head h1,
+#page-dashboard .dashboard-head h2 {
+  margin: 0 0 14px 0 !important;
+  padding: 0 !important;
+  font-size: 24px !important;
+  line-height: 1.25 !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.04em !important;
+}
+
+#page-dashboard > div:first-child > p:last-child,
+#page-dashboard .dashboard-desc {
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: 720px !important;
+  font-size: 13px !important;
+  line-height: 1.7 !important;
+  font-weight: 400 !important;
+  color: #64748b !important;
+  word-break: keep-all !important;
+}
+
+#page-dashboard .dashboard-stat-grid,
+#page-dashboard > div:first-child + .dashboard-stat-grid,
+#page-dashboard > div:first-child + div {
+  margin-top: 0 !important;
+}
+
+#page-dashboard .dash-btn,
+#page-dashboard .dashboard-btn,
+#page-dashboard .btn-primary,
+#page-dashboard .btn-secondary,
+#page-dashboard button {
+  font-weight: 900 !important;
+}
+
+#page-dashboard .dash-btn,
+#page-dashboard .dashboard-btn,
+#page-dashboard .btn-secondary,
+#page-dashboard button {
+  border-color: #cbd5e1 !important;
+}
+
+#page-dashboard .dash-btn:hover,
+#page-dashboard .dashboard-btn:hover,
+#page-dashboard .btn-secondary:hover,
+#page-dashboard button:hover {
+  border-color: #a0b4c8 !important;
+}
+
+/* ════════════════════════════════════════════
+   7. 반응형
+   ════════════════════════════════════════════ */
+
+.data-table button,
+table button {
+  height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: var(--officer-text) !important;
+}
+
+@media (max-width: 1280px) {
+  .dashboard-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-layout,
+  .dashboard-layout-top,
+  #page-dashboard .dashboard-layout:first-of-type,
+  #page-dashboard .dashboard-layout:not(:first-of-type) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shortcut-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 신규 신고접수 테이블 컬럼 비율 고정 */
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table th:nth-child(1),
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table td:nth-child(1) {
+  width: 25%;
+}
+
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table th:nth-child(2),
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table td:nth-child(2) {
+  width: 18%;
+}
+
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table th:nth-child(3),
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table td:nth-child(3) {
+  width: 17%;
+}
+
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table th:nth-child(4),
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table td:nth-child(4) {
+  width: 20%;
+}
+
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table th:nth-child(5),
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table td:nth-child(5) {
+  width: 15%;
+}
+
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table th:nth-child(6),
+#page-dashboard .dashboard-stat-grid + .dashboard-layout .dashboard-table td:nth-child(6) {
+  width: 15%;
+}

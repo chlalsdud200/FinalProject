@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.tacs.warehouse.dashboard.mapper.IWarehouseDashboardMapper">
+	
+	 <!--
+        창고관리자 대시보드 상단 카드 집계 조회
+    -->
+    <select id="selectDashboardCount"
+            resultType="kr.or.tacs.dto.warehouse.WarehouseDashboardDTO">
+
+        SELECT
+            (
+                SELECT COUNT(*)
+                FROM WH_IN_RPT WIR
+                WHERE WIR.WIR_WM_ID = #{wmId}
+                  AND WIR.WIR_STATUS_CD = 'WAIT'
+            ) wirWaitCnt,
+
+            (
+                SELECT COUNT(*)
+                FROM WH_IN_RPT WIR
+                WHERE WIR.WIR_WM_ID = #{wmId}
+                  AND WIR.WIR_STATUS_CD = 'REQ_SENT'
+            ) wirReqSentCnt,
+
+            (
+                SELECT COUNT(*)
+                FROM CARGO_RELEASE_REQ CRR
+                WHERE CRR.CRR_WM_ID = #{wmId}
+                  AND CRR.CRR_STATUS_CD = 'REL_WAIT'
+            ) crrWaitCnt,
+
+            (
+                SELECT COUNT(*)
+                FROM WAREHOUSE_ITEM WI
+
+                JOIN WAREHOUSE_ITEM_LOCATION WIL
+                  ON WI.WIL_CL_NO = WIL.WIL_NO
+
+                JOIN WAREHOUSE_ZONE WZ
+                  ON WIL.WIL_WH_ZONE_NO = WZ.WZ_NO
+
+                WHERE WI.WI_USE_YN = 'Y'
+                  AND WIL.WIL_OUT_DT IS NULL
+                  AND WIL.WIL_NO IS NOT NULL
+                  AND WZ.WM_ID = #{wmId}
+            ) wirStoredCnt
+
+        FROM DUAL
+
+    </select>
+
+
+    <!--
+        창고관리자 대시보드 최근 입출고 현황 조회
+
+        입고:
+        - WH_IN_RPT 기준
+
+        반출:
+        - CARGO_RELEASE_REQ 기준
+
+        입고 + 반출을 합쳐 최근 5건 조회
+    -->
+    <select id="selectRecentFlowList"
+            resultType="kr.or.tacs.dto.warehouse.WarehouseDashboardDTO">
+
+        SELECT *
+        FROM (
+            SELECT FLOW.*
+            FROM (
+                /*
+                    최근 입고 현황
+                */
+                SELECT
+                    WIR.WIR_IO_SE_CD wirIoSeCd,
+
+                    CASE
+                        WHEN WIR.WIR_IO_SE_CD = 'IMP' THEN '수입'
+                        WHEN WIR.WIR_IO_SE_CD = 'IMPORT' THEN '수입'
+                        WHEN WIR.WIR_IO_SE_CD = 'EXP' THEN '수출'
+                        WHEN WIR.WIR_IO_SE_CD = 'EXPORT' THEN '수출'
+                        ELSE WIR.WIR_IO_SE_CD
+                    END wirIoSeNm,
+
+                    WIR.WIR_NO wirNo,
+                    NULL crrNo,
+
+                    WIR.WIR_OWR_NM wirOwrNm,
+
+                    (
+                        SELECT
+                            CASE
+                                WHEN COUNT(*) > 1 THEN MIN(GD.GOODS_NAME) || ' 외 ' || (COUNT(*) - 1) || '건'
+                                ELSE MIN(GD.GOODS_NAME)
+                            END
+                        FROM CUSTOMS_GOODS CG
+
+                        JOIN GOODS GD
+                          ON CG.GOODS_NO = GD.GOODS_NO
+
+                        WHERE CG.GG_NO = WIR.WIR_GG_NO
+                    ) goodsSummary,
+
+                    WIR.WIR_STATUS_CD wirStatusCd,
+
+                    NVL(CC_WIR.CC_NM, WIR.WIR_STATUS_CD) wirStatusNm,
+
+                    NULL crrStatusCd,
+                    NULL crrStatusNm,
+
+                    TO_CHAR(WIR.WIR_IN_PLAN_DT, 'YYYY-MM-DD HH24:MI') wirDt,
+                    NULL crrDt,
+
+                    WIR.WIR_IN_PLAN_DT sortDt
+
+                FROM WH_IN_RPT WIR
+
+                LEFT JOIN COM_CODE CC_WIR
+                  ON WIR.WIR_STATUS_CD = CC_WIR.CC_CD
+                 AND CC_WIR.CC_CCG_ID = 'WH_IN_STATUS'
+
+                WHERE WIR.WIR_WM_ID = #{wmId}
+
+
+                UNION ALL
+
+
+                /*
+                    최근 반출 현황
+                */
+                SELECT
+                    'OUT' wirIoSeCd,
+                    '반출' wirIoSeNm,
+
+                    NULL wirNo,
+                    CRR.CRR_NO crrNo,
+
+                    CRR.CRR_NM wirOwrNm,
+
+                    CRR.CRR_FRGHT_IEM_NM goodsSummary,
+
+                    NULL wirStatusCd,
+                    NULL wirStatusNm,
+
+                    CRR.CRR_STATUS_CD crrStatusCd,
+
+                    CASE
+                        WHEN CRR.CRR_STATUS_CD = 'REL_WAIT' THEN '반출대기'
+                        WHEN CRR.CRR_STATUS_CD = 'REL_DONE' THEN '반출완료'
+                        WHEN CRR.CRR_STATUS_CD = 'REQ_FIX' THEN '보완요청'
+                        WHEN CRR.CRR_STATUS_CD = 'REQ_SENT' THEN '보완제출'
+                        WHEN CRR.CRR_STATUS_CD = 'REJECT' THEN '반려'
+                        ELSE CRR.CRR_STATUS_CD
+                    END crrStatusNm,
+
+                    NULL wirDt,
+                    TO_CHAR(
+                        NVL(CRR.CRR_RELEASE_DT, CRR.CRR_CR_DT),
+                        'YYYY-MM-DD HH24:MI'
+                    ) crrDt,
+
+                    NVL(CRR.CRR_RELEASE_DT, CRR.CRR_CR_DT) sortDt
+
+                FROM CARGO_RELEASE_REQ CRR
+
+                WHERE CRR.CRR_WM_ID = #{wmId}
+
+            ) FLOW
+
+            ORDER BY FLOW.sortDt DESC NULLS LAST
+        )
+        WHERE ROWNUM &lt;= 5
+
+    </select>
+</mapper>

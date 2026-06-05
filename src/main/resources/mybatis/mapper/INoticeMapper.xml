@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.common.notice.mapper.INoticeMapper">
+
+    <resultMap id="noticeMap" type="kr.or.tacs.vo.common.notice.NoticeVO">
+        <id property="noticeNo" column="NOTICE_NO"/>
+        <result property="noticeType" column="NOTICE_TYPE"/>
+        <result property="noticeTitle" column="NOTICE_TITLE"/>
+        <result property="noticeContent" column="NOTICE_CONTENT"/>
+        <result property="noticeAdddate" column="NOTICE_ADDDATE"/>
+        <result property="noticeUpddate" column="NOTICE_UPDDATE"/>
+        <result property="noticeCnt" column="NOTICE_CNT"/>
+        <result property="noticeAdminId" column="NOTICE_ADMIN_ID"/>
+        <result property="noticePinYn" column="NOTICE_PIN_YN"/>
+        <result property="noticeUseYn" column="NOTICE_USE_YN"/>
+    </resultMap>
+
+    <sql id="noticeWhere">
+        WHERE 1 = 1
+        <if test="type != null and type != '' and type != 'all'">
+            AND notice_type = #{type}
+        </if>
+        <if test="pinnedYn != null and pinnedYn != '' and pinnedYn != 'all'">
+            AND notice_pin_yn = #{pinnedYn}
+        </if>
+        <if test="useYn != null and useYn != '' and useYn != 'all'">
+            AND notice_use_yn = #{useYn}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                UPPER(notice_title) LIKE '%' || UPPER(#{keyword}) || '%'
+                OR UPPER(notice_content) LIKE '%' || UPPER(#{keyword}) || '%'
+            )
+        </if>
+        <if test="fromDate != null and fromDate != ''">
+            AND TRUNC(notice_adddate) &gt;= TO_DATE(#{fromDate}, 'YYYY-MM-DD')
+        </if>
+        <if test="toDate != null and toDate != ''">
+            AND TRUNC(notice_adddate) &lt;= TO_DATE(#{toDate}, 'YYYY-MM-DD')
+        </if>
+    </sql>
+
+    <select id="retriveNoticeList" parameterType="kr.or.tacs.vo.common.notice.NoticeSearchVO" resultMap="noticeMap">
+        SELECT
+            notice_no
+          , notice_type
+          , notice_title
+          , notice_content
+          , notice_adddate
+          , notice_upddate
+          , notice_cnt
+          , notice_admin_id
+          , notice_pin_yn
+          , notice_use_yn
+        FROM (
+            SELECT
+                ROW_NUMBER() OVER (
+                    ORDER BY
+                        CASE notice_pin_yn WHEN 'Y' THEN 1 ELSE 2 END
+                      , notice_adddate DESC
+                      , notice_no DESC
+                ) AS RN
+              , notice_no
+              , NVL(notice_type, 'NOTICE') AS NOTICE_TYPE
+              , notice_title
+              , notice_content
+              , TO_CHAR(notice_adddate, 'YYYY-MM-DD HH24:MI') AS NOTICE_ADDDATE
+              , TO_CHAR(notice_upddate, 'YYYY-MM-DD HH24:MI') AS NOTICE_UPDDATE
+              , NVL(notice_cnt, 0) AS NOTICE_CNT
+              , notice_admin_id
+              , NVL(notice_pin_yn, 'N') AS NOTICE_PIN_YN
+              , NVL(notice_use_yn, 'Y') AS NOTICE_USE_YN
+            FROM notice
+            <include refid="noticeWhere"/>
+        )
+        WHERE RN BETWEEN #{startRow} AND #{endRow}
+        ORDER BY RN
+    </select>
+
+    <select id="selectNoticeCount" parameterType="kr.or.tacs.vo.common.notice.NoticeSearchVO" resultType="int">
+        SELECT COUNT(1)
+        FROM notice
+        <include refid="noticeWhere"/>
+    </select>
+
+    <select id="selectNotice" parameterType="long" resultMap="noticeMap">
+        SELECT
+            notice_no
+          , NVL(notice_type, 'NOTICE') AS NOTICE_TYPE
+          , notice_title
+          , notice_content
+          , TO_CHAR(notice_adddate, 'YYYY-MM-DD HH24:MI') AS NOTICE_ADDDATE
+          , TO_CHAR(notice_upddate, 'YYYY-MM-DD HH24:MI') AS NOTICE_UPDDATE
+          , NVL(notice_cnt, 0) AS NOTICE_CNT
+          , notice_admin_id
+          , NVL(notice_pin_yn, 'N') AS NOTICE_PIN_YN
+          , NVL(notice_use_yn, 'Y') AS NOTICE_USE_YN
+        FROM notice
+        WHERE notice_no = #{noticeNo}
+    </select>
+
+    <update id="updateNoticeCount" parameterType="long">
+        UPDATE notice
+        SET notice_cnt = NVL(notice_cnt, 0) + 1
+        WHERE notice_no = #{noticeNo}
+    </update>
+
+    <insert id="insertNotice" parameterType="kr.or.tacs.vo.common.notice.NoticeVO">
+        <selectKey keyProperty="noticeNo" resultType="long" order="BEFORE">
+            SELECT NVL(MAX(notice_no), 0) + 1 FROM notice
+        </selectKey>
+        INSERT INTO notice (
+            notice_no
+          , notice_type
+          , notice_title
+          , notice_content
+          , notice_adddate
+          , notice_upddate
+          , notice_cnt
+          , notice_admin_id
+          , notice_pin_yn
+          , notice_use_yn
+        ) VALUES (
+            #{noticeNo}
+          , #{noticeType}
+          , #{noticeTitle}
+          , #{noticeContent}
+          , SYSDATE
+          , SYSDATE
+          , 0
+          , #{noticeAdminId}
+          , #{noticePinYn}
+          , #{noticeUseYn}
+        )
+    </insert>
+
+    <update id="updateNotice" parameterType="kr.or.tacs.vo.common.notice.NoticeVO">
+        UPDATE notice
+        SET
+            notice_type = #{noticeType}
+          , notice_title = #{noticeTitle}
+          , notice_content = #{noticeContent}
+          , notice_use_yn = #{noticeUseYn}
+          , notice_upddate = SYSDATE
+        WHERE notice_no = #{noticeNo}
+    </update>
+
+    <update id="updateNoticePinYn">
+        UPDATE notice
+        SET notice_pin_yn = #{noticePinYn}
+          , notice_upddate = SYSDATE
+        WHERE notice_no = #{noticeNo}
+    </update>
+
+    <update id="updateNoticeUseYn">
+        UPDATE notice
+        SET notice_use_yn = #{noticeUseYn}
+          , notice_upddate = SYSDATE
+        WHERE notice_no = #{noticeNo}
+    </update>
+
+    <delete id="deleteNotice" parameterType="long">
+        DELETE FROM notice
+        WHERE notice_no = #{noticeNo}
+    </delete>
+</mapper>

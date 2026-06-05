@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.officer.fulfillmentandexport.mapper.IWarehouseCargoTrackingMapper">
+
+    <select id="selectWarehouseCargoList"
+            resultType="kr.or.tacs.dto.officer.WarehouseCargoTrackingDTO">
+
+        SELECT
+            ROWNUM AS no,
+            A.reqNo,
+            A.declareType,
+            A.goodsGroupNo,
+            A.warehouseName,
+            A.bondedAreaCode,
+            A.storageLocation,
+            A.cargoMgmtNo,
+            A.mblNo,
+            A.hblNo,
+            A.blStatusCd,
+            A.transportReqNo,
+            A.transportStatusCd,
+            A.itemName,
+            A.qtyWeight,
+            A.itemCount,
+            A.totalQtyWeight,
+            A.itemDetailRows,
+            A.declarantName,
+            A.cargoStatusCd,
+            A.cargoStatus,
+            A.inboundDate,
+            A.releaseDate
+        FROM (
+            SELECT
+                MIN(B.reqNo) AS reqNo,
+                MIN(B.declareType) AS declareType,
+                B.goodsGroupNo AS goodsGroupNo,
+                MIN(B.warehouseName) AS warehouseName,
+                MIN(B.bondedAreaCode) AS bondedAreaCode,
+                MIN(B.storageLocation) AS storageLocation,
+                B.cargoMgmtNo AS cargoMgmtNo,
+                B.mblNo AS mblNo,
+                MIN(B.hblNo) AS hblNo,
+                MIN(B.blStatusCd) AS blStatusCd,
+                MIN(B.transportReqNo) AS transportReqNo,
+                MIN(B.transportStatusCd) AS transportStatusCd,
+
+                CASE
+                    WHEN MAX(B.itemCountRaw) IS NOT NULL AND MAX(B.itemCountRaw) &gt; 1
+                        THEN MIN(B.itemNameRaw) || ' 외 ' || (MAX(B.itemCountRaw) - 1) || '건'
+                    WHEN MAX(B.itemCountRaw) IS NULL AND COUNT(*) &gt; 1
+                        THEN MIN(B.itemNameRaw) || ' 외 ' || (COUNT(*) - 1) || '건'
+                    ELSE MIN(B.itemNameRaw)
+                END AS itemName,
+
+                CASE
+                    WHEN MAX(B.itemCountRaw) IS NOT NULL THEN MAX(B.itemCountRaw) || '개 품목'
+                    ELSE COUNT(*) || '개 품목'
+                END AS qtyWeight,
+
+                CASE
+                    WHEN MAX(B.itemCountRaw) IS NOT NULL THEN MAX(B.itemCountRaw)
+                    ELSE COUNT(*)
+                END AS itemCount,
+
+                CASE
+                    WHEN MAX(B.itemCountRaw) IS NOT NULL THEN
+                        CASE
+                            WHEN MAX(NVL(B.qtyNum, 0)) = 0 AND MAX(NVL(B.weightNum, 0)) = 0 THEN '-'
+                            ELSE TO_CHAR(MAX(NVL(B.qtyNum, 0))) || ' / ' || TO_CHAR(MAX(NVL(B.weightNum, 0))) || 'KG'
+                        END
+                    ELSE
+                        CASE
+                            WHEN SUM(NVL(B.qtyNum, 0)) = 0 AND SUM(NVL(B.weightNum, 0)) = 0 THEN '-'
+                            ELSE TO_CHAR(SUM(NVL(B.qtyNum, 0))) || ' / ' || TO_CHAR(SUM(NVL(B.weightNum, 0))) || 'KG'
+                        END
+                END AS totalQtyWeight,
+
+                CASE
+                    WHEN MAX(B.itemDetailRowsRaw) IS NOT NULL THEN MAX(B.itemDetailRowsRaw)
+                    ELSE LISTAGG(
+                        B.itemNameRaw
+                        || '|' || NVL(TO_CHAR(B.qtyNum), '-')
+                        || '|' || CASE WHEN B.weightNum IS NOT NULL THEN TO_CHAR(B.weightNum) || 'KG' ELSE '-' END,
+                        '§'
+                    ) WITHIN GROUP (ORDER BY B.wiNo)
+                END AS itemDetailRows,
+
+                MIN(B.declarantName) AS declarantName,
+                MIN(B.cargoStatusCd) AS cargoStatusCd,
+                MIN(B.cargoStatus) AS cargoStatus,
+                MIN(B.inboundDate) AS inboundDate,
+                MIN(B.releaseDate) AS releaseDate,
+                MAX(B.wilInDt) AS sortInDt,
+                MAX(B.wiNo) AS sortWiNo
+            FROM (
+                SELECT
+                    NVL(NVL(D.REQ_NO, ID.ID_IR_NO), '-') AS reqNo,
+
+                    CASE
+                        WHEN ID.ID_IR_NO IS NOT NULL THEN '수입'
+                        ELSE NVL(D.DECLARE_TYPE,
+                            CASE
+                                WHEN WIR.WIR_IO_SE_CD = 'EXPORT' THEN '수출'
+                                WHEN WIR.WIR_IO_SE_CD = 'IMPORT' THEN '수입'
+                                ELSE NVL(WIR.WIR_IO_SE_CD, '-')
+                            END
+                        )
+                    END AS declareType,
+
+                    WI.WI_GG_NO AS goodsGroupNo,
+
+                    NVL(WH.WH_NM, '-') AS warehouseName,
+                    NVL(TO_CHAR(WZ.WZ_NO), '-') AS bondedAreaCode,
+                    NVL(WZ.WZ_NM, '-') AS storageLocation,
+
+                    NVL(WIR.WIR_CARGO_MGMT_NO, '-') AS cargoMgmtNo,
+                    NVL(NVL(BI.BI_MBL_NO, TCS.TCS_MBL_NO), '-') AS mblNo,
+                    NVL(NVL(BI.BI_HBL_NO, TCS.TCS_HBL_NO), '-') AS hblNo,
+                    NVL(BI.BI_STATUS_CD, '-') AS blStatusCd,
+                    NVL(TCS.TCS_TRC_NO, '-') AS transportReqNo,
+                    NVL(TCS.TCS_STL_STATUS_CD, '-') AS transportStatusCd,
+
+                    NVL(ITEM.ITEM_REP_NAME, NVL(G.GOODS_NAME, '-')) AS itemNameRaw,
+                    NVL(ITEM.TOTAL_QTY, CG.CG_QTY) AS qtyNum,
+                    NVL(ITEM.TOTAL_WEIGHT, CG.CG_WEIGHT) AS weightNum,
+                    ITEM.ITEM_COUNT AS itemCountRaw,
+                    ITEM.ITEM_DETAIL_ROWS AS itemDetailRowsRaw,
+
+                    NVL(ID.ID_DCLRNT_NM,
+                        NVL(D.OWNER_NAME,
+                            NVL(O_BI.OWR_NM,
+                                NVL(O_TCS.OWR_NM,
+                                    NVL(TRDR.TRDR_NM, '-')
+                                )
+                            )
+                        )
+                    ) AS declarantName,
+
+                    CASE
+                        WHEN WIL.WIL_OUT_DT IS NOT NULL THEN 'RELEASE_DONE'
+                        WHEN WIR.WIR_STATUS_CD IS NOT NULL THEN WIR.WIR_STATUS_CD
+                        ELSE NVL(WI.WI_STATUS_CD, '-')
+                    END AS cargoStatusCd,
+
+                    CASE
+                        WHEN WIL.WIL_OUT_DT IS NOT NULL THEN '반출완료'
+                        WHEN NVL(WIR.WIR_STATUS_CD, WI.WI_STATUS_CD) IN ('WAIT', 'IN_WAIT') THEN '반입대기'
+                        WHEN NVL(WIR.WIR_STATUS_CD, WI.WI_STATUS_CD) IN ('IN_DONE') THEN '반입완료'
+                        WHEN NVL(WIR.WIR_STATUS_CD, WI.WI_STATUS_CD) IN ('STORAGE', 'USE', 'USING', 'IN_USE') THEN '보관중'
+                        WHEN NVL(WIR.WIR_STATUS_CD, WI.WI_STATUS_CD) IN ('RELEASE_WAIT') THEN '반출대기'
+                        WHEN NVL(WIR.WIR_STATUS_CD, WI.WI_STATUS_CD) IN ('RELEASE_DONE') THEN '반출완료'
+                        ELSE NVL(NVL(WIR.WIR_STATUS_CD, WI.WI_STATUS_CD), '-')
+                    END AS cargoStatus,
+
+                    TO_CHAR(WIL.WIL_IN_DT, 'YYYY-MM-DD') AS inboundDate,
+                    NVL(TO_CHAR(WIL.WIL_OUT_DT, 'YYYY-MM-DD'), '-') AS releaseDate,
+
+                    WIL.WIL_IN_DT AS wilInDt,
+                    WI.WI_NO AS wiNo
+
+                FROM WAREHOUSE_ITEM WI
+
+                LEFT JOIN WH_IN_RPT WIR
+                       ON WI.WI_WIR_NO = WIR.WIR_NO
+
+                LEFT JOIN (
+                    SELECT
+                        '수입' AS DECLARE_TYPE,
+                        ID.ID_IR_NO AS REQ_NO,
+                        ID.ID_GG_NO AS GG_NO,
+                        ID.ID_DCLRNT_NM AS OWNER_NAME
+                    FROM IMP_DCLR ID
+                    WHERE ID.ID_GG_NO IS NOT NULL
+
+                    UNION ALL
+
+                    SELECT
+                        '수출' AS DECLARE_TYPE,
+                        ED.ED_ER_NO AS REQ_NO,
+                        ED.ED_GG_NO AS GG_NO,
+                        ER.ER_ONER_NM AS OWNER_NAME
+                    FROM EXP_DCLR ED
+                    LEFT JOIN EXP_RQST ER
+                           ON ER.ER_NO = ED.ED_ER_NO
+                    WHERE ED.ED_GG_NO IS NOT NULL
+                ) D
+                       ON D.GG_NO = WI.WI_GG_NO
+
+                LEFT JOIN BL_ISSU BI
+                       ON BI.BI_GG_NO = WI.WI_GG_NO
+
+                LEFT JOIN OWNER O_BI
+                       ON O_BI.OWR_ID = BI.BI_OWR_ID
+
+                LEFT JOIN TRAN_COST_STL TCS
+                       ON TCS.TCS_GG_NO = WI.WI_GG_NO
+
+                LEFT JOIN OWNER O_TCS
+                       ON O_TCS.OWR_ID = TCS.TCS_OWR_ID
+
+                LEFT JOIN IMP_DCLR ID
+                       ON ID.ID_MBL_NO = NVL(BI.BI_MBL_NO, TCS.TCS_MBL_NO)
+
+                LEFT JOIN TRDR TRDR
+                       ON WIR.WIR_TRDR_NO = TRDR.TRDR_NO
+
+                LEFT JOIN WAREHOUSE_ITEM_LOCATION WIL
+                       ON WI.WIL_CL_NO = WIL.WIL_NO
+
+                LEFT JOIN WAREHOUSE_ZONE WZ
+                       ON WIL.WIL_WH_ZONE_NO = WZ.WZ_NO
+
+                LEFT JOIN WAREHOUSE WH
+                       ON WZ.WZ_WH_NO = WH.WH_NO
+
+                LEFT JOIN CUSTOMS_GOODS CG
+                       ON WI.WI_CG_NO = CG.CG_NO
+
+                LEFT JOIN GOODS G
+                       ON CG.GOODS_NO = G.GOODS_NO
+
+                LEFT JOIN (
+                    SELECT
+                        IDI.IDI_IR_NO,
+                        MIN(IDI.IDI_DCLR_GDSNM) KEEP (DENSE_RANK FIRST ORDER BY IDI.IDI_SN) AS ITEM_REP_NAME,
+                        COUNT(*) AS ITEM_COUNT,
+                        SUM(NVL(IDI.IDI_QTY, 0)) AS TOTAL_QTY,
+                        SUM(NVL(IDI.IDI_NET_WT, 0)) AS TOTAL_WEIGHT,
+                        LISTAGG(
+                            NVL(IDI.IDI_DCLR_GDSNM, '-')
+                            || '|' || NVL(TO_CHAR(IDI.IDI_QTY), '-')
+                            || '|' || CASE
+                                         WHEN IDI.IDI_NET_WT IS NOT NULL THEN TO_CHAR(IDI.IDI_NET_WT) || 'KG'
+                                         ELSE '-'
+                                      END,
+                            '§'
+                        ) WITHIN GROUP (ORDER BY IDI.IDI_SN) AS ITEM_DETAIL_ROWS
+                    FROM IMP_DCLR_ITEM IDI
+                    GROUP BY IDI.IDI_IR_NO
+                ) ITEM
+                       ON NVL(D.REQ_NO, ID.ID_IR_NO) = ITEM.IDI_IR_NO
+
+                WHERE NVL(WI.WI_USE_YN, 'Y') = 'Y'
+
+                <if test="reqNo != null and reqNo != ''">
+                    AND (
+                        NVL(D.REQ_NO, ID.ID_IR_NO) LIKE '%' || #{reqNo} || '%'
+                        OR WIR.WIR_CARGO_MGMT_NO LIKE '%' || #{reqNo} || '%'
+                        OR NVL(BI.BI_MBL_NO, TCS.TCS_MBL_NO) LIKE '%' || #{reqNo} || '%'
+                        OR NVL(BI.BI_HBL_NO, TCS.TCS_HBL_NO) LIKE '%' || #{reqNo} || '%'
+                        OR WI.WI_WIR_NO LIKE '%' || #{reqNo} || '%'
+                        OR TO_CHAR(WI.WI_NO) LIKE '%' || #{reqNo} || '%'
+                        OR TO_CHAR(WI.WI_GG_NO) LIKE '%' || #{reqNo} || '%'
+                    )
+                </if>
+
+                <if test="declareType != null and declareType != '' and declareType != 'ALL'">
+                    <choose>
+                        <when test="declareType == 'IMPORT' or declareType == '수입'">
+                            AND (D.DECLARE_TYPE = '수입' OR WIR.WIR_IO_SE_CD = 'IMPORT')
+                        </when>
+                        <when test="declareType == 'EXPORT' or declareType == '수출'">
+                            AND (D.DECLARE_TYPE = '수출' OR WIR.WIR_IO_SE_CD = 'EXPORT')
+                        </when>
+                    </choose>
+                </if>
+
+                <if test="warehouseName != null and warehouseName != ''">
+                    AND (
+                        WH.WH_NM LIKE '%' || #{warehouseName} || '%'
+                        OR WZ.WZ_NM LIKE '%' || #{warehouseName} || '%'
+                        OR TO_CHAR(WZ.WZ_NO) LIKE '%' || #{warehouseName} || '%'
+                        OR ITEM.ITEM_DETAIL_ROWS LIKE '%' || #{warehouseName} || '%'
+                        OR G.GOODS_NAME LIKE '%' || #{warehouseName} || '%'
+                        OR NVL(D.REQ_NO, ID.ID_IR_NO) LIKE '%' || #{warehouseName} || '%'
+                        OR WIR.WIR_CARGO_MGMT_NO LIKE '%' || #{warehouseName} || '%'
+                        OR NVL(BI.BI_MBL_NO, TCS.TCS_MBL_NO) LIKE '%' || #{warehouseName} || '%'
+                        OR NVL(BI.BI_HBL_NO, TCS.TCS_HBL_NO) LIKE '%' || #{warehouseName} || '%'
+                        OR NVL(ID.ID_DCLRNT_NM, NVL(D.OWNER_NAME, NVL(O_BI.OWR_NM, O_TCS.OWR_NM))) LIKE '%' || #{warehouseName} || '%'
+                        OR TRDR.TRDR_NM LIKE '%' || #{warehouseName} || '%'
+                    )
+                </if>
+
+                <if test="cargoStatusCd != null and cargoStatusCd != '' and cargoStatusCd != 'ALL'">
+                    <choose>
+                        <when test="cargoStatusCd == 'RELEASE_DONE'">
+                            AND WIL.WIL_OUT_DT IS NOT NULL
+                        </when>
+                        <when test="cargoStatusCd == 'STORAGE'">
+                            AND WIL.WIL_OUT_DT IS NULL
+                            AND NVL(WIR.WIR_STATUS_CD, WI.WI_STATUS_CD) IN ('STORAGE', 'USE', 'USING', 'IN_USE')
+                        </when>
+                        <otherwise>
+                            AND WIL.WIL_OUT_DT IS NULL
+                            AND NVL(WIR.WIR_STATUS_CD, WI.WI_STATUS_CD) = #{cargoStatusCd}
+                        </otherwise>
+                    </choose>
+                </if>
+
+                <if test="startDate != null and startDate != ''">
+                    AND WIL.WIL_IN_DT &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+                </if>
+
+                <if test="endDate != null and endDate != ''">
+                    AND WIL.WIL_IN_DT &lt; TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+                </if>
+            ) B
+            GROUP BY
+                B.cargoMgmtNo,
+                B.mblNo,
+                B.goodsGroupNo
+            ORDER BY sortInDt DESC, sortWiNo DESC
+        ) A
+
+    </select>
+
+</mapper>

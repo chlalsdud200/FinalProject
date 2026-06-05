@@ -1,0 +1,17 @@
+package kr.or.tacs.owner.arrival.mapper;
+
+import kr.or.tacs.dto.owner.OwnerArrivalNoticeDTO;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+
+@Mapper
+public interface IArrivalMapper {
+
+    List<OwnerArrivalNoticeDTO> selectArrivalNoticeList(String owrId);
+
+    OwnerArrivalNoticeDTO selectArrivalNoticeDetail(@Param("ianNo") String ianNo,@Param("owrId") String owrId);
+
+    OwnerArrivalNoticeDTO selectArrivalNoticeDetailByTrcNo(@Param("trcNo") String trcNo, @Param("owrId") String owrId);
+}

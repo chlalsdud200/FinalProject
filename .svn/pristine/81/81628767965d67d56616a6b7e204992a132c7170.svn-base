@@ -1,0 +1,32 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%
+    if (request.getAttribute("mypageActorPath") == null) {
+        request.setAttribute("mypageActorPath", "transport");
+    }
+    if (request.getAttribute("mypageTab") == null) {
+        request.setAttribute("mypageTab", request.getParameter("tab") == null ? "profile" : request.getParameter("tab"));
+    }
+%>
+<!DOCTYPE html>
+<html lang="ko" class="light">
+<head>
+<%@ include file="/WEB-INF/views/transport/common/head.jsp" %>
+<link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/common/mypage.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/transport/css/pages/mypage.css">
+</head>
+<body class="bg-background text-on-surface">
+<%@ include file="/WEB-INF/views/transport/common/sidebar.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/topbar.jsp" %>
+<div class="content">
+    <%@ include file="/WEB-INF/views/common/mypage/mypageContent.jsp" %>
+</div>
+<%@ include file="/WEB-INF/views/transport/common/footer.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/modals.jsp" %>
+<script>
+  window.TRANSPORT_INITIAL_VIEW = { group: 'mypage', item: '${mypageTab eq 'alarm' ? 'TACS-MY-002' : 'TACS-MY-001'}' };
+</script>
+<script src="${pageContext.request.contextPath}/resources/js/transport/js/common.js?v=20260526-import-server-route1"></script>
+<script src="${pageContext.request.contextPath}/resources/js/common/mypage.js"></script>
+<script src="${pageContext.request.contextPath}/resources/js/transport/js/pages/mypage.js?v=20260512-mypage-shell1"></script>
+</body>
+</html>

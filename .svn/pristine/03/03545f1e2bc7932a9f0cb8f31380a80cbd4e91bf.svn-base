@@ -1,0 +1,92 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%
+    request.setAttribute("activeMenu", "certs");
+    request.setAttribute("activeGroup", "");
+    request.setAttribute("activeSub", "");
+%>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="ctx-path" content="${pageContext.request.contextPath}">
+  <title>TACS 수출입신고필증 조회</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet">
+  <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/owner.css">
+</head>
+<body>
+<div class="app" id="app">
+    <%@ include file="/WEB-INF/views/owner/sidebar.jsp" %>
+
+  <div class="main-wrap">
+    <%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+    <main class="content">
+<div class="page active" id="pg-certs">
+<div class="page-title-row">
+<div>
+<div style="font-size:11px;color:#94a3b8;font-weight:600;letter-spacing:.5px;margin-bottom:4px;text-transform:uppercase">현황 · 관리</div>
+<h2>수출입신고필증 조회</h2>
+</div>
+</div>
+<div class="filter-bar" style="margin-bottom: 20px; border-left: 3px solid #565e74;">
+<div style="display:flex; gap:12px; align-items:center; flex:1;">
+<label>구분</label>
+<select id="certs-type-filter" style="min-width:100px">
+<option>전체</option>
+<option>수출</option>
+<option>수입</option>
+</select>
+<input id="certs-date-from" style="padding:6px 8px;border:1px solid #e2e8f0;font-size:12px" type="date"/>
+<span style="font-size:11px;color:#94a3b8">~</span>
+<input id="certs-date-to" style="padding:6px 8px;border:1px solid #e2e8f0;font-size:12px" type="date"/>
+<div class="filter-sep"></div>
+<div class="search-wrap" style="flex:1">
+<span class="material-symbols-outlined">search</span>
+<input id="certs-search-input" placeholder="신고번호 또는 의뢰번호를 입력하세요" style="width:100%"/>
+</div>
+</div>
+<button class="btn btn-dark" onclick="filterCertsList()">조회</button>
+</div>
+<div class="card-section">
+<div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:10px">발급 완료된 신고필증 목록</div>
+<table class="data-table">
+<thead>
+<tr>
+<th>구분</th>
+<th>신고번호 (필증번호)</th>
+<th>의뢰번호</th>
+<th>품명</th>
+<th>발급일자</th>
+<th>관리</th>
+</tr>
+</thead>
+<tbody id="certs-list-body">
+<tr>
+<td><span class="badge badge-ok">수출</span></td>
+<td class="td-id">12345-26-000123X</td>
+<td>EXP-OW-20260416-001</td>
+<td>스마트 센서 모듈 외 1건</td>
+<td class="td-muted">2026-04-16</td>
+<td>
+<button class="mini mini-view" onclick="downloadDetailPDF('export')">필증 다운로드</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+    </main>
+
+    <%@ include file="/WEB-INF/views/common/ownerModals.jsp" %>
+    <%@ include file="/WEB-INF/views/common/footer.jsp" %>
+  </div>
+</div>
+
+<%@ include file="/WEB-INF/views/common/ownerScripts.jsp" %>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+package kr.or.tacs.owner.arrival.service;
+
+import kr.or.tacs.dto.owner.OwnerArrivalNoticeDTO;
+
+import java.util.List;
+
+public interface IArrivalService {
+
+    List<OwnerArrivalNoticeDTO> retrieveArrivalNoticeList(String owrId);
+
+    OwnerArrivalNoticeDTO retrieveArrivalNoticeDetail(String ianNo, String owrId);
+
+    OwnerArrivalNoticeDTO retrieveArrivalNoticeDetailByTrcNo(String trcNo, String owrId);
+}

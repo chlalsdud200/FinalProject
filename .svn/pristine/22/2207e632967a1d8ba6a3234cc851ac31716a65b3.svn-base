@@ -1,0 +1,21 @@
+package kr.or.tacs.common.notification.mapper;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import kr.or.tacs.vo.common.notification.NotificationPolicyVO;
+import kr.or.tacs.vo.common.notification.NotificationVO;
+
+@Mapper
+public interface INotificationMapper {
+
+    NotificationPolicyVO selectNotificationPolicy(@Param("eventCd") String eventCd);
+
+    String selectOwnerIdByIrNo(@Param("irNo") String irNo);
+
+    String selectBrokerIdByIrNo(@Param("irNo") String irNo);
+
+    String selectOfficerIdByIrNo(@Param("irNo") String irNo);
+
+    int insertNotification(NotificationVO vo);
+}

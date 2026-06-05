@@ -1,0 +1,26 @@
+package kr.or.tacs.dto.owner;
+
+import kr.or.tacs.dto.PageDTO;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class OwnerTranSearchDTO extends PageDTO {
+
+    private String owrId;           // 로그인 화주
+    private String tradeSeCd;       // EXP / IMP
+
+    // 운송업체
+    private String tmNo;            // 운송업체 번호
+    private String tmNm;            // 운송업체명
+
+    // 운송 접수/계약
+    private String trcNo;           // 운송의뢰번호
+
+    // 날짜 검색 구분
+    private String dateType;        // RQST: 신청일, RCEPT: 접수일
+
+    private String owrPicNm;        // 화주 담당자명
+
+}

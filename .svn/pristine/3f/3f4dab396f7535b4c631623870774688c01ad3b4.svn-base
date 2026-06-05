@@ -1,0 +1,125 @@
+package kr.or.tacs.broker.declare.service;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.web.multipart.MultipartFile;
+
+import kr.or.tacs.dto.FileInfoDTO;
+import org.apache.ibatis.annotations.Param;
+import kr.or.tacs.vo.BrokerVO;
+import kr.or.tacs.vo.broker.declare.ImpDclrVO;
+import kr.or.tacs.vo.broker.declare.ImpRqstVO;
+
+/**
+ * 신고서 작성 Service
+ *  · 1차: saveImpDraft (insert)
+ *  · 5차: 이어쓰기 — saveImpDraft 가 idIrNo 유무로 insert/update 분기 + findImpDclrById
+ *  · 6차: findImpDraftList
+ *  · 7차: sendImp (전송)
+ */
+public interface IBrokerDeclareService {
+
+	
+	/*
+	 * 8E-DELETE
+	 * 수입신고서 임시저장 삭제
+	 * - TEMP 상태만 삭제 가능
+	 * - 자식 테이블 삭제 후 부모 삭제
+	 */
+	void deleteImpDraft(String idIrNo, String brokerId);
+	
+    /** 임시저장 (insert/update 분기) */
+    String saveImpDraft(ImpDclrVO vo, String brokerId);
+
+    /** 1건 조회 (이어쓰기용) */
+    ImpDclrVO findImpDclrById(String brokerId, String idIrNo);
+
+    /** 임시문서함 목록 */
+    List<ImpDclrVO> findImpDraftList(String brokerId);
+
+    /**
+     * 신고서 전송 (TEMP → SUBMIT)
+     *  · 1) 현재 폼 데이터 마지막 저장 (insert/update)
+     *  · 2) status 를 SUBMIT 으로 변경 + id_dclr_dt 세팅
+     * @return 전송된 통관의뢰번호
+     */
+    String sendImp(ImpDclrVO vo, String brokerId);
+
+    /**
+     * 의뢰번호 1건 조회 — [조회] 버튼 응답용
+     * 본인 담당 또는 미배정 의뢰서만 반환 (없으면 null)
+     */
+    ImpRqstVO findImpRqstById(String brokerId, String irNo);
+
+    /**
+     * 의뢰서 검색 — 돋보기 모달 응답용
+     * 본인 담당 또는 미배정 의뢰서 중 키워드 부분일치
+     */
+    List<ImpRqstVO> findImpRqstList(String brokerId, String keyword);
+
+    /** 로그인 사용자(관세사) BROKER 정보 조회 — 신고인 영역 자동 채움 */
+    BrokerVO findCurrentBroker(String brokerId);
+    
+    
+    /** 국가 코드 조회 */
+    List<Map<String, Object>> selectCountryList(String keyword);
+    
+    /** 상호 조회 */
+    List<Map<String, Object>> selectOwnerList(String keyword);
+    
+    /** 환율 */
+    Map<String, Object> findExchangeRate(String currency) throws Exception;
+    
+    /** 수량코드 */
+    List<Map<String, Object>> selectCommonCodeList(String groupId, String keyword);
+
+    /** HS코드 목록 검색 */
+    List<Map<String, Object>> selectHsCodeList(String keyword);
+    
+    /** HS분류계층 자식 목록 조회 */
+    List<Map<String, Object>> selectHsClassChildren(String parentCd);
+
+    /** HS코드 + FTA세율 조회 */
+    Map<String, Object> findHsCodeInfo(String hsCode, String countryCd, String orgnCertYn);
+
+    /** HS AI추천 기능 사용 가능 여부 */
+    boolean isHsAiRecommendEnabled();
+
+    /** HS AI추천 후보 조회 */
+    List<Map<String, Object>> recommendHsCode(Map<String, Object> param);
+    
+    
+    
+    /*
+     * 8D-ATTACH
+     * 수입신고서 첨부파일 업로드
+     *
+     * 구조:
+     * - 수입신고서가 별도 파일그룹을 가지지 않음
+     * - irNo로 IMP_RQST.IR_TFG_NO를 찾아서 기존 그룹에 파일 추가
+     * - IR_TFG_NO가 없으면 새 파일그룹 생성 후 IMP_RQST에 연결
+     */
+    Long uploadImpDocs(String irNo,
+                       List<MultipartFile> files,
+                       String brokerId) throws Exception;
+
+    /*
+     * 8D-ATTACH
+     * 수입신고서 첨부파일 목록 조회
+     *
+     * irNo → IMP_RQST.IR_TFG_NO → 공통 파일목록 조회
+     */
+    List<FileInfoDTO> getImpDocList(String irNo,
+                                    String brokerId);
+
+    /*
+     * 8D-ATTACH
+     * 수입신고서 첨부파일 삭제
+     *
+     * 1차 MVP에서는 공통 fileNo 기준 삭제.
+     */
+    void deleteImpDoc(String irNo,
+                      Long fileNo,
+                      String brokerId);
+}

@@ -1,0 +1,111 @@
+package kr.or.tacs.warehouse.inventory.controller;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import kr.or.tacs.dto.warehouse.WarehouseInventory3DDTO;
+import kr.or.tacs.dto.warehouse.WarehouseZoneDTO;
+import kr.or.tacs.vo.common.CustomUser;
+import kr.or.tacs.warehouse.inventory.service.Inventory3DService;
+
+@Controller
+@RequestMapping("/warehouse")
+public class InventoryController {
+
+  @Autowired
+  private Inventory3DService inventory3DService;
+  
+  private String getLoginId() {
+	  
+  		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+  		CustomUser user = (CustomUser) auth.getPrincipal();
+  		return user.getLoginId();
+  	}
+  
+	
+  @GetMapping("/inventory.do")
+    public String warehouseInventory(Model model) {
+	  
+	  	String wmId = getLoginId();
+	  
+	  	// 보세재고 목록 조회용
+	  	List<WarehouseInventory3DDTO> inventoryList = inventory3DService.selectInventory3DList(wmId);
+	  	model.addAttribute("inventoryList", inventoryList);
+	  	
+	  	// 구역별 적재율 조회용
+	  	List<WarehouseZoneDTO> zoneStatusList = inventory3DService.selectZoneStatusList(wmId);
+	  	model.addAttribute("zoneStatusList",zoneStatusList);
+        return "warehouse/inventory";
+    }
+  
+  // 보세재고 목록 검색 및 페이징 처리
+  @GetMapping("/inventory/search.do")
+  @ResponseBody
+  public Map<String, Object> searchInventory(
+                              @RequestParam(required = false, defaultValue = "1") int page,
+                              @RequestParam(required = false) String zone,
+                              @RequestParam(required = false) String wirIoSeCd,
+                              @RequestParam(required = false) String statusCd,
+                              @RequestParam(required = false) String startDate,
+                              @RequestParam(required = false) String endDate,
+                              @RequestParam(required = false) String keyword
+                              ){
+      String wmId = getLoginId();
+
+      WarehouseInventory3DDTO searchDTO = new WarehouseInventory3DDTO();
+      searchDTO.setPage(page);
+      searchDTO.setZone(zone);
+      searchDTO.setWirIoSeCd(wirIoSeCd);
+      searchDTO.setStatusCd(statusCd);
+      searchDTO.setStartDate(startDate);
+      searchDTO.setEndDate(endDate);
+      searchDTO.setKeyword(keyword);
+	  
+	  // 전체 건수 구함
+	  int totalCount = inventory3DService.selectInventoryCount(searchDTO,wmId);
+	  searchDTO.setTotalCount(totalCount);
+	  
+	  // 현재 페이지 재고 목록 조회
+	  List<WarehouseInventory3DDTO> dataList = inventory3DService.selectInventoryList(searchDTO, wmId);
+	  
+	  Map<String, Object> resultMap = new HashMap<>();
+	  
+	  resultMap.put("dataList", dataList);
+	  resultMap.put("currentPage", searchDTO.getPage());
+	  resultMap.put("startPage", searchDTO.getStartPage());
+	  resultMap.put("endPage", searchDTO.getEndPage());
+	  resultMap.put("totalPage", searchDTO.getTotalPage());
+	  resultMap.put("totalCount", searchDTO.getTotalCount());
+	  
+	  return resultMap;
+  }
+  
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

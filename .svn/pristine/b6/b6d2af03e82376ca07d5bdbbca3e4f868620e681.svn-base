@@ -1,0 +1,375 @@
+.pagination a.page-btn {
+  text-decoration: none;
+}
+
+.pagination span.page-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #fff;
+  color: #4d6172;
+  border: 1px solid #cbd5e1;
+}
+
+.page-info {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #697d8f;
+}
+.pagination a.page-btn {
+  text-decoration: none;
+}
+
+.pagination span.page-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #fff;
+  color: #4d6172;
+  border: 1px solid #cbd5e1;
+}
+
+.page-info {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #697d8f;
+}
+
+/* ===== 통합조회 상세: 란사항 상태 badge ===== */
+.item-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.item-dclr {
+  background: #eef2ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+}
+
+.item-review {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.item-supp-req {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
+
+.item-supp-sub {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.item-acpt {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.item-rej {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.item-unknown {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+/* ===== 통합조회 상세: 처리 칸 ===== */
+.action-muted {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+}
+
+.action-reject {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.item-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: #565e74;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
+.item-action-btn:hover {
+  background: #424a5f;
+  transform: translateY(-1px);
+}
+
+.status-field {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+}
+
+/* ===== 통합조회 페이지네이션 보정 ===== */
+.pagination a.page-btn {
+  text-decoration: none;
+}
+
+.pagination span.page-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #fff;
+  color: #4d6172;
+  border: 1px solid #cbd5e1;
+}
+
+.page-info {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #697d8f;
+}
+
+/* ===== 통합조회 상세: 란사항 상태 badge ===== */
+.item-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.item-dclr {
+  background: #eef2ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+}
+
+.item-review {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.item-supp-req {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
+
+.item-supp-sub {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.item-acpt {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.item-rej {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.item-unknown {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+/* ===== 통합조회 상세: 처리 칸 ===== */
+.action-muted {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+}
+
+.action-reject {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.item-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: #565e74;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
+.item-action-btn:hover {
+  background: #424a5f;
+  transform: translateY(-1px);
+}
+
+.status-field {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+}
+
+/* ===== 통합조회 페이지네이션 보정 ===== */
+.pagination a.page-btn {
+  text-decoration: none;
+}
+
+.pagination span.page-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #fff;
+  color: #4d6172;
+  border: 1px solid #cbd5e1;
+}
+
+.page-info {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #697d8f;
+}
+/* ===== 보완수정: 모델/규격 테이블 input 정리 ===== */
+#supp-mdlspec-table input {
+  width: 100%;
+  height: 32px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #203444;
+  font-size: 12px;
+  font-weight: 500;
+  box-sizing: border-box;
+  outline: none;
+}
+
+#supp-mdlspec-table input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+#supp-mdlspec-table input:focus {
+  border-color: #7b8da8;
+  box-shadow: 0 0 0 2px rgba(86, 94, 116, 0.12);
+}
+
+#supp-mdlspec-table td {
+  vertical-align: middle;
+  padding: 8px 10px;
+}
+
+#supp-mdlspec-table .mini-reject {
+  border: 0;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+#supp-mdlspec-table .mini-reject:hover {
+  background: #fecaca;
+}
+/* ===== 보완수정: a 태그 버튼 밑줄 제거 ===== */
+a.btn,
+a.btn-secondary,
+a.btn-outline,
+a.item-action-btn,
+a.mini {
+  text-decoration: none;
+}
+
+a.btn:hover,
+a.btn-secondary:hover,
+a.btn-outline:hover,
+a.item-action-btn:hover,
+a.mini:hover {
+  text-decoration: none;
+}
+#st-supp-form .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 4px;
+  border: 1px solid #9fb3ca;
+  background: #eef4fb;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+#st-supp-form .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 4px;
+  border: 1px solid #565e74;
+  background: #565e74;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}

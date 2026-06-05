@@ -1,0 +1,591 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <%@ include file="/WEB-INF/views/broker/common/meta.jsp" %>
+    <link rel="stylesheet" href="${ctx}/resources/css/broker/common.css">
+    <link rel="stylesheet" href="${ctx}/resources/css/broker/pages/status.css">
+    <title>처리현황 | TACS</title>
+</head>
+<body>
+<div class="app" id="app">
+    <%@ include file="/WEB-INF/views/broker/common/sidebar.jsp" %>
+    <div class="main-wrap">
+        <%@ include file="/WEB-INF/views/broker/common/header.jsp" %>
+        <div class="content">
+<%-- 처리현황 페이지 --%>
+      <div class="page active" id="pg-status">
+       <div class="sub-page">
+          <div class="sub-tabs" id="tabs-st">
+            <a class="sub-tab ${activeSub eq 'search' ? 'active' : ''}" href="${ctx}/status/search">통합 조회</a>
+            <a class="sub-tab ${activeSub eq 'tax' ? 'active' : ''}" href="${ctx}/status/tax">세금납부 관리</a>
+            <a class="sub-tab ${activeSub eq 'cert' ? 'active' : ''}" href="${ctx}/status/cert">신고필증 관리</a>
+          </div>
+
+          <!-- ===== 통합 조회 ===== -->
+          <div id="st-search" style="display:${activeSub eq 'search' ? 'block' : 'none'}">
+           	 <h2><span class="material-symbols-outlined">fact_check</span> 통합 조회</h2>
+          
+
+              <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+				  <div class="form-item">
+				    <label>통관의뢰번호</label>
+				    <input placeholder="통관의뢰번호">
+				  </div>
+				  
+				  <div class="form-item">
+				    <label>화주</label>
+				    <input placeholder="화주명 입력">
+				  </div>
+				  
+				  <div class="form-item">
+				    <label>유형</label>
+				    <select>
+				      <option>전체</option>
+				      <option>수입</option>
+				      <option>수출</option>
+				      <option>반송</option>
+				    </select>
+				  </div>
+				  
+				  <div class="form-item">
+				    <label>품목</label>
+				    <input placeholder="품목명 입력">
+				  </div>
+				  
+				  <div class="form-item">
+				    <label>신고일</label>
+				    <input type="date">
+				  </div>
+				  
+				  <div class="form-item">
+				    <label>상태</label>
+				    <select>
+				      <option>전체</option>
+				      <option>접수</option>
+				      <option>심사중</option>
+				      <option>수리</option>
+				      <option>반려</option>
+				      <option>서류보완</option>
+				    </select>
+				  </div>
+				  
+				  <div class="form-item">
+				    <label>세관</label>
+				    <input placeholder="세관명 또는 코드">
+				  </div>
+				  
+				  <div class="form-item" style="justify-content: flex-end;">
+				    <label>&nbsp;</label>
+				    <div class="btn-row">
+				      <button class="btn btn-primary" onclick="alert('조회 결과: 총 237건')">조회</button>
+				      <button class="btn btn-secondary">초기화</button>
+				    </div>
+				  </div>
+				</div>
+
+
+
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>통관의뢰번호</th>
+                  <th>화주</th>
+                  <th>유형</th>
+                  <th>품목</th>
+                  <th>신고일</th>
+                  <th>상태</th>
+                  <th>세관</th>
+                  <th>처리</th>
+                </tr>
+              </thead>
+              <tbody>
+
+                <tr>
+                  <td class="td-id">IMP-20240520-001</td>
+                  <td>SK하이닉스</td>
+                  <td>일반수입</td>
+                  <td>정밀기기</td>
+                  <td class="td-muted">05-20</td>
+                  <td><span class="badge badge-rev">심사중</span></td>
+                  <td>인천</td>
+                  <td><button class="mini mini-view"
+                      onclick="openStatusDetail('SK하이닉스','2024-05-20','IMP-20240520-001')">상세</button></td>
+                </tr>
+                <tr>
+                  <td class="td-id">EXP-20240520-421</td>
+                  <td>삼성전자</td>
+                  <td>간이수출</td>
+                  <td>반도체</td>
+                  <td class="td-muted">05-20</td>
+                  <td><span class="badge badge-ok">수리</span></td>
+                  <td>인천</td>
+                  <td><button class="mini mini-view"
+                      onclick="openStatusDetail('삼성전자','2024-05-20','EXP-20240520-421')">상세</button></td>
+                </tr>
+                <tr>
+                  <td class="td-id">IMP-20240520-002</td>
+                  <td>현대모비스</td>
+                  <td>보류신고</td>
+                  <td>자동차부품</td>
+                  <td class="td-muted">05-20</td>
+                  <td><span class="badge badge-doc">서류보완</span></td>
+                  <td>부산</td>
+                  <td><button class="mini mini-view"
+                      onclick="openStatusDetail('현대모비스','2024-05-20','IMP-20240520-002')">상세</button></td>
+                </tr>
+                <tr>
+                  <td class="td-id">REF-20240519-015</td>
+                  <td>LG화학</td>
+                  <td>환급신청</td>
+                  <td>수입원재료</td>
+                  <td class="td-muted">05-19</td>
+                  <td><span class="badge badge-ok">승인</span></td>
+                  <td>인천</td>
+                  <td><button class="mini mini-view"
+                      onclick="openStatusDetail('LG화학','2024-05-19','REF-20240519-015')">상세</button></td>
+                </tr>
+                <tr>
+                  <td class="td-id">EXP-20240519-420</td>
+                  <td>포스코</td>
+                  <td>일반수출</td>
+                  <td>철강제품</td>
+                  <td class="td-muted">05-19</td>
+                  <td><span class="badge badge-ok">수리</span></td>
+                  <td>부산</td>
+                  <td><button class="mini mini-view"
+                      onclick="openStatusDetail('포스코','2024-05-19','EXP-20240519-420')">상세</button></td>
+                </tr>     
+              </tbody>
+            </table>
+            
+            <!-- 페이지네이션 -->
+			<div class="pagination">
+			  <button class="page-btn" title="처음" disabled>«</button>
+			  <button class="page-btn" title="이전" disabled>‹</button>
+			  <button class="page-btn active">1</button>
+			  <button class="page-btn">2</button>
+			  <button class="page-btn">3</button>
+			  <button class="page-btn">4</button>
+			  <button class="page-btn">5</button>
+			  <button class="page-btn" title="다음">›</button>
+			  <button class="page-btn" title="마지막">»</button>
+			</div>
+            
+            
+            <!-- ===== 선택된 신고서 미리보기 영역 ===== -->
+            <!-- ===== 선택된 신고서 미리보기 영역 (처리현황 하단) ===== -->
+            <div id="st-detail-preview" style="margin-top:24px;border-top:2px solid #cbd5e1;padding-top:20px">
+
+              <!-- 초기 빈 상태 -->
+              <div id="st-preview-empty" style="text-align:center;padding:40px 0;color:#a0b4c8">
+                <span class="material-symbols-outlined"
+                  style="font-size:42px;display:block;margin-bottom:10px">description</span>
+                <p style="font-size:13px;font-weight:600;color:#697d8f;margin:0">상단 목록에서 <b>[상세]</b> 버튼을 눌러 조회할 신고서를
+                  선택하세요.</p>
+                <p style="font-size:11px;color:#a0b4c8;margin-top:4px">선택한 신고서의 내용이 이 영역에 표시됩니다.</p>
+              </div>
+
+              <!-- 신고서 내용 표시 영역 (숨김 상태로 시작) -->
+              <div id="st-preview-content" style="display:none">
+                <div
+                  style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding:12px 16px;background:linear-gradient(135deg,#ecf4ff,#dae2fd);border-left:4px solid #565e74">
+                  <div>
+                    <div style="font-size:10px;font-weight:800;color:#565e74;letter-spacing:1px">SELECTED DECLARATION
+                    </div>
+                    <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+                      <h3 id="stP-title" style="font-size:16px;font-weight:900;color:#203444;margin:0">수입신고서 상세</h3>
+                      <span id="stP-no" style="font-size:11px;color:#697d8f;font-family:monospace">-</span>
+                    </div>
+                  </div>
+                  <button class="btn btn-outline" style="padding:6px 10px;font-size:11px"
+                    onclick="closeStDetailPreview()">
+                    <span class="material-symbols-outlined" style="font-size:14px">close</span> 닫기
+                  </button>
+                </div>
+
+                <!-- 기본 정보 -->
+                <div style="border-left:3px solid #565e74;padding-left:12px;margin-bottom:16px">
+                  <h4 style="font-size:12px;font-weight:700;color:#4d6172;margin-bottom:10px">■ 기본 신고 정보</h4>
+                  <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+                    <div class="form-item"><label>통관의뢰번호</label><input type="text" id="stP-f-no" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>신고유형</label><input type="text" id="stP-f-type" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>처리상태</label><input type="text" id="stP-f-status" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>화주(수입자/수출자)</label><input type="text" id="stP-f-client" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>사업자등록번호</label><input type="text" id="stP-f-bizNo" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>통관고유부호</label><input type="text" id="stP-f-clientCode" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>접수일시</label><input type="text" id="stP-f-acceptDate" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>담당 세관</label><input type="text" id="stP-f-customs" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>담당자</label><input type="text" id="stP-f-officer" readonly
+                        style="background:#f8fafc"></div>
+                  </div>
+                </div>
+
+                <!-- 물품 정보 -->
+                <div style="border-left:3px solid #506076;padding-left:12px;margin-bottom:16px">
+                  <h4 style="font-size:12px;font-weight:700;color:#4d6172;margin-bottom:10px">■ 물품 정보</h4>
+                  <div class="form-grid" style="grid-template-columns:2fr 1fr 1fr">
+                    <div class="form-item"><label>품명</label><input type="text" id="stP-f-item" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>HS 코드</label><input type="text" id="stP-f-hs" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>원산지</label><input type="text" id="stP-f-origin" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>수량</label><input type="text" id="stP-f-qty" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>중량</label><input type="text" id="stP-f-weight" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>송품장 금액</label><input type="text" id="stP-f-invoice" readonly
+                        style="background:#f8fafc"></div>
+                  </div>
+                </div>
+
+                <!-- 운송/세금 정보 -->
+                <div style="border-left:3px solid #9f403d;padding-left:12px;margin-bottom:16px">
+                  <h4 style="font-size:12px;font-weight:700;color:#4d6172;margin-bottom:10px">■ 운송 · 세금 정보</h4>
+                  <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+                    <div class="form-item"><label>B/L 번호</label><input type="text" id="stP-f-bl" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>적용환율</label><input type="text" id="stP-f-exchange" readonly
+                        style="background:#f8fafc"></div>
+                    <div class="form-item"><label>관세 총액</label><input type="text" id="stP-f-tax" readonly
+                        style="background:#f8fafc;color:#9f403d;font-weight:700"></div>
+                  </div>
+                </div>
+
+                <!-- 액션 버튼 -->
+                <div
+                  style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0">
+                  <div style="font-size:11px;color:#697d8f">
+                    <span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle">info</span>
+                    읽기 전용 화면입니다. 수정이 필요한 경우 신고서 작성 페이지로 이동하세요.
+                  </div>
+                  <div class="btn-row">
+                    <button class="btn btn-outline" onclick="alert('신고서 내용을 PDF로 다운로드합니다.')"><span
+                        class="material-symbols-outlined" style="font-size:14px">download</span> PDF 다운로드</button>
+                    <button class="btn btn-primary" onclick="alert('신고서 작성 화면에서 수정하려면 상세→불러오기를 사용하세요.')"><span
+                        class="material-symbols-outlined" style="font-size:14px">edit</span> 신고서 편집</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+
+            <!-- ===== 세금납부 관리 ===== -->
+            <div id="st-tax" style="display:${activeSub eq 'tax' ? 'block' : 'none'}">
+				 <h2><span class="material-symbols-outlined">payments</span> 세금납부 관리</h2>
+                    
+                <div class="form-grid" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px 12px; align-items: end;">
+
+				    <div class="form-item"><label>통관의뢰번호</label><input type="text" placeholder="번호 입력"></div>
+				    <div class="form-item"><label>화주</label><input type="text" placeholder="화주명"></div>
+				    <div class="form-item"><label>납부기한</label><input type="date" value="2024-05-01"></div>
+				    <div class="form-item"><label>상태</label><input type="text" placeholder="납부완료 / 미납 / 해당없음"></div>
+				    <div class="form-item"><label>전자납부번호</label><input type="text" placeholder="ENP-YYYY-MMDD-XXX"></div>
+				
+				    <div class="form-item">
+				        <div class="btn-row" style="display: flex; gap: 4px;">
+				            <button class="btn btn-primary" style="flex: 1.5; background:#555e70;">조회</button>
+				            <button class="btn btn-secondary" style="flex: 1; background:#eef4fb; color:#444; border:1px solid #d0ddec;">초기화</button>
+				        </div>
+				    </div>
+				</div>
+
+
+
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>수입통관의뢰번호</th>
+                    <th>화주</th>
+                    <th>세목</th>
+                    <th>납부세액</th>
+                    <th>납부기한</th>
+                    <th>납부상태</th>
+                    <th>전자납부번호</th>
+                    <th>처리</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="background:#fef2f2">
+                    <td class="td-id">IMP-20240520-001</td>
+                    <td>SK하이닉스</td>
+                    <td>
+                      <div style="font-size:11px">관세: ₩12,450,000</div>
+                      <div style="font-size:11px">부가세: ₩4,580,000</div>
+                    </td>
+                    <td style="font-weight:800;color:#9f403d">₩17,350,000</td>
+                    <td>
+                      <div style="font-weight:700;color:#9f403d">2024-05-22</div>
+                      <span class="dday-chip danger">D-2</span>
+                    </td>
+                    <td><span class="pay-badge urgent"><span class="material-symbols-outlined">warning</span>미납</span>
+                    </td>
+                    <td class="td-muted">-</td>
+                    <td>
+                      <button class="mini mini-view" onclick="showModal('tax-detail')">상세</button>
+                      <button class="mini" style="background:#565e74;color:#fff"
+                        onclick="showModal('tax-pay')">납부</button>
+                    </td>
+                  </tr>
+                  <tr style="background:#fef2f2">
+                    <td class="td-id">IMP-20240519-012</td>
+                    <td>포스코</td>
+                    <td>
+                      <div style="font-size:11px">관세: ₩89,200,000</div>
+                      <div style="font-size:11px">부가세: ₩31,220,000</div>
+                    </td>
+                    <td style="font-weight:800;color:#9f403d">₩120,420,000</td>
+                    <td style="color:#9f403d;font-weight:800">2024-05-23<br><span style="font-size:10px">D-3</span></td>
+                    <td><span class="pay-badge unpaid">미납</span></td>
+                    <td class="td-muted">-</td>
+                    <td>
+                      <button class="mini mini-view" onclick="openTaxDetail('IMP-20240518-008')">상세</button>
+                      <button class="mini" style="background:#565e74;color:#fff"
+                        onclick="openTaxPay('IMP-20240520-001')">납부</button>
+                    </td>
+                  </tr>
+                  <tr style="background:#fffbeb">
+                    <td class="td-id">IMP-20240518-008</td>
+                    <td>LG화학</td>
+                    <td>
+                      <div style="font-size:11px">관세: ₩5,600,000</div>
+                      <div style="font-size:11px">부가세: ₩1,960,000</div>
+                    </td>
+                    <td style="font-weight:800;color:#d97706">₩7,560,000</td>
+                    <td>2024-05-28<br><span style="font-size:10px;color:#d97706">D-8 (분납)</span></td>
+                    <td><span class="pay-badge installment"><span class="material-symbols-outlined">schedule</span>분납중
+                        1/2</span></td>
+                    <td class="td-muted">ENP-2024-0518-001</td>
+                    <td>
+                      <button class="mini mini-view" onclick="openTaxDetail('IMP-20240519-015')">상세</button>
+                      <button class="mini mini-sup" onclick="openTaxSchedule('IMP-20240519-015')">일정</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-id">IMP-20240519-015</td>
+                    <td>삼성전자</td>
+                    <td>
+                      <div style="font-size:11px">관세: ₩3,618,400</div>
+                      <div style="font-size:11px">부가세: ₩1,266,440</div>
+                    </td>
+                    <td style="font-weight:700">₩4,884,840</td>
+                    <td>2024-05-20<br><span style="font-size:10px;color:#1d6b4f">완료</span></td>
+                    <td><span class="pay-badge paid"><span
+                          class="material-symbols-outlined">check_circle</span>납부완료</span></td>
+                    <td class="td-muted">ENP-2024-0519-003</td>
+                    <td>
+                      <button class="mini mini-view" onclick="openTaxDetail('IMP-20240517-003')">상세</button>
+                      <button class="mini" style="background:#ecf4ff;color:#565e74"
+                        onclick="alert('납부영수증을 출력합니다.')">영수증</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-id">IMP-20240517-003</td>
+                    <td>현대모비스</td>
+                    <td>
+                      <div style="font-size:11px">관세: ₩8,920,000</div>
+                      <div style="font-size:11px">부가세: ₩3,122,000</div>
+                    </td>
+                    <td style="font-weight:700">₩12,042,000</td>
+                    <td>2024-05-19<br><span style="font-size:10px;color:#1d6b4f">완료</span></td>
+                    <td><span class="pay-badge paid"><span
+                          class="material-symbols-outlined">check_circle</span>납부완료</span></td>
+                    <td class="td-muted">ENP-2024-0517-001</td>
+                    <td>
+                      <button class="mini mini-view" onclick="openTaxDetail('IMP-20240520-001')">상세</button>
+                      <button class="mini" style="background:#ecf4ff;color:#565e74"
+                        onclick="alert('납부영수증을 출력합니다.')">영수증</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+				<!-- 페이지네이션 -->
+				<div class="pagination">
+				  <button class="page-btn" title="처음" disabled>«</button>
+				  <button class="page-btn" title="이전" disabled>‹</button>
+				  <button class="page-btn active">1</button>
+				  <button class="page-btn">2</button>
+				  <button class="page-btn">3</button>
+				  <button class="page-btn">4</button>
+				  <button class="page-btn">5</button>
+				  <button class="page-btn" title="다음">›</button>
+				  <button class="page-btn" title="마지막">»</button>
+				</div>
+
+            </div>
+
+            <!-- ===== 신고필증 관리 ===== -->
+            <div id="st-cert" style="display:${activeSub eq 'cert' ? 'block' : 'none'}">
+            	  <h2><span class="material-symbols-outlined">verified</span> 신고필증 관리</h2>
+              <div class="form-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px 12px;align-items:end">
+				  <div class="form-item"><label>통관의뢰번호</label><input type="text" placeholder="번호 입력"></div>
+				  <div class="form-item"><label>구분</label><select>
+				      <option>전체</option>
+				      <option>수입</option>
+				      <option>수출</option>
+				    </select></div>
+				  <div class="form-item"><label>화주</label><input type="text" placeholder="화주명"></div>
+				  <div class="form-item"><label>품목</label><input type="text" placeholder="품목명"></div>
+				
+				  <div class="form-item"><label>수리기간(시작)</label><input type="date" value="2024-05-01"></div>
+				  <div class="form-item"><label>수리기간(종료)</label><input type="date" value="2024-05-20"></div>
+				  <div class="form-item"><label>납부상태</label><select>
+				      <option>전체</option>
+				      <option>납부완료</option>
+				      <option>해당없음</option>
+				      <option>미납</option>
+				    </select></div>
+				  <div class="form-item"><label>필증상태</label><select>
+				      <option>전체</option>
+				      <option>발급가능</option>
+				      <option>발급불가</option>
+				    </select></div>
+				
+				  <div class="form-item"><label>화주전달</label><select>
+				      <option>전체</option>
+				      <option>미전달</option>
+				      <option>전달완료</option>
+				    </select></div>
+				  <div class="form-item" style="grid-column:4/5;justify-content:flex-end"><label>&nbsp;</label>
+				    <div class="btn-row"><button class="btn btn-primary"
+				        onclick="alert('조회 완료: 총 15건')">조회</button><button class="btn btn-secondary">초기화</button></div>
+				  </div>
+				</div>
+
+              <table class="data-table">
+               <thead>
+				  <tr>
+				    <th>수입통관의뢰번호</th>
+				    <th>구분</th>
+				    <th>화주</th>
+				    <th>품목</th>
+				    <th>수리일자</th>
+				    <th>납부상태</th>
+				    <th>필증상태</th>
+				    <th>화주전달</th>
+				    <th>처리</th>
+				  </tr>
+				</thead>
+                <tbody>
+                  <tr>
+                    <td class="td-id">IMP-20240519-015</td>
+                    <td>수입</td>
+                    <td>삼성전자</td>
+                    <td>정밀 의료기기 외 2건</td>
+                    <td class="td-muted">05-20</td>
+                    <td><span class="badge badge-ok">납부완료</span></td>
+                    <td><span class="badge" style="background:#d1fae5;color:#065f46;font-size:8px">발급가능</span></td>
+                    <td><span class="badge" style="background:#ecf4ff;color:#565e74;font-size:8px">미전달</span></td>
+                    <td>
+                      <!-- 각 행마다 이렇게 수정 -->
+                      <button class="mini mini-view" onclick="openCertDetail('IMP-20240519-015')">상세</button>
+                      <button class="mini" style="background:#565e74;color:#fff;font-size:9px"
+                        onclick="openCertPrint('IMP-20240519-015')">출력</button>
+                      <button class="mini mini-sup" style="font-size:9px"
+                        onclick="openCertSend('IMP-20240519-015')">화주전달</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-id">EXP-20240520-421</td>
+                    <td>수출</td>
+                    <td>삼성전자</td>
+                    <td>전자부품 (반도체)</td>
+                    <td class="td-muted">05-20</td>
+                    <td style="color:#697d8f;font-size:11px">해당없음</td>
+                    <td><span class="badge" style="background:#d1fae5;color:#065f46;font-size:8px">발급가능</span></td>
+                    <td><span class="badge" style="background:#ecf4ff;color:#565e74;font-size:8px">미전달</span></td>
+                    <td>
+                      <button class="mini mini-view" onclick="showModal('cert-detail')">상세</button>
+                      <button class="mini" style="background:#565e74;color:#fff;font-size:9px"
+                        onclick="alert('수출신고필증을 출력합니다.')">출력</button>
+                      <button class="mini mini-sup" style="font-size:9px" onclick="alert('✅ 화주 전달 완료')">화주전달</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-id">IMP-20240517-003</td>
+                    <td>수입</td>
+                    <td>현대모비스</td>
+                    <td>자동차 부품 조립체</td>
+                    <td class="td-muted">05-19</td>
+                    <td><span class="badge badge-ok">납부완료</span></td>
+                    <td><span class="badge" style="background:#d1fae5;color:#065f46;font-size:8px">발급가능</span></td>
+                    <td><span class="badge badge-ok" style="font-size:8px">전달완료</span></td>
+                    <td>
+                      <button class="mini mini-view" onclick="showModal('cert-detail')">상세</button>
+                      <button class="mini" style="background:#565e74;color:#fff;font-size:9px"
+                        onclick="alert('수입신고필증을 출력합니다.')">출력</button>
+                      <button class="mini" style="background:#ecf4ff;color:#565e74;font-size:9px"
+                        onclick="alert('재전달 완료')">재전달</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="td-id">EXP-20240519-420</td>
+                    <td>수출</td>
+                    <td>포스코</td>
+                    <td>철강제품</td>
+                    <td class="td-muted">05-19</td>
+                    <td style="color:#697d8f;font-size:11px">해당없음</td>
+                    <td><span class="badge" style="background:#d1fae5;color:#065f46;font-size:8px">발급가능</span></td>
+                    <td><span class="badge badge-ok" style="font-size:8px">전달완료</span></td>
+                    <td>
+                      <button class="mini mini-view" onclick="showModal('cert-detail')">상세</button>
+                      <button class="mini" style="background:#565e74;color:#fff;font-size:9px">출력</button>
+                      <button class="mini" style="background:#ecf4ff;color:#565e74;font-size:9px">재전달</button>
+                    </td>
+                  </tr>
+                  <tr style="background:#fef2f2">
+                    <td class="td-id">IMP-20240520-001</td>
+                    <td>수입</td>
+                    <td>SK하이닉스</td>
+                    <td>정밀기기</td>
+                    <td class="td-muted">-</td>
+                    <td><span class="badge badge-urgent">미납</span></td>
+                    <td><span class="badge" style="background:#fecaca;color:#991b1b;font-size:8px">발급불가</span></td>
+                    <td>-</td>
+                    <td>
+                      <button class="mini mini-view">상세</button>
+                      <button class="mini" style="background:#e2e8f0;color:#94a3b8;font-size:9px;cursor:not-allowed"
+                        disabled>출력</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              	<!-- 페이지네이션 -->
+				<div class="pagination">
+				  <button class="page-btn" title="처음" disabled>«</button>
+				  <button class="page-btn" title="이전" disabled>‹</button>
+				  <button class="page-btn active">1</button>
+				  <button class="page-btn">2</button>
+				  <button class="page-btn">3</button>
+				  <button class="page-btn">4</button>
+				  <button class="page-btn">5</button>
+				  <button class="page-btn" title="다음">›</button>
+				  <button class="page-btn" title="마지막">»</button>
+				</div>
+
+              <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+            </div>
+
+          </div>     <!-- closes st-cert sub-tab content -->
+      </div>         <!-- closes pg-status -->
+        </div>
+        <%@ include file="/WEB-INF/views/broker/common/footer.jsp" %>
+    </div>
+</div>
+<%@ include file="/WEB-INF/views/broker/common/modals.jsp" %>
+<script>window.contextPath = '${ctx}';</script>
+<script src="${ctx}/resources/js/broker/common.js"></script>
+<script src="${ctx}/resources/js/broker/pages/status.js"></script>
+</body>
+</html>

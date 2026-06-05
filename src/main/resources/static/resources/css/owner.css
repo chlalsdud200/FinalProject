@@ -1,0 +1,31 @@
+@charset "UTF-8";
+
+/* TACS Owner Portal CSS entrypoint. 실제 스타일은 common/owner 하위 파일로 분리되어 있습니다. */
+@import url("./common/reset.css");
+@import url("./common/layout.css");
+@import url("./common/header.css");
+@import url("./common/sidebar.css");
+@import url("./common/footer.css");
+@import url("./common/page.css");
+@import url("./common/card.css");
+@import url("./common/button.css");
+@import url("./common/badge.css");
+@import url("./common/form.css");
+@import url("./common/table.css");
+@import url("./common/filter.css");
+@import url("./common/alert.css");
+@import url("./common/modal.css");
+@import url("./common/responsive.css");
+@import url("./owner/dashboard.css");
+@import url("./owner/request.css");
+@import url("./owner/transport.css");
+@import url("./owner/customs.css");
+@import url("./common/docs.css");
+@import url("./owner/community.css");
+@import url("./owner/mypage.css");
+@import url("./owner/settings.css");
+@import url("./owner/contract.css");
+@import url("./owner/ownerPay.css");
+@import url("./owner/dury.css");
+@import url("./owner/owner-certs.css");
+@import url("./owner/arrivalNotice.css");

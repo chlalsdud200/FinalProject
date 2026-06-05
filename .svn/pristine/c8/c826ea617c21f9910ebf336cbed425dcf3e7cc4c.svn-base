@@ -1,0 +1,21 @@
+package kr.or.tacs.owner.transport.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Controller
+@RequestMapping("/owner/transport/import")
+public class TransportImportController {
+
+    @GetMapping("/list.do")
+    public String retrieveImportTransportList() {
+        return "owner/transport/importTransportList";
+    }
+
+    @GetMapping("/detail.do/{trNo}")
+    public String retrieveTransportDetail(@PathVariable String trNo) {
+        return "owner/transport/transportDetail";
+    }
+}

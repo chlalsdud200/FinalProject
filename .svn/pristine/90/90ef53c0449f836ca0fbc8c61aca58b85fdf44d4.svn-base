@@ -1,0 +1,28 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!-- ── Topbar ── -->
+<header class="topbar">
+    <div class="tb-left">
+        <span class="tb-brand">TACS</span>
+        <div class="search-wrap" style="width: 320px;">
+            <span class="material-symbols-outlined">search</span>
+            <input id="gSearch" placeholder="화물번호 · B/L · 업체명 검색 후 Enter" onkeydown="if(event.key==='Enter')doSearch()">
+        </div>
+    </div>
+    <div class="tb-right">
+        <% if (request.isUserInRole("SYSTEM_ADMIN")) { %>
+        <button class="tb-btn" title="액터 목록" onclick="location.href='${pageContext.request.contextPath}/systemadmin/dashboard.do'">
+            <span class="material-symbols-outlined">list</span>
+        </button>
+        <% } %>
+        <jsp:include page="/WEB-INF/views/common/notification_bell.jsp" />
+        <button class="tb-btn" onclick="alert('창고관리자 데모 v2')"><span class="material-symbols-outlined">help</span></button>
+        <div class="tb-sep"></div>
+        <div class="tb-user">
+            <div class="tb-user-info">
+                <div class="name">임경호 창고팀장</div>
+                <div class="role">TACS 창고관리 포털 · DEMO</div>
+            </div>
+            <div class="tb-avatar" onclick="if(confirm('로그아웃 하시겠습니까?')) document.getElementById('logoutForm').submit();" style="cursor:pointer">임</div>
+        </div>
+    </div>
+</header>

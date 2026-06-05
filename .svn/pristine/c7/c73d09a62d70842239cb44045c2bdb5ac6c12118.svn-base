@@ -1,0 +1,35 @@
+package kr.or.tacs.officer.fulfillmentandexport.service;
+
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import kr.or.tacs.dto.officer.WarehouseCargoTrackingDTO;
+import kr.or.tacs.officer.fulfillmentandexport.mapper.IWarehouseCargoTrackingMapper;
+
+@Service
+@RequiredArgsConstructor
+public class WarehouseCargoTrackingServiceImpl implements IWarehouseCargoTrackingService {
+
+    private final IWarehouseCargoTrackingMapper mapper;
+
+    @Override
+    public List<WarehouseCargoTrackingDTO> selectWarehouseCargoList(
+            String startDate,
+            String endDate,
+            String reqNo,
+            String declareType,
+            String warehouseName,
+            String cargoStatusCd) {
+
+        return mapper.selectWarehouseCargoList(
+                startDate,
+                endDate,
+                reqNo,
+                declareType,
+                warehouseName,
+                cargoStatusCd
+        );
+    }
+}

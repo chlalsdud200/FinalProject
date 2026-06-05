@@ -1,0 +1,1238 @@
+(function () {
+    if (window.__TACS_IMPORT_MANIFEST_PDF_COMPARE_CLEAN) return;
+    window.__TACS_IMPORT_MANIFEST_PDF_COMPARE_CLEAN = true;
+
+    function ctxPath() {
+        if (typeof getTransportContextPath === 'function') return getTransportContextPath();
+        var path = window.location.pathname || '';
+        var idx = path.indexOf('/transport/');
+        return idx >= 0 ? path.substring(0, idx) : (window.contextPath || '');
+    }
+
+    function esc(v) {
+        if (typeof safeText === 'function') return safeText(v);
+        return String(v == null || v === '' ? '-' : v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/\"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function fileNo(item) {
+        item = item || {};
+        return item.packingListFileNo || item.pkgFileNo || item.fileNo || '';
+    }
+
+    function buildDownloadUrl(item) {
+        item = item || {};
+        if (item.__uploadedPackingObjectUrl) return item.__uploadedPackingObjectUrl;
+        var no = fileNo(item);
+        return no ? ctxPath() + '/common/file/download.do?fileNo=' + encodeURIComponent(no) : '';
+    }
+
+    function buildPreviewUrl(item) {
+        item = item || {};
+        if (item.__uploadedPackingObjectUrl) return item.__uploadedPackingObjectUrl;
+        var no = fileNo(item);
+        /*
+         * iframe에는 download.do를 쓰면 탭 진입/대상 선택 시 자동 다운로드가 발생한다.
+         * 미리보기는 preview.do, 실제 다운로드는 버튼 클릭 시 download.do만 사용한다.
+         */
+        return no ? ctxPath() + '/common/file/preview.do?fileNo=' + encodeURIComponent(no) : '';
+    }
+
+    function buildPdfUrl(item) {
+        return buildPreviewUrl(item);
+    }
+
+    function injectManifestStyle() {
+        if (document.getElementById('tacsManifestOneUploadStyle')) return;
+
+        var style = document.createElement('style');
+        style.id = 'tacsManifestOneUploadStyle';
+        style.textContent = ''
+            + '#manifestPackingViewBtn,#manifestManualConfirmArea{display:none!important;}'
+            + '#manifestPackingUploadInput{display:none!important;}'
+            + '.manifest-packing-upload-label input{display:none!important;}'
+            + '.manifest-pdf-frame{width:100%!important;height:560px!important;background:#fff!important;border:1px solid #cbd5e1!important;}'
+            + '.manifest-packing-upload-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:34px!important;height:34px!important;padding:0 16px!important;border:1px solid #64748b!important;background:#64748b!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-size:12px!important;font-weight:900!important;cursor:pointer!important;transition:all 0.2s!important;line-height:1!important;margin:0!important;}'
+            + '.manifest-packing-upload-btn:hover{background:#334155!important;border-color:#334155!important;}'
+            + '.manifest-packing-upload-btn::before,.manifest-packing-upload-btn::after{content:none!important;display:none!important;}'
+            + '.manifest-pdf-value-input{background:#fff!important;color:#0f172a!important;}'
+            + '.manifest-compare-result span{white-space:nowrap;}'
+            + '#importManifestResetBtn,#importManifestReloadBtn,#importManifestResetBtn *,#importManifestReloadBtn *{color:#fff!important;}';
+        document.head.appendChild(style);
+    }
+
+    window.buildManifestPackingPdfUrl = buildPdfUrl;
+
+    window.hasManifestPackingFile = function (item) {
+        return !!buildPdfUrl(item || {});
+    };
+
+    window.hideManifestPackingExtraControls = function () {
+        ['manifestPackingViewBtn', 'manifestManualConfirmArea'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+    };
+
+    function bindUploadInput(item) {
+        var input = document.getElementById('manifestPackingUploadInput');
+        if (!input) return;
+
+        input.onchange = function () {
+            var file = input.files && input.files[0];
+            if (!file) return;
+
+            if (typeof window.handleManifestPackingUpload === 'function') {
+                window.handleManifestPackingUpload(file, item);
+            } else if (typeof handlePackingPdfUpload === 'function') {
+                handlePackingPdfUpload(file);
+            } else {
+                alert('PDF 업로드 대조 함수가 없습니다. import-manifest.js를 확인하세요.');
+            }
+        };
+    }
+
+    window.renderManifestAttachmentDownloadBox = function (item) {
+        injectManifestStyle();
+
+        item = item || window.SELECTED_IMPORT_MANIFEST || {};
+        var name = item.packingListFile || item.packingListFileName || item.pkgFileNm || '포장명세서 PDF를 업로드하세요.';
+        var previewUrl = buildPreviewUrl(item);
+        var downloadUrl = buildDownloadUrl(item);
+        var body = document.getElementById('manifestPackingPreviewBody');
+        if (!body) return;
+
+        if (previewUrl || downloadUrl) {
+            body.innerHTML =
+                '<div class="min-h-[390px] border-2 border-dashed border-slate-300 rounded-lg bg-slate-100 p-4">' +
+                '  <div class="flex items-center justify-between gap-3 mb-3">' +
+                '    <div class="min-w-0">' +
+                '      <p class="text-xs font-bold text-slate-700 break-all">' + esc(name || '포장명세서.pdf') + '</p>' +
+                '      <p class="text-[11px] text-slate-500 mt-1">포장명세서 PDF를 확인하면서 오른쪽 비교값을 수정할 수 있습니다.</p>' +
+                '    </div>' +
+                '    <div class="flex items-center gap-2">' +
+                '      <button type="button" class="manifest-packing-upload-btn" onclick="document.getElementById(\'manifestPackingUploadInput\').click()">PDF 업로드</button>' +
+                '      <input id="manifestPackingUploadInput" type="file" accept="application/pdf,.pdf" style="display:none">' +
+                '    </div>' +
+                '  </div>' +
+                '  <iframe src="' + esc(previewUrl) + '#toolbar=0&navpanes=0" title="포장명세서 PDF" class="manifest-pdf-frame"></iframe>' +
+                '</div>';
+        } else {
+            body.innerHTML =
+                '<div class="flex flex-col items-center justify-center min-h-[390px] text-center border-2 border-dashed border-slate-300 rounded-lg bg-slate-100 p-6">' +
+                '  <span class="material-symbols-outlined text-5xl text-slate-400 mb-3">upload_file</span>' +
+                '  <p class="text-xs font-bold text-slate-700 break-all">' + esc(name) + '</p>' +
+                '  <p class="text-[11px] text-slate-500 mt-2">포장명세서 PDF를 업로드하면 PDF 화면과 오른쪽 비교표에 반영됩니다.</p>' +
+                '  <div class="mt-4 flex justify-center">' +
+                '    <button type="button" class="manifest-packing-upload-btn" onclick="document.getElementById(\'manifestPackingUploadInput\').click()">PDF 업로드</button>' +
+                '    <input id="manifestPackingUploadInput" type="file" accept="application/pdf,.pdf" style="display:none">' +
+                '  </div>' +
+                '</div>';
+        }
+
+        bindUploadInput(item);
+        window.hideManifestPackingExtraControls();
+    };
+
+    window.loadManifestPackingText = function (item) {
+        item = item || {};
+        var no = fileNo(item);
+
+        if (!no || item.__uploadedPackingObjectUrl) {
+            item.packingText = item.packingText || '';
+            item.__packingTextLoaded = !!item.packingText;
+            item.__packingTextLoading = false;
+            if (typeof window.renderManifestAttachmentDownloadBox === 'function') window.renderManifestAttachmentDownloadBox(item);
+            if (typeof window.renderImportManifestCargoItems === 'function') window.renderImportManifestCargoItems(item);
+            return;
+        }
+
+        if (item.__packingTextLoaded || item.__packingTextLoading) {
+            if (typeof window.renderManifestAttachmentDownloadBox === 'function') window.renderManifestAttachmentDownloadBox(item);
+            if (typeof window.renderImportManifestCargoItems === 'function') window.renderImportManifestCargoItems(item);
+            return;
+        }
+
+        item.__packingTextLoading = true;
+        fetch(ctxPath() + '/transport/import/manifest/packing-text.do?fileNo=' + encodeURIComponent(no) + '&_=' + Date.now(), {
+            method: 'GET',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            cache: 'no-store',
+            credentials: 'same-origin'
+        })
+            .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error('HTTP ' + res.status)); })
+            .then(function (data) {
+                item.packingText = data && data.success ? (data.text || '') : '';
+                item.__packingTextLoaded = true;
+                item.__packingTextLoading = false;
+                window.renderManifestAttachmentDownloadBox(item);
+                window.renderImportManifestCargoItems(item);
+            })
+            .catch(function () {
+                item.packingText = '';
+                item.__packingTextLoaded = true;
+                item.__packingTextLoading = false;
+                window.renderManifestAttachmentDownloadBox(item);
+                window.renderImportManifestCargoItems(item);
+            });
+    };
+})();
+
+(function () {
+    if (window.__TACS_IMPORT_MANIFEST_COMPARE_UI_CLEAN) return;
+    window.__TACS_IMPORT_MANIFEST_COMPARE_UI_CLEAN = true;
+
+    var originalSelect = window.selectImportManifestItem;
+
+    function ctxPath() {
+        if (typeof getTransportContextPath === 'function') return getTransportContextPath();
+        var path = window.location.pathname || '';
+        var idx = path.indexOf('/transport/');
+        return idx >= 0 ? path.substring(0, idx) : (window.contextPath || '');
+    }
+
+    function csrfHeaders(extra) {
+        var headers = extra || {};
+        var token = (window.TRANSPORT_CSRF && window.TRANSPORT_CSRF.token) || (document.querySelector('meta[name="_csrf"]') && document.querySelector('meta[name="_csrf"]').getAttribute('content')) || '';
+        var headerName = (window.TRANSPORT_CSRF && window.TRANSPORT_CSRF.header) || (document.querySelector('meta[name="_csrf_header"]') && document.querySelector('meta[name="_csrf_header"]').getAttribute('content')) || '';
+        if (token && headerName && token !== '${_csrf.token}' && headerName !== '${_csrf.headerName}') {
+            headers[headerName] = token;
+        }
+        return headers;
+    }
+
+    function text(v) {
+        if (typeof safeText === 'function') return safeText(v);
+        return String(v == null || v === '' ? '-' : v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function attr(v) {
+        if (typeof escapeAttr === 'function') return escapeAttr(v);
+        return String(v == null ? '' : v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function norm(v) {
+        return String(v == null ? '' : v)
+            .replace(/,/g, '')
+            .replace(/\s+/g, '')
+            .replace(/[()\-_/.:]/g, '')
+            .trim()
+            .toLowerCase();
+    }
+
+    function normalizeWeight(value) {
+        if (typeof normalizeWeightForDisplay === 'function') return normalizeWeightForDisplay(value);
+        var raw = String(value == null ? '' : value).trim();
+        return raw && !/kg/i.test(raw) ? raw + ' KG' : raw;
+    }
+
+    function linesOf(rawText) {
+        return String(rawText || '')
+            .replace(/\r/g, '')
+            .split('\n')
+            .map(function (line) { return line.trim(); })
+            .filter(Boolean);
+    }
+
+
+    function flatPdfText(rawText) {
+        return String(rawText || '')
+            .replace(/\r/g, '\n')
+            .replace(/[ \t]+/g, ' ')
+            .replace(/\n+/g, '\n')
+            .trim();
+    }
+
+    function extractLabelRange(text, startPattern, endPattern) {
+        var source = flatPdfText(text);
+        var re = new RegExp(startPattern + '\\s*[:：-]?\\s*([\\s\\S]*?)(?=' + endPattern + ')', 'i');
+        var match = source.match(re);
+        return match ? cleanPdfFieldValue(match[1]) : '';
+    }
+
+    function cleanPdfFieldValue(value) {
+        return String(value || '')
+            .replace(/\s+/g, ' ')
+            .replace(/^(?:[:：\-]\s*)+/, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function cleanLocationValue(value) {
+        var raw = cleanPdfFieldValue(value)
+            .replace(/(?:④|4[.)]?|\(4\))\s*(?:Vessel\/?flight|선박\/?항공편).*$/i, '')
+            .replace(/(?:⑪|11[.)]?|\(11\))\s*(?:Terms\s+of\s+delivery\s+and\s+payment|인도\s+및\s+결제조건).*$/i, '')
+            .replace(/(?:⑦|7[.)]?|\(7\))\s*(?:Shipping|선적).*$/i, '')
+            .trim();
+        var known = raw.match(/\b(?:BANGKOK|BUSAN)(?:\s*,\s*(?:THAILAND|KOREA|REPUBLIC\s+OF\s+KOREA))?\b/i);
+        if (known) return known[0].toUpperCase().replace(/\s+/g, ' ');
+        var cityCountry = raw.match(/\b[A-Z][A-Z\s]{3,}\s*,\s*[A-Z][A-Z\s]{3,}\b/);
+        return cityCountry ? cityCountry[0].toUpperCase().replace(/\s+/g, ' ') : '';
+    }
+
+    function lineAfterLabel(lines, labelPattern) {
+        for (var i = 0; i < lines.length; i += 1) {
+            var line = lines[i] || '';
+            var match = line.match(labelPattern);
+            if (!match) continue;
+            var sameLine = cleanLocationValue(line.substring(match.index + match[0].length));
+            if (sameLine) return sameLine;
+            for (var j = i + 1; j < lines.length; j += 1) {
+                var next = cleanLocationValue(lines[j] || '');
+                if (next) return next;
+            }
+        }
+        return '';
+    }
+
+    function extractLocation(rawText, type, lines) {
+        var fromLabel = '(?:⑤|5[.)]?|\\(5\\))\\s*(?:From|출발지)';
+        var toLabel = '(?:⑥|6[.)]?|\\(6\\))\\s*(?:To|도착지)';
+        var termsLabel = '(?:⑪|11[.)]?|\\(11\\))\\s*(?:Terms\\s+of\\s+delivery\\s+and\\s+payment|인도\\s+및\\s+결제조건)';
+        var value = type === 'departure'
+            ? extractLabelRange(rawText, fromLabel, toLabel)
+            : extractLabelRange(rawText, toLabel, termsLabel);
+
+        value = cleanLocationValue(value);
+        if (value) return value;
+        value = type === 'departure'
+            ? lineAfterLabel(lines, /(?:⑤|5[.)]?|\(5\))\s*(?:From|출발지)\s*[:：-]?\s*/i)
+            : lineAfterLabel(lines, /(?:⑥|6[.)]?|\(6\))\s*(?:To|도착지)\s*[:：-]?\s*/i);
+        if (value) return value;
+        return type === 'departure'
+            ? lineAfterLabel(lines, /\bFrom\b\s*[:：-]?\s*/i)
+            : lineAfterLabel(lines, /\bTo\b\s*[:：-]?\s*/i);
+    }
+
+    function parseCollapsedCargoLine(rawText) {
+        var flat = flatPdfText(rawText).replace(/\s+/g, ' ');
+        var match = flat.match(/(\d[\d,]*\s*(?:BAGS?|BAG|CTNS?|CARTONS?|BOXES?|PCS?|PACKAGES?))\s+([A-Z0-9][A-Z0-9\s/().,\-]+?)\s+(\d[\d,]*(?:\.\d+)?\s*(?:KG|KGS))\s+(\d[\d,]*(?:\.\d+)?\s*(?:KG|KGS))(?:\s|$)/i);
+        if (!match) return {};
+        return {
+            packageQuantity: cleanPdfFieldValue(match[1]),
+            goodsDescription: cleanPdfFieldValue(match[2]).replace(/\s*\/\s*/g, ' / '),
+            netWeight: cleanPdfFieldValue(match[3]).replace(/\bKGS\b/i, 'KG'),
+            grossWeight: cleanPdfFieldValue(match[4]).replace(/\bKGS\b/i, 'KG')
+        };
+    }
+
+    function normalizePdfWeight(value) {
+        return cleanPdfFieldValue(value).replace(/\bKGS\b/i, 'KG');
+    }
+
+    function isPackageLine(line) {
+        return /^\d[\d,]*\s*(?:BAGS?|CTNS?|CARTONS?|BOXES?|PCS?|PACKAGES?)$/i.test(line || '');
+    }
+
+    function isWeightLine(line) {
+        return /^\d[\d,]*(?:\.\d+)?\s*(?:KG|KGS)$/i.test(line || '');
+    }
+
+    function isPackageWeightTotalLine(line) {
+        return /^\d[\d,]*\s*(?:BAGS?|CTNS?|CARTONS?|BOXES?|PCS?|PACKAGES?)\s+\d[\d,]*(?:\.\d+)?\s*(?:KG|KGS)$/i.test(line || '');
+    }
+
+    function isCargoNameLine(line) {
+        if (!line || isPackageLine(line) || isWeightLine(line) || isPackageWeightTotalLine(line)) return false;
+        if (/^(?:TOTAL|Signed by|PACKING LIST)$/i.test(line)) return false;
+        if (/^\d+\)?$/.test(line) || /^[\d,\-\/\s]+$/.test(line)) return false;
+        if (/^(?:MADE IN|C\/NO\.?)$/i.test(line)) return false;
+        if (/^(?:Shipping Marks|No\.?\s*&\s*kind|Goods description|Quantity|Gross Weight|Measurement)$/i.test(line)) return false;
+        return /[A-Z가-힣]/i.test(line);
+    }
+
+    function lastPackageRunBeforeWeight(lines, firstWeightIndex) {
+        var indexes = [];
+        lines.forEach(function (line, idx) {
+            if (idx < firstWeightIndex && isPackageLine(line)) indexes.push(idx);
+        });
+        if (!indexes.length) return [];
+
+        var run = [indexes[indexes.length - 1]];
+        for (var i = indexes.length - 2; i >= 0; i -= 1) {
+            if (indexes[i] === run[0] - 1) run.unshift(indexes[i]);
+            else break;
+        }
+        return run;
+    }
+
+    function parseStackedCargoItems(lines) {
+        var firstWeightIndex = -1;
+        for (var i = 0; i < lines.length; i += 1) {
+            if (isWeightLine(lines[i])) {
+                firstWeightIndex = i;
+                break;
+            }
+        }
+        if (firstWeightIndex < 0) return [];
+
+        var packageIndexes = lastPackageRunBeforeWeight(lines, firstWeightIndex);
+        if (!packageIndexes.length) return [];
+
+        var packageValues = packageIndexes.map(function (idx) { return cleanPdfFieldValue(lines[idx]); });
+        var goodsValues = lines.slice(packageIndexes[packageIndexes.length - 1] + 1, firstWeightIndex)
+            .filter(isCargoNameLine)
+            .map(cleanPdfFieldValue);
+        var weightValues = [];
+
+        for (var w = firstWeightIndex; w < lines.length; w += 1) {
+            if (isWeightLine(lines[w])) {
+                weightValues.push(normalizePdfWeight(lines[w]));
+                continue;
+            }
+            if (isPackageWeightTotalLine(lines[w]) || /^TOTAL$/i.test(lines[w] || '')) break;
+            if (weightValues.length) break;
+        }
+
+        var count = Math.max(packageValues.length, goodsValues.length, weightValues.length);
+        if (!count || !goodsValues.length) return [];
+
+        var items = [];
+        for (var c = 0; c < count; c += 1) {
+            items.push({
+                goodsName: goodsValues[c] || '',
+                packageQuantity: packageValues[c] || '',
+                qty: packageValues[c] || '',
+                netWeight: weightValues[c] || '',
+                weight: weightValues[c] || ''
+            });
+        }
+        return items.filter(function (item) {
+            return item.goodsName || item.packageQuantity || item.netWeight;
+        });
+    }
+
+    function stripTableHeaderValue(value) {
+        return cleanPdfFieldValue(value)
+            .replace(/^(?:Description|Quantity\s+or\s+net\s+weight|Gross\s+Weight|상품명세|수량\s+또는\s+순중량|총중량)\s*/i, '')
+            .trim();
+    }
+
+    function parseManifestPackingText(rawText) {
+        var raw = String(rawText || '');
+        var lines = linesOf(raw);
+        var invoiceMatch = raw.match(/Invoice No\. and date\s+([A-Z0-9-]+)/i)
+            || raw.match(/Invoice\s*(?:No\.?|Number)?\s*[:#-]?\s*([A-Z0-9-]+)/i);
+        /*
+         * B/L은 PDF에 명확하게 Master/House/M.B.L/H.B.L 라벨이 있을 때만 추출한다.
+         * 일반 B/L 패턴을 넓게 잡으면 packing list 본문에서 'ic' 같은 조각을 오인식한다.
+         */
+        var mblMatch = raw.match(/Master\s*B\/?L\s*(?:No\.?|Number)?\s*[:#-]?\s*([A-Z0-9-]+)/i)
+            || raw.match(/M\.?B\.?L\.?\s*(?:No\.?|Number)?\s*[:#-]?\s*([A-Z0-9-]+)/i);
+        var hblMatch = raw.match(/House\s*B\/?L\s*(?:No\.?|Number)?\s*[:#-]?\s*([A-Z0-9-]+)/i)
+            || raw.match(/H\.?B\.?L\.?\s*(?:No\.?|Number)?\s*[:#-]?\s*([A-Z0-9-]+)/i);
+        var collapsedCargo = parseCollapsedCargoLine(raw);
+        var stackedCargoItems = parseStackedCargoItems(lines);
+        var goodsLabel = '(?:⑭|14[.)]?|\\(14\\))\\s*(?:Goods\\s+description|상품명세)';
+        var netLabel = '(?:⑮|15[.)]?|\\(15\\))\\s*(?:Quantity\\s+or\\s+net\\s+weight|수량\\s+또는\\s+순중량)';
+        var grossLabel = '(?:⑯|16[.)]?|\\(16\\))\\s*(?:Gross\\s+Weight|총중량)';
+        var measurementLabel = '(?:⑰|17[.)]?|\\(17\\))\\s*(?:Measurement|용적)';
+        var goodsByLabel = stripTableHeaderValue(extractLabelRange(raw, goodsLabel, netLabel));
+        var netByLabel = stripTableHeaderValue(extractLabelRange(raw, netLabel, grossLabel));
+        var grossByLabel = stripTableHeaderValue(extractLabelRange(raw, grossLabel, measurementLabel));
+        var tableStart = lines.findIndex(function (line) { return /⑰\s*Measurement/i.test(line); });
+        var tableRows = tableStart >= 0 ? lines.slice(tableStart + 1) : [];
+        var packageGoodsLine = tableRows[4] || '';
+        var packageGoodsMatch = packageGoodsLine.match(/^(.+?BAGS)\s+(.+)$/i);
+        var goodsLines = [];
+
+        if (packageGoodsMatch && packageGoodsMatch[2]) goodsLines.push(packageGoodsMatch[2]);
+        for (var i = 5; i < tableRows.length; i += 1) {
+            if (/^(TOTAL|Signed by|⑱)/i.test(tableRows[i])) break;
+            if (/^[\d,]+\s*KG\s+[\d,]+\s*KG$/i.test(tableRows[i])) break;
+            goodsLines.push(tableRows[i]);
+        }
+
+        return {
+            invoiceNo: invoiceMatch ? invoiceMatch[1].trim() : '',
+            departure: extractLocation(raw, 'departure', lines),
+            destination: extractLocation(raw, 'destination', lines),
+            mblNo: mblMatch ? mblMatch[1].trim() : '',
+            hblNo: hblMatch ? hblMatch[1].trim() : '',
+            cargoItems: stackedCargoItems.length ? stackedCargoItems : (collapsedCargo.goodsDescription ? [{
+                goodsName: collapsedCargo.goodsDescription,
+                packageQuantity: collapsedCargo.packageQuantity || '',
+                qty: collapsedCargo.packageQuantity || '',
+                netWeight: collapsedCargo.netWeight || '',
+                weight: collapsedCargo.netWeight || ''
+            }] : []),
+            goodsDescription: (stackedCargoItems.length ? stackedCargoItems.map(function (cargo) { return cargo.goodsName; }).filter(Boolean).join(' / ') : '') || collapsedCargo.goodsDescription || goodsByLabel || goodsLines.join(' / '),
+            packageQuantity: (stackedCargoItems[0] && stackedCargoItems[0].packageQuantity) || collapsedCargo.packageQuantity || (packageGoodsMatch && packageGoodsMatch[1] ? packageGoodsMatch[1].trim() : ''),
+            quantity: collapsedCargo.netWeight || netByLabel,
+            netWeight: (stackedCargoItems[0] && stackedCargoItems[0].netWeight) || collapsedCargo.netWeight || netByLabel,
+            grossWeight: collapsedCargo.grossWeight || grossByLabel
+        };
+    }
+
+    function getCargoRows(item) {
+        item = item || {};
+        var rows = Array.isArray(item.cargoItems) ? item.cargoItems : [];
+
+        if (!rows.length) {
+            rows = [{
+                cgNo: item.cgNo || item.goodsNo,
+                goodsNo: item.goodsNo,
+                goodsName: item.goodsName || item.itemNm || item.frghtIemNm,
+                qty: item.cgQty || item.goodsQty || item.qty,
+                netWeight: item.netWeight || item.cgWeight || item.goodsWeight || item.weight,
+                grossWeight: item.grossWeight || item.totalWeight || item.weight,
+                weight: item.cgWeight || item.goodsWeight || item.weight || item.totalWeight
+            }];
+        }
+
+        return rows.map(function (cargo) {
+            return typeof normalizeManifestCargoItem === 'function' ? normalizeManifestCargoItem(cargo) : cargo;
+        }).filter(function (cargo) {
+            return cargo && ['goodsName', 'qty', 'netWeight', 'grossWeight', 'weight', 'cgNo', 'goodsNo'].some(function (key) {
+                return cargo[key] !== null && cargo[key] !== undefined && String(cargo[key]).trim() !== '';
+            });
+        });
+    }
+
+    function numberOnly(value) {
+        var m = String(value == null ? '' : value).replace(/,/g, '').match(/\d+(?:\.\d+)?/);
+        return m ? m[0] : '';
+    }
+
+    function normPortValue(value) {
+        var v = norm(value);
+        if (!v) return '';
+
+        /*
+         * norm()이 영문을 소문자로 만들기 때문에 기존 대문자 비교는
+         * BUSAN, KOREA / BANGKOK, THAILAND 를 못 잡는다.
+         * DB는 한글 항구명(부산항/방콕항)으로 내려오고 PDF는 영문 국가명까지
+         * 붙어서 내려오므로, 대표 키로 맞춰 비교한다.
+         */
+        if (v.indexOf('krpus') >= 0 || v.indexOf('busan') >= 0 || v.indexOf('pusan') >= 0 || v.indexOf('부산') >= 0) return 'busan';
+        if (v.indexOf('thbkk') >= 0 || v.indexOf('bangkok') >= 0 || v.indexOf('방콕') >= 0) return 'bangkok';
+
+        return v
+            .replace(/korea|republicofkorea|thailand|port|항/g, '')
+            .replace(/[^0-9a-z가-힣]/g, '');
+    }
+
+    function compareManifestValue(kind, dbValue, pdfValue) {
+        var d = norm(dbValue);
+        var p = norm(pdfValue);
+
+        if (!d) return 'db-empty';
+        if (!p) return 'need-check';
+
+        if (kind === 'departure' || kind === 'destination') {
+            var dp = normPortValue(dbValue);
+            var pp = normPortValue(pdfValue);
+            return dp && pp && (dp === pp || pp.indexOf(dp) >= 0 || dp.indexOf(pp) >= 0) ? 'match' : 'warn';
+        }
+
+        if (kind && (kind.indexOf('qty') === 0 || kind.indexOf('packageQuantity') === 0)) {
+            var dq = numberOnly(dbValue);
+            var pq = numberOnly(pdfValue);
+            return dq && pq && dq === pq ? 'match' : 'warn';
+        }
+
+        if (kind && (kind.indexOf('netWeight') === 0 || kind.indexOf('grossWeight') === 0)) {
+            var dw = numberOnly(dbValue);
+            var pw = numberOnly(pdfValue);
+            if (dw && pw && dw === pw) return 'match';
+            /* 현재 적하목록/품목 DB에는 순중량/총중량이 분리되어 있지 않아 CG_WEIGHT 하나를 같이 보여준다. */
+            if (kind.indexOf('grossWeight') === 0) return 'need-check';
+            return 'warn';
+        }
+
+        if (kind && kind.indexOf('goodsName') === 0) {
+            if (d === p || (d.length > 2 && p.indexOf(d) >= 0) || (p.length > 2 && d.indexOf(p) >= 0)) return 'match';
+            return 'warn';
+        }
+
+        if (d === p || (d.length > 2 && p.indexOf(d) >= 0) || (p.length > 2 && d.indexOf(p) >= 0)) return 'match';
+        return 'warn';
+    }
+
+    function compareBadge(dbValue, pdfValue, hasFile, loaded, kind) {
+        if (!hasFile) return '<span data-compare="empty" class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-slate-100 text-slate-500 border border-slate-200">포장명세서 없음</span>';
+        if (!loaded) return '<span data-compare="empty" class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200">PDF 업로드 대기</span>';
+
+        var result = compareManifestValue(kind || '', dbValue, pdfValue);
+        if (result === 'db-empty') {
+            return '<span data-compare="empty" class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-slate-100 text-slate-500 border border-slate-200">DB 값 없음</span>';
+        }
+        if (result === 'need-check') {
+            return '<span data-compare="empty" class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">확인필요</span>';
+        }
+        if (result === 'match') {
+            return '<span data-compare="match" class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">일치</span>';
+        }
+        return '<span data-compare="warn" class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200">불일치</span>';
+    }
+
+    function rowHtml(label, key, dbValue, pdfValue, hasFile, loaded) {
+        var db = dbValue == null || String(dbValue).trim() === '' ? '' : String(dbValue);
+        var pdf = pdfValue == null ? '' : String(pdfValue);
+
+        return '' +
+            '<tr class="border-t border-slate-200 hover:bg-slate-50">' +
+            '<td class="px-5 py-4 font-extrabold text-slate-800 bg-slate-50 align-top">' + text(label) + '</td>' +
+            '<td class="px-5 py-4 align-top text-slate-900">' + text(db || '-') + '</td>' +
+            '<td class="px-5 py-4 align-top text-slate-600">' +
+            '<input data-manifest-pdf-field="' + attr(key) + '" data-manifest-db-value="' + attr(db) + '" data-manifest-compare-kind="' + attr(key) + '" class="manifest-pdf-value-input w-full border border-slate-300 px-3 py-2 text-xs font-bold" value="' + attr(pdf) + '" placeholder="PDF 추출불가 시 직접 입력">' +
+            '</td>' +
+            '<td class="px-5 py-4 align-top text-slate-600 manifest-compare-result">' + compareBadge(db, pdf, hasFile, loaded, key) + '</td>' +
+            '</tr>';
+    }
+
+    function ensureCompareLayout() {
+        var tbody = document.getElementById('manifestCargoItemBody');
+        var table = tbody && tbody.closest('table');
+
+        if (table) {
+            var headRow = table.querySelector('thead tr');
+            if (headRow) {
+                headRow.innerHTML = '<th class="px-5 py-3 w-40">항목</th><th class="px-5 py-3">적하목록 DB 값</th><th class="px-5 py-3">포장명세서 PDF 추출/수정값</th><th class="px-5 py-3 w-32">결과</th>';
+                table.classList.remove('min-w-[720px]');
+                table.classList.add('min-w-[920px]');
+            }
+        }
+
+        var panel = tbody && tbody.closest('.bg-white.border');
+        if (panel && !document.getElementById('manifestCompareSummary')) {
+            var summary = document.createElement('div');
+            summary.id = 'manifestCompareSummary';
+            summary.className = 'grid grid-cols-4 gap-2 px-5 py-3 border-b border-slate-200 bg-slate-50 text-center text-xs';
+            summary.innerHTML =
+                '<div class="border border-slate-200 bg-white py-2"><div class="text-[11px] text-slate-500">전체</div><div class="text-lg font-black text-slate-900">-</div></div>' +
+                '<div class="border border-emerald-200 bg-white py-2"><div class="text-[11px] text-emerald-700">일치</div><div class="text-lg font-black text-emerald-700">-</div></div>' +
+                '<div class="border border-rose-200 bg-white py-2"><div class="text-[11px] text-rose-700">불일치</div><div class="text-lg font-black text-rose-700">-</div></div>' +
+                '<div class="border border-amber-200 bg-white py-2"><div class="text-[11px] text-amber-700">확인필요</div><div class="text-lg font-black text-amber-700">-</div></div>';
+
+            var scroll = panel.querySelector('.overflow-x-auto');
+            panel.insertBefore(summary, scroll);
+        }
+    }
+
+    function updateSummary() {
+        var summary = document.getElementById('manifestCompareSummary');
+        var tbody = document.getElementById('manifestCargoItemBody');
+        if (!summary || !tbody) return;
+
+        var badges = tbody.querySelectorAll('[data-compare]');
+        var counts = {match: 0, warn: 0, empty: 0};
+
+        badges.forEach(function (badge) {
+            var key = badge.getAttribute('data-compare');
+            if (counts[key] !== undefined) counts[key] += 1;
+        });
+
+        var nums = summary.querySelectorAll('.text-lg');
+        if (nums[0]) nums[0].textContent = String(badges.length);
+        if (nums[1]) nums[1].textContent = String(counts.match);
+        if (nums[2]) nums[2].textContent = String(counts.warn);
+        if (nums[3]) nums[3].textContent = String(counts.empty);
+    }
+
+    function refreshOneInput(input) {
+        var row = input.closest('tr');
+        var cell = row && row.querySelector('.manifest-compare-result');
+        if (!cell) return;
+
+        var item = window.SELECTED_IMPORT_MANIFEST || {};
+        var hasFile = typeof window.hasManifestPackingFile === 'function' ? window.hasManifestPackingFile(item) : false;
+
+        cell.innerHTML = compareBadge(input.dataset.manifestDbValue || '', input.value || '', hasFile, item.__packingTextLoaded === true, input.dataset.manifestCompareKind || '');
+        item.__manualPdfValues = item.__manualPdfValues || {};
+        item.__manualPdfValues[input.dataset.manifestPdfField || ''] = input.value || '';
+        updateSummary();
+    }
+
+    function manualOr(manual, key, fallback) {
+        return manual && manual[key] !== undefined ? manual[key] : fallback;
+    }
+
+    function findPdfCargo(cargo, idx, pdfCargoItems, usedIndexes) {
+        pdfCargoItems = Array.isArray(pdfCargoItems) ? pdfCargoItems : [];
+        var dbName = norm(cargo.goodsName || cargo.itemNm || cargo.frghtIemNm || '');
+        var i;
+        var pdfName;
+
+        if (dbName) {
+            for (i = 0; i < pdfCargoItems.length; i += 1) {
+                if (usedIndexes[i]) continue;
+                pdfName = norm(pdfCargoItems[i] && pdfCargoItems[i].goodsName);
+                if (pdfName && pdfName === dbName) {
+                    usedIndexes[i] = true;
+                    return pdfCargoItems[i];
+                }
+            }
+            for (i = 0; i < pdfCargoItems.length; i += 1) {
+                if (usedIndexes[i]) continue;
+                pdfName = norm(pdfCargoItems[i] && pdfCargoItems[i].goodsName);
+                if (pdfName && (pdfName.indexOf(dbName) >= 0 || dbName.indexOf(pdfName) >= 0)) {
+                    usedIndexes[i] = true;
+                    return pdfCargoItems[i];
+                }
+            }
+        }
+
+        if (pdfCargoItems[idx] && !usedIndexes[idx]) {
+            usedIndexes[idx] = true;
+            return pdfCargoItems[idx];
+        }
+        return {};
+    }
+
+    function bindInputs() {
+        document.querySelectorAll('.manifest-pdf-value-input').forEach(function (input) {
+            if (input.dataset.bound === 'true') return;
+            input.dataset.bound = 'true';
+            input.addEventListener('input', function () { refreshOneInput(input); });
+        });
+    }
+
+    window.renderImportManifestCargoItems = function (item) {
+        var tbody = document.getElementById('manifestCargoItemBody');
+        if (!tbody) return;
+
+        ensureCompareLayout();
+
+        item = item || {};
+        var parsed = parseManifestPackingText(item.packingText || '');
+        var manual = item.__manualPdfValues || {};
+        var pdf = Object.assign({}, parsed, manual);
+        var hasFile = typeof window.hasManifestPackingFile === 'function' ? window.hasManifestPackingFile(item) : false;
+        var loaded = item.__packingTextLoaded === true;
+        var cargos = getCargoRows(item);
+        var rows = [];
+        var pdfCargoItems = Array.isArray(parsed.cargoItems) ? parsed.cargoItems : [];
+        var usedPdfCargoIndexes = {};
+        var dbDeparture = item.deptPortNm || item.deptPortCd || item.loadingPort || '';
+        var dbDestination = item.arvlPortNm || item.arvlPortCd || item.dischargePort || '';
+
+        if (pdf.departure && pdf.destination && manual.departure === undefined && manual.destination === undefined) {
+            var directRouteMatch = compareManifestValue('departure', dbDeparture, pdf.departure) === 'match'
+                && compareManifestValue('destination', dbDestination, pdf.destination) === 'match';
+            var swappedRouteMatch = compareManifestValue('departure', dbDeparture, pdf.destination) === 'match'
+                && compareManifestValue('destination', dbDestination, pdf.departure) === 'match';
+            if (!directRouteMatch && swappedRouteMatch) {
+                var pdfDeparture = pdf.departure;
+                pdf.departure = pdf.destination;
+                pdf.destination = pdfDeparture;
+            }
+        }
+
+        // 송장번호는 포장명세서 기준 비교항목에서 제외한다.
+        // 금액/송장정보는 Commercial Invoice 영역이고, Packing List 비교에서는 사용하지 않는다.
+        rows.push(rowHtml('출발지', 'departure', dbDeparture, pdf.departure, hasFile, loaded));
+        rows.push(rowHtml('목적지', 'destination', dbDestination, pdf.destination, hasFile, loaded));
+
+        if (!cargos.length) {
+            rows.push(rowHtml('품명', 'goodsName0', '', pdf.goodsDescription, hasFile, loaded));
+            rows.push(rowHtml('수량', 'qty0', '', pdf.packageQuantity, hasFile, loaded));
+            rows.push(rowHtml('중량', 'netWeight0', '', pdf.netWeight || pdf.quantity || pdf.grossWeight, hasFile, loaded));
+        } else {
+            cargos.forEach(function (cargo, idx) {
+                var pdfCargo = findPdfCargo(cargo, idx, pdfCargoItems, usedPdfCargoIndexes);
+                rows.push(rowHtml('품명', 'goodsName' + idx, cargo.goodsName || '', manualOr(manual, 'goodsName' + idx, pdfCargo.goodsName || pdf.goodsDescription), hasFile, loaded));
+                rows.push(rowHtml('수량', 'qty' + idx, cargo.qty || '', manualOr(manual, 'qty' + idx, pdfCargo.qty || pdfCargo.packageQuantity || pdf.packageQuantity), hasFile, loaded));
+                rows.push(rowHtml('중량', 'netWeight' + idx, normalizeWeight(cargo.netWeight || cargo.weight), manualOr(manual, 'netWeight' + idx, pdfCargo.netWeight || pdfCargo.weight || pdf.netWeight || pdf.quantity || pdf.grossWeight), hasFile, loaded));
+            });
+        }
+
+        tbody.innerHTML = rows.join('');
+        bindInputs();
+        updateSummary();
+    };
+
+    window.selectImportManifestItem = function (item) {
+        if (typeof originalSelect === 'function') originalSelect(item);
+
+        ensureCompareLayout();
+        if (typeof window.hideManifestPackingExtraControls === 'function') window.hideManifestPackingExtraControls();
+        if (typeof window.renderManifestAttachmentDownloadBox === 'function') window.renderManifestAttachmentDownloadBox(item);
+        if (typeof window.renderImportManifestCargoItems === 'function') window.renderImportManifestCargoItems(item);
+    };
+
+    window.handleManifestPackingUpload = function (file, item) {
+        item = item || window.SELECTED_IMPORT_MANIFEST || {};
+        if (!file) return;
+
+        if (item.__uploadedPackingObjectUrl) {
+            URL.revokeObjectURL(item.__uploadedPackingObjectUrl);
+        }
+
+        item.__uploadedPackingObjectUrl = URL.createObjectURL(file);
+        item.__uploadedPackingFile = file;
+        item.packingListFile = file.name;
+        item.__packingTextLoading = true;
+        item.__packingTextLoaded = false;
+
+        window.renderManifestAttachmentDownloadBox(item);
+        window.renderImportManifestCargoItems(item);
+
+        var formData = new FormData();
+        formData.append('file', file);
+
+        fetch(ctxPath() + '/transport/import/manifest/upload-packing-text.do', {
+            method: 'POST',
+            headers: csrfHeaders({'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}),
+            body: formData,
+            credentials: 'same-origin'
+        })
+            .then(function (res) {
+                if (!res.ok) {
+                    return res.text().then(function (body) {
+                        throw new Error('HTTP ' + res.status + (body ? ' / ' + body.substring(0, 120) : ''));
+                    });
+                }
+                return res.json();
+            })
+            .then(function (data) {
+                item.packingText = data && data.success ? (data.text || '') : '';
+                item.__packingTextLoading = false;
+                item.__packingTextLoaded = true;
+                item.__manualPdfValues = {};
+
+                window.renderManifestAttachmentDownloadBox(item);
+                window.renderImportManifestCargoItems(item);
+
+                if (!data || !data.success) {
+                    console.warn('포장명세서 PDF 텍스트 추출 실패 응답', data);
+                    alert((data && data.message) ? data.message : 'PDF 텍스트를 추출하지 못했습니다. 비교값을 직접 입력해주세요.');
+                }
+            })
+            .catch(function (error) {
+                console.error('포장명세서 업로드 텍스트 추출 실패', error);
+
+                item.packingText = '';
+                item.__packingTextLoading = false;
+                item.__packingTextLoaded = true;
+
+                window.renderManifestAttachmentDownloadBox(item);
+                window.renderImportManifestCargoItems(item);
+
+                alert('업로드한 PDF 텍스트 추출 요청이 실패했습니다. CSRF/컨트롤러 매핑 또는 PDFBox 의존성을 확인해주세요.');
+            });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.hideManifestPackingExtraControls === 'function') window.hideManifestPackingExtraControls();
+    });
+})();
+
+(function () {
+    if (window.__TACS_IMPORT_MANIFEST_ARRIVAL_NOTICE_SYNC_FIX) return;
+    window.__TACS_IMPORT_MANIFEST_ARRIVAL_NOTICE_SYNC_FIX = true;
+
+    function normalizeText(value) {
+        return String(value == null ? '' : value).trim();
+    }
+
+    function requestNoKeys(value) {
+        var raw = normalizeText(value).toUpperCase();
+        if (!raw) return [];
+        var noTrc = raw.replace(/^TRC-/, '');
+        var compact = noTrc.replace(/-/g, '');
+        var compactNoPrefix = compact.replace(/^TRC/, '');
+        var nums = noTrc.match(/^(IMP|EXP)-?(\d{4})-?(\d{2})-?(\d{2})-?(\d+)$/);
+        var canonical = nums ? (nums[1] + nums[2] + nums[3] + nums[4] + String(parseInt(nums[5], 10))) : '';
+        return [raw, noTrc, compact, compactNoPrefix, canonical].filter(function (item, index, arr) {
+            return item && arr.indexOf(item) === index;
+        });
+    }
+
+    function values(row) {
+        row = row || {};
+        return [
+            row.trcNo, row.TRC_NO, row.requestNo, row.reqNo, row.tcsTrcNo,
+            row.ianTrcNo, row.IAN_TRC_NO, row.arrivalTrcNo, row.arrivalNoticeTrcNo,
+            row.arrivalNoticeReqNo, row.arrivalNoticeNo, row.noticeNo, row.ntcNo,
+            row.ianIrNo, row.IAN_IR_NO, row.irNo, row.IR_NO, row.relatedTrcNo
+        ];
+    }
+
+    function rowMatches(row, no) {
+        var target = requestNoKeys(no);
+        if (!target.length || !row) return false;
+        var rowKeys = [];
+        values(row).forEach(function (value) {
+            rowKeys.push.apply(rowKeys, requestNoKeys(value));
+        });
+        return target.some(function (key) { return rowKeys.indexOf(key) >= 0; });
+    }
+
+    function arrivalRows() {
+        var rows = [];
+        [
+            window.TRANSPORT_IMPORT_ARRIVAL_TRACKING,
+            window.TRANSPORT_IMPORT_ARRIVAL_LIST,
+            window.__TACS_IMPORT_ARRIVAL_TRACKING_ROWS
+        ].forEach(function (list) {
+            if (Array.isArray(list)) rows = rows.concat(list);
+        });
+        return rows;
+    }
+
+    function statusValue(row) {
+        row = row || {};
+        return normalizeText(
+            row.noticeStatusCd || row.noticeStatus || row.noticeStatusNm || row.sendStatusNm ||
+            row.arrivalNoticeStatusCd || row.arrivalNoticeSendStatusCd ||
+            row.ianSendSttsCd || row.ianSendSttsNm || row.IAN_SEND_STTS_CD || row.IAN_SEND_STTS_NM ||
+            row.statusCd || row.statusNm
+        ).toUpperCase();
+    }
+
+    function isSent(row) {
+        var st = statusValue(row);
+        return st === 'TRC_NTC_SENT' || st === 'SENT' || st.indexOf('발송완료') >= 0 || st.indexOf('통지완료') >= 0;
+    }
+
+    function requestNoOf(item) {
+        item = item || {};
+        return item.trcNo || item.TRC_NO || item.requestNo || item.reqNo || item.tcsTrcNo || item.ianTrcNo || item.IAN_TRC_NO || item.relatedTrcNo || '';
+    }
+
+    function markItemSent(item) {
+        if (!item) return;
+        item.noticeStatus = 'TRC_NTC_SENT';
+        item.noticeStatusCd = 'TRC_NTC_SENT';
+        item.noticeStatusNm = '발송완료';
+        item.arrivalNoticeStatusCd = 'TRC_NTC_SENT';
+        item.arrivalNoticeSendStatusCd = 'TRC_NTC_SENT';
+        item.ianSendSttsCd = 'TRC_NTC_SENT';
+        item.ianSendSttsNm = '발송완료';
+        item.IAN_SEND_STTS_CD = 'TRC_NTC_SENT';
+        item.IAN_SEND_STTS_NM = '발송완료';
+        item.statusCd = 'TRC_NTC_SENT';
+        item.statusNm = '발송완료';
+    }
+
+    function syncData(no) {
+        var sent = arrivalRows().some(function (row) { return rowMatches(row, no) && isSent(row); });
+        if (!sent) return false;
+        [
+            window.SELECTED_IMPORT_MANIFEST,
+            window.selectedImportManifest,
+            window.currentImportManifest
+        ].forEach(function (item) {
+            if (item && rowMatches(item, no)) markItemSent(item);
+        });
+        [
+            window.TRANSPORT_IMPORT_MANIFEST_LIST,
+            window.__TACS_IMPORT_MANIFEST_ROWS,
+            window.importManifestRows,
+            window.IMPORT_MANIFEST_LIST
+        ].forEach(function (list) {
+            if (!Array.isArray(list)) return;
+            list.forEach(function (item) { if (rowMatches(item, no)) markItemSent(item); });
+        });
+        return true;
+    }
+
+    window.syncManifestArrivalNoticeStatus = function (no) {
+        no = no || requestNoOf(window.SELECTED_IMPORT_MANIFEST || window.selectedImportManifest || {});
+        if (!no) return;
+        syncData(no);
+    };
+
+    var prevSelect = window.selectImportManifestItem;
+    window.selectImportManifestItem = function (item) {
+        if (typeof prevSelect === 'function') prevSelect(item);
+        var no = requestNoOf(item || window.SELECTED_IMPORT_MANIFEST || {});
+        if (no) window.syncManifestArrivalNoticeStatus(no);
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        setTimeout(function () { window.syncManifestArrivalNoticeStatus(); }, 200);
+    });
+})();
+
+/*
+ * 2026-05-25 fix: 왼쪽 카테고리 [적하목록 조회] 목록 행 클릭 시
+ * 해당 의뢰 상세가 아코디언으로 펼쳐지도록 복구한다.
+ * 기존 탭 상세/비교 로직은 건드리지 않고, 목록 화면 DOM에만 이벤트를 붙인다.
+ */
+(function () {
+    if (window.__TACS_IMPORT_MANIFEST_LIST_ACCORDION_FIX) return;
+    window.__TACS_IMPORT_MANIFEST_LIST_ACCORDION_FIX = true;
+
+    function esc(v) {
+        if (typeof safeText === 'function') return safeText(v);
+        return String(v == null || v === '' ? '-' : v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/\"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function ctxPath() {
+        if (typeof getTransportContextPath === 'function') return getTransportContextPath();
+        var path = window.location.pathname || '';
+        var idx = path.indexOf('/transport/');
+        return idx >= 0 ? path.substring(0, idx) : (window.contextPath || '');
+    }
+
+    function reqNoOf(item) {
+        item = item || {};
+        return item.trcNo || item.TRC_NO || item.requestNo || item.reqNo || item.treId || item.ianTrcNo || item.IAN_TRC_NO || '';
+    }
+
+    function norm(v) {
+        return String(v == null ? '' : v).replace(/\s+/g, '').toUpperCase();
+    }
+
+    function allManifestRows() {
+        var lists = [
+            window.TRANSPORT_IMPORT_MANIFEST_LIST,
+            window.__TACS_IMPORT_MANIFEST_ROWS,
+            window.importManifestRows,
+            window.IMPORT_MANIFEST_LIST,
+            window.importManifestList,
+            window.manifestList
+        ];
+        for (var i = 0; i < lists.length; i++) {
+            if (Array.isArray(lists[i]) && lists[i].length) return lists[i];
+        }
+        return [];
+    }
+
+    function findItemByReqNo(no) {
+        var key = norm(no);
+        if (!key) return null;
+        var rows = allManifestRows();
+        for (var i = 0; i < rows.length; i++) {
+            if (norm(reqNoOf(rows[i])) === key) return rows[i];
+        }
+        return null;
+    }
+
+    function val(item, keys, fallback) {
+        item = item || {};
+        for (var i = 0; i < keys.length; i++) {
+            var v = item[keys[i]];
+            if (v != null && v !== '') return v;
+        }
+        return fallback == null || fallback === '' ? '-' : fallback;
+    }
+
+    function fileNo(item) {
+        return val(item, ['packingListFileNo', 'pkgFileNo', 'fileNo', 'dFiFileNo', 'DFI_FILE_NO'], '');
+    }
+
+    function downloadButton(item) {
+        var no = fileNo(item || {});
+        if (!no || no === '-') return '<span class="text-xs text-slate-400">등록된 포장명세서 없음</span>';
+        return '<a class="inline-flex items-center justify-center h-8 px-3 border border-slate-600 bg-slate-700 text-white text-xs font-bold" '
+            + 'href="' + esc(ctxPath() + '/common/file/download.do?fileNo=' + encodeURIComponent(no)) + '" target="_blank" rel="noopener">포장명세서 다운로드</a>';
+    }
+
+    function cellTexts(row) {
+        return Array.prototype.slice.call(row.children || []).map(function (td) {
+            return (td.textContent || '').trim();
+        });
+    }
+
+    function buildAccordionHtml(item, cells, colspan) {
+        item = item || {};
+        cells = cells || [];
+        var trcNo = val(item, ['trcNo', 'TRC_NO', 'requestNo'], cells[0]);
+        var ownerNm = val(item, ['ownerNm', 'owrNm', 'TRC_OWR_NM', 'buyerNm'], cells[1]);
+        var mblNo = val(item, ['mblNo', 'masterBlNo', 'icmMblNo', 'ICM_MBL_NO'], cells[2]);
+        var hblNo = val(item, ['hblNo', 'houseBlNo', 'icmHblNo', 'ICM_HBL_NO'], cells[3]);
+        var cargoNm = val(item, ['cargoNm', 'cargoName', 'frghtIemNm', 'goodsName', 'itemNm'], cells[4]);
+        var mfstSt = val(item, ['manifestStatusNm', 'mfstStatusNm', 'statusNm', 'icmStatusNm'], '발급완료');
+        var ntcSt = val(item, ['noticeStatusNm', 'ianSendSttsNm', 'arrivalNoticeStatusNm'], cells[6]);
+        var submitDt = val(item, ['submitDt', 'icmSubmitDt', 'registDt', 'TRC_REG_DT'], '');
+
+        return ''
+            + '<tr class="import-manifest-accordion-row bg-slate-50" data-accordion-for="' + esc(trcNo) + '">'
+            + '  <td colspan="' + esc(colspan || 8) + '" class="p-0 border-t border-slate-200">'
+            + '    <div class="m-3 border border-slate-200 bg-white p-4 text-left">'
+            + '      <div class="flex items-center justify-between mb-3">'
+            + '        <div class="font-bold text-slate-800">적하목록 상세</div>'
+            + '        <button type="button" class="import-manifest-accordion-close h-8 px-3 border border-slate-400 bg-white text-slate-700 text-xs font-bold">닫기</button>'
+            + '      </div>'
+            + '      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">'
+            + field('의뢰번호', trcNo)
+            + field('화주', ownerNm)
+            + field('품명', cargoNm)
+            + field('Master B/L', mblNo)
+            + field('House B/L', hblNo)
+            + field('적하목록 상태', mfstSt)
+            + field('도착통지서 상태', ntcSt)
+            + field('등록/제출일시', submitDt)
+            + '        <div><div class="text-[11px] font-bold text-slate-500 mb-1">포장명세서</div><div class="min-h-9 flex items-center">' + downloadButton(item) + '</div></div>'
+            + '      </div>'
+            + '    </div>'
+            + '  </td>'
+            + '</tr>';
+    }
+
+    function field(label, value) {
+        return '<div><div class="text-[11px] font-bold text-slate-500 mb-1">' + esc(label) + '</div>'
+            + '<div class="min-h-9 px-3 py-2 border border-slate-200 bg-slate-100 text-xs font-semibold text-slate-700">' + esc(value) + '</div></div>';
+    }
+
+    function isManifestListTable(table) {
+        if (!table) return false;
+        // 왼쪽 사이드바 [적하목록 리스트] 전용 아코디언이다.
+        // 운송의뢰 상세 > 도착통지서 탭 안의 비교 테이블에는 붙이면 화면이 중첩된다.
+        if (table.closest && table.closest('.import-inline-tabs-0513')) return false;
+        var text = (table.textContent || '').replace(/\s+/g, '');
+        return text.indexOf('의뢰번호') >= 0
+            && text.indexOf('MASTERB/L') >= 0
+            && text.indexOf('패킹리스트') >= 0
+            && text.indexOf('도착통지서') >= 0;
+    }
+
+    function bindTable(table) {
+        if (!isManifestListTable(table) || table.__tacsManifestAccordionBound) return;
+        table.__tacsManifestAccordionBound = true;
+        table.classList.add('import-manifest-accordion-table');
+        Array.prototype.slice.call(table.querySelectorAll('tbody tr')).forEach(function (tr) {
+            if (!tr.classList.contains('import-manifest-accordion-row')) tr.style.cursor = 'pointer';
+        });
+    }
+
+    function bindAll() {
+        Array.prototype.slice.call(document.querySelectorAll('table')).forEach(bindTable);
+    }
+
+    document.addEventListener('click', function (e) {
+        var close = e.target.closest && e.target.closest('.import-manifest-accordion-close');
+        if (close) {
+            var ar = close.closest('tr.import-manifest-accordion-row');
+            if (ar) ar.remove();
+            return;
+        }
+
+        var row = e.target.closest && e.target.closest('tr');
+        if (!row || row.classList.contains('import-manifest-accordion-row')) return;
+        var table = row.closest('table');
+        if (!isManifestListTable(table)) return;
+        if (e.target.closest('a,button,input,select,label')) return;
+
+        var cells = cellTexts(row);
+        var reqNo = cells[0] || '';
+        if (!reqNo || reqNo.indexOf('TRC-IMP-') < 0) return;
+
+        var next = row.nextElementSibling;
+        if (next && next.classList.contains('import-manifest-accordion-row')) {
+            next.remove();
+            return;
+        }
+
+        Array.prototype.slice.call(table.querySelectorAll('tr.import-manifest-accordion-row')).forEach(function (tr) { tr.remove(); });
+        var item = findItemByReqNo(reqNo) || { trcNo: reqNo };
+        row.insertAdjacentHTML('afterend', buildAccordionHtml(item, cells, row.children.length || 8));
+    }, true);
+
+    var style = document.createElement('style');
+    style.id = 'tacsImportManifestAccordionFixStyle';
+    style.textContent = '.import-manifest-accordion-table tbody tr:not(.import-manifest-accordion-row):hover td{background:#f8fafc!important;}';
+    if (!document.getElementById(style.id)) document.head.appendChild(style);
+
+    document.addEventListener('DOMContentLoaded', bindAll);
+    setTimeout(bindAll, 300);
+    setTimeout(bindAll, 900);
+    if (window.MutationObserver) {
+        new MutationObserver(function () { bindAll(); }).observe(document.documentElement, { childList: true, subtree: true });
+    }
+})();
+/*
+ * 2026-05-27 fix: 적하목록 리스트 아코디언 상세에서
+ * 화물관리번호/송장번호 항목은 화면에 표시하지 않는다.
+ *
+ * 기존 렌더러가 다른 파일(import-ui 등)에서 먼저 아코디언 HTML을 만든 경우도 있어서,
+ * import-manifest.js에서 DOM 후처리로 해당 필드 카드만 안전하게 제거한다.
+ */
+(function () {
+    if (window.__TACS_IMPORT_MANIFEST_HIDE_INVOICE_CARGO_NO_FIX) return;
+    window.__TACS_IMPORT_MANIFEST_HIDE_INVOICE_CARGO_NO_FIX = true;
+
+    var HIDE_LABELS = {
+        '송장번호': true,
+        '화물관리번호': true,
+        '적하목록번호': true
+    };
+
+    function norm(value) {
+        return String(value == null ? '' : value).replace(/\s+/g, '').trim();
+    }
+
+    function isManifestArea(el) {
+        if (!el) return false;
+
+        var accordion = el.closest && el.closest('.import-manifest-accordion-row');
+        if (accordion) return true;
+
+        var node = el;
+        for (var i = 0; node && i < 8; i += 1, node = node.parentElement) {
+            var txt = norm(node.textContent || '');
+            if (txt.indexOf('적하목록기본정보') >= 0 || txt.indexOf('적하목록상세') >= 0) return true;
+            if (txt.indexOf('MASTERB/L') >= 0 && txt.indexOf('HOUSEB/L') >= 0 && txt.indexOf('화주/거래자정보') >= 0) return true;
+        }
+
+        return false;
+    }
+
+    function findFieldBox(labelEl) {
+        var node = labelEl;
+        for (var i = 0; node && i < 6; i += 1, node = node.parentElement) {
+            var parent = node.parentElement;
+            if (!parent) continue;
+
+            var parentClass = String(parent.className || '');
+            if (parentClass.indexOf('grid') >= 0 || parentClass.indexOf('flex') >= 0) {
+                return node;
+            }
+
+            if (node.querySelector && node.querySelector('input,select,textarea,.border,.bg-slate-100,.bg-blue-50')) {
+                return node;
+            }
+        }
+        return labelEl.parentElement || labelEl;
+    }
+
+    function cleanManifestAccordionFields(root) {
+        root = root || document;
+
+        Array.prototype.slice.call(root.querySelectorAll('label, div, span, p, th, dt')).forEach(function (el) {
+            var label = norm(el.textContent || '');
+            if (!HIDE_LABELS[label]) return;
+            if (!isManifestArea(el)) return;
+
+            var box = findFieldBox(el);
+            if (box && box.parentElement) {
+                box.remove();
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        cleanManifestAccordionFields(document);
+        setTimeout(function () { cleanManifestAccordionFields(document); }, 100);
+        setTimeout(function () { cleanManifestAccordionFields(document); }, 500);
+    });
+
+    document.addEventListener('click', function () {
+        setTimeout(function () { cleanManifestAccordionFields(document); }, 0);
+        setTimeout(function () { cleanManifestAccordionFields(document); }, 120);
+    }, true);
+
+    if (window.MutationObserver) {
+        new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                Array.prototype.slice.call(mutation.addedNodes || []).forEach(function (node) {
+                    if (node && node.nodeType === 1) cleanManifestAccordionFields(node);
+                });
+            });
+        }).observe(document.documentElement, { childList: true, subtree: true });
+    }
+})();

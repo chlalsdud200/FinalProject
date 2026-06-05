@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.common.notification.pref.mapper.INotificationPrefMapper">
+
+    <!-- 해당 사용자 유형이 수신 대상인 활성 정책 + 사용자 설정(없으면 기본 'Y') -->
+    <select id="selectPrefList"
+            resultType="kr.or.tacs.vo.common.notification.NotificationPrefVO">
+        SELECT
+            p.np_event_cd               AS eventCd
+          , p.np_biz_nm                 AS bizNm
+          , NVL(up.nup_use_yn, 'Y')     AS useYn
+        FROM noti_policy p
+        LEFT JOIN noti_user_pref up
+            ON up.nup_event_cd = p.np_event_cd
+           AND up.nup_user_id  = #{userId}
+        WHERE p.np_use_yn = 'Y'
+          AND ',' || REPLACE(p.np_receiver_user_type, ' ') || ','
+              LIKE '%,' || #{userType} || ',%'
+        ORDER BY p.np_event_cd
+    </select>
+
+    <!-- 사용자별 on/off 설정 upsert -->
+    <update id="mergePref">
+        MERGE INTO noti_user_pref t
+        USING (
+            SELECT #{userId} AS nup_user_id, #{eventCd} AS nup_event_cd FROM dual
+        ) s
+        ON (t.nup_user_id = s.nup_user_id AND t.nup_event_cd = s.nup_event_cd)
+        WHEN MATCHED THEN
+            UPDATE SET t.nup_use_yn = #{useYn}, t.nup_updt_dt = SYSTIMESTAMP
+        WHEN NOT MATCHED THEN
+            INSERT (nup_user_id, nup_event_cd, nup_use_yn, nup_updt_dt)
+            VALUES (#{userId}, #{eventCd}, #{useYn}, SYSTIMESTAMP)
+    </update>
+
+    <!-- 전체 켜기/끄기: 사용자 유형이 받는 모든 활성 알림을 한 번에 upsert -->
+    <update id="mergeAllPref">
+        MERGE INTO noti_user_pref t
+        USING (
+            SELECT #{userId} AS u_id, p.np_event_cd AS e_cd
+            FROM noti_policy p
+            WHERE p.np_use_yn = 'Y'
+              AND ',' || REPLACE(p.np_receiver_user_type, ' ') || ','
+                  LIKE '%,' || #{userType} || ',%'
+        ) s
+        ON (t.nup_user_id = s.u_id AND t.nup_event_cd = s.e_cd)
+        WHEN MATCHED THEN
+            UPDATE SET t.nup_use_yn = #{useYn}, t.nup_updt_dt = SYSTIMESTAMP
+        WHEN NOT MATCHED THEN
+            INSERT (nup_user_id, nup_event_cd, nup_use_yn, nup_updt_dt)
+            VALUES (s.u_id, s.e_cd, #{useYn}, SYSTIMESTAMP)
+    </update>
+
+</mapper>

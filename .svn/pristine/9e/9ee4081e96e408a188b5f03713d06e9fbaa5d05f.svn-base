@@ -1,0 +1,90 @@
+package kr.or.tacs.officer.basicscreen.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import kr.or.tacs.dto.officer.ReceiptListDTO;
+import kr.or.tacs.officer.basicscreen.mapper.IBasicMapper;
+
+@Service
+public class BasicServiceImpl implements IBasicService {
+
+    @Autowired
+    private IBasicMapper mapper;
+
+    @Override
+    public List<ReceiptListDTO> selectReceiptList(ReceiptListDTO search) {
+        return mapper.selectReceiptList(search);
+    }
+
+    /**
+     * 단건 접수
+     *
+     * 기준 테이블:
+     * - 수입: IMP_DCLR
+     * - 수출: EXP_DCLR
+     *
+     * 상태 변경:
+     * - CSTM_REQ -> CSTM_ACPT
+     */
+    @Override
+    @Transactional
+    public void acceptReceipt(String reqNo, String declareType, String officerId) {
+
+        if ("수입".equals(declareType)) {
+            mapper.updateImportReceiptAccept(reqNo, officerId);
+
+        } else if ("수출".equals(declareType)) {
+            mapper.updateExportReceiptAccept(reqNo, officerId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void acceptReceiptBatch(List<String> reqNoList, List<String> declareTypeList, String officerId) {
+        for (int i = 0; i < reqNoList.size(); i++) {
+            acceptReceipt(reqNoList.get(i), declareTypeList.get(i), officerId);
+        }
+    }
+
+    /**
+     * 반려 처리
+     *
+     * 기준 테이블:
+     * - 수입: IMP_DCLR
+     * - 수출: EXP_DCLR
+     *
+     * 상태 변경:
+     * - CSTM_REQ -> CSTM_REJ
+     *
+     * 반려사유:
+     * - RJCT_MNG에 저장
+     */
+    @Override
+    @Transactional
+    public void rejectReceipt(String reqNo, String declareType, String rejectReason, String officerId) {
+
+        String refBizCd = "";
+        String targetId = "";
+
+        if ("수입".equals(declareType)) {
+            mapper.updateImportReject(reqNo, rejectReason, officerId);
+
+            // 중요: 이제 IMP_RQST 아님
+            refBizCd = "IMP_DCLR";
+            targetId = mapper.selectImportOwnerId(reqNo);
+
+        } else if ("수출".equals(declareType)) {
+            mapper.updateExportReject(reqNo, officerId);
+
+            // 중요: 이제 EXP_RQST 아님
+            refBizCd = "EXP_DCLR";
+            targetId = mapper.selectExportOwnerId(reqNo);
+        }
+
+        mapper.insertRejectMng(refBizCd, reqNo, rejectReason, officerId, targetId);
+    }
+}

@@ -1,0 +1,11 @@
+package kr.or.tacs.vo.systemadmin.notification;
+
+import lombok.Data;
+
+@Data
+public class AdminNotificationPolicySearchVO {
+
+    private String keyword;
+    private String useYn;
+    private String receiverType;
+}

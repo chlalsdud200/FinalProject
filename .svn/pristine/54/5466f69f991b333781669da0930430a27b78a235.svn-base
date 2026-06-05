@@ -1,0 +1,51 @@
+package kr.or.tacs.common.notification.inbox.service;
+
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import kr.or.tacs.common.notification.inbox.mapper.INotificationInboxMapper;
+import kr.or.tacs.vo.common.notification.inbox.NotificationInboxItemVO;
+import kr.or.tacs.vo.common.notification.inbox.NotificationUnreadCountVO;
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class NotificationInboxServiceImpl implements INotificationInboxService {
+
+    private final INotificationInboxMapper inboxMapper;
+
+    @Override
+    public NotificationUnreadCountVO retrieveUnreadSummary(String receiverId) {
+        return inboxMapper.selectUnreadSummary(receiverId);
+    }
+
+    @Override
+    public List<NotificationInboxItemVO> retrieveInboxList(String receiverId, int limit, int offset) {
+        int clampedLimit = limit;
+        if (clampedLimit < 1) {
+            clampedLimit = 10;
+        } else if (clampedLimit > 100) {
+            clampedLimit = 100;
+        }
+
+        int clampedOffset = offset < 0 ? 0 : offset;
+
+        return inboxMapper.selectInboxList(receiverId, clampedLimit, clampedOffset);
+    }
+
+    @Transactional
+    @Override
+    public void modifyRead(Long notiNo, String receiverId) {
+        inboxMapper.updateRead(notiNo, receiverId);
+        // 권한 없음/이미 읽음 케이스에서 예외 없이 반환 (컨트롤러에서 200 반환)
+    }
+
+    @Transactional
+    @Override
+    public int modifyReadAll(String receiverId) {
+        return inboxMapper.updateReadAll(receiverId);
+    }
+}

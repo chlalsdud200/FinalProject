@@ -1,0 +1,532 @@
+// =========================================================
+// TACS 현장공무원 검역 합격 증명서 발급 전용 스크립트
+// - 발급 대상 목록/상세 전환
+// - 증명서 상세 데이터 표시
+// - 목록 검색/초기화
+// =========================================================
+
+// =========================================================
+// TACS 현장공무원 검역 합격 증명서 발급 목록 - TOAST UI Grid
+// =========================================================
+document.addEventListener('DOMContentLoaded', function () {
+
+  // certs.jsp 목록 화면이 아닐 경우 실행하지 않음
+  const gridEl = document.getElementById('certsGrid');
+
+  if (!gridEl) {
+    return;
+  }
+
+  if (typeof TacsGrid === 'undefined') {
+    console.error('TacsGrid 공통 모듈이 로드되지 않았습니다.');
+    return;
+  }
+
+  const certsGrid = TacsGrid.create({
+    el: 'certsGrid',
+    perPage: 10,
+    bodyHeight: 420,
+
+    columns: [
+      {
+        header: '검역요청번호',
+        name: 'reqNo',
+        align: 'center',
+        width: 150,
+		sortable: true
+      },
+      {
+        header: '업체명',
+        name: 'bizNm',
+        minWidth: 180,
+		sortable: true
+      },
+      {
+        header: '품목명',
+        name: 'itemNm',
+        minWidth: 180,
+		sortable: true
+      },
+      {
+        header: 'HS CODE',
+        name: 'hsCode',
+        align: 'center',
+        width: 120,
+		sortable: true
+      },
+	  {
+	    header: '판정상태',
+	    name: 'iirResultNm',
+	    align: 'center',
+	    width: 120,
+	    sortable: true
+	  },
+	  {
+	    header: '발급상태',
+	    name: 'certIssueStatusNm',
+	    align: 'center',
+	    width: 130,
+	    sortable: true
+	  },
+      {
+        header: '상세',
+        name: 'detailBtn',
+        align: 'center',
+        width: 90,
+        formatter: function () {
+          return '<button type="button" class="grid-detail-btn">상세</button>';
+        }
+      }
+    ]
+  });
+
+  /*
+   * 상세 버튼 클릭 시 상세 페이지 이동
+   */
+  certsGrid.on('click', function (ev) {
+    console.log('Certs Grid 클릭 이벤트:', ev);
+
+    // 상세 버튼 컬럼이 아니면 이동하지 않음
+    if (ev.columnName !== 'detailBtn') {
+      return;
+    }
+
+    if (ev.rowKey === null || ev.rowKey === undefined) {
+      return;
+    }
+
+    const rowData = certsGrid.getRow(ev.rowKey);
+    console.log('증명서 상세 이동 rowData:', rowData);
+
+    if (!rowData || !rowData.reqNo) {
+      alert('검역요청번호가 없습니다.');
+      return;
+    }
+
+    location.href = window.contextPath
+      + '/fieldofficer/certs/detail.do?reqNo='
+      + encodeURIComponent(rowData.reqNo);
+  });
+
+  /*
+   * Grid 목록 조회
+   */
+  function loadCertsGrid() {
+    const params = $('#certSearchForm').serialize();
+
+    TacsGrid.load(
+      certsGrid,
+      window.contextPath + '/fieldofficer/certs/gridData.do',
+      params
+    );
+  }
+
+  /*
+   * 조회 버튼 클릭
+   */
+  $('#certSearchBtn').on('click', function () {
+    $('#page').val('1');
+    loadCertsGrid();
+  });
+
+  /*
+   * Enter 검색 시 화면 새로고침 방지
+   */
+  $('#certSearchForm').on('submit', function (e) {
+    e.preventDefault();
+    $('#page').val('1');
+    loadCertsGrid();
+  });
+
+  /*
+   * 초기화 버튼 클릭
+   */
+  $('#certResetBtn').on('click', function () {
+    $('#certSearchForm')[0].reset();
+    $('#page').val('1');
+    loadCertsGrid();
+  });
+
+  /*
+   * 화면 최초 진입 시 조회
+   */
+  loadCertsGrid();
+});
+
+// =========================================================
+// 검역 합격 증명서 미리보기 모달
+// =========================================================
+
+// input/select/textarea 값 가져오기
+function getCertInputValue(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+// 모달 안의 텍스트 넣기
+function setCertModalText(id, value) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = value || '-';
+  }
+}
+
+// 미리보기 모달 열기
+function openCertPreviewModal() {
+  setCertModalText('modalCertIssueNo', getCertInputValue('certIssueNo'));
+  setCertModalText('modalCertReqNo', getCertInputValue('certReqNo'));
+  setCertModalText('modalCertIssueDate', getCertInputValue('certIssueDate'));
+  setCertModalText('modalCertOfficer', getCertInputValue('certOfficer'));
+
+  setCertModalText('modalApplicantName', getCertInputValue('certApplicantName'));
+  setCertModalText('modalApplicantBiz', getCertInputValue('certApplicantBiz'));
+  setCertModalText('modalBizNo', getCertInputValue('certBizNo'));
+  setCertModalText('modalTel', getCertInputValue('certTel'));
+  setCertModalText('modalAddr', getCertInputValue('certAddr'));
+
+  setCertModalText('modalCargoNo', getCertInputValue('certCargoNo'));
+  setCertModalText('modalBlNo', getCertInputValue('certBlNo'));
+  setCertModalText('modalWarehouse', getCertInputValue('certWarehouse'));
+  setCertModalText('modalExportCountry', getCertInputValue('certExportCountry'));
+  setCertModalText('modalItemName', getCertInputValue('certItemName'));
+  setCertModalText('modalHsCode', getCertInputValue('certHsCode'));
+
+  const qty = (getCertInputValue('certQty') + ' ' + getCertInputValue('certQtyUnit')).trim();
+  const weight = (getCertInputValue('certWeight') + ' ' + getCertInputValue('certWeightUnit')).trim();
+
+  setCertModalText('modalQty', qty);
+  setCertModalText('modalWeight', weight);
+
+  setCertModalText('modalInspectDate', getCertInputValue('certInspectDate'));
+  setCertModalText('modalJudgeResult', getCertInputValue('certJudgeResultText'));
+  setCertModalText('modalJudgeReason', getCertInputValue('certJudgeReason'));
+
+  const modal = document.getElementById('certPreviewModal');
+  if (modal) {
+    modal.classList.add('open');
+  }
+}
+
+// 미리보기 모달 닫기
+function closeCertPreviewModal() {
+  const modal = document.getElementById('certPreviewModal');
+  if (modal) {
+    modal.classList.remove('open');
+  }
+}
+
+// 미리보기 출력
+function printCertPreview() {
+  const printArea = document.getElementById('certPreviewPrintArea');
+  if (!printArea) return;
+
+  const printWindow = window.open('', '_blank', 'width=900,height=1000');
+
+  const html =
+    '<html>' +
+    '<head>' +
+    '<title>검역 합격 증명서</title>' +
+    '<style>' +
+    '* { box-sizing: border-box; font-family: Arial, sans-serif; }' +
+    'body { margin: 0; padding: 30px; color: #203444; }' +
+    'table { width: 100%; border-collapse: collapse; }' +
+    'th, td { border: 1px solid #cbd5e1; padding: 10px; font-size: 13px; }' +
+    'th { background: #ecf4ff; text-align: left; }' +
+    '</style>' +
+    '</head>' +
+    '<body>' +
+    printArea.innerHTML +
+    '</body>' +
+    '</html>';
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
+
+// =========================================================
+// 최종 판정 및 발급 적격성 확인
+// - 합격: 검역 합격 증명서 발급 버튼 표시
+// - 불합격: 검역 합격 증명서 발급 버튼 숨김
+// - 보완요청: 검역 합격 증명서 발급 버튼 숨김 + 보완요청 등록 버튼 표시
+// =========================================================
+function selectFinalJudge(value) {
+  const hidden = document.getElementById('certJudgeResult');
+
+  const box = document.getElementById('certFinalDecisionBox');
+  const passCard = document.getElementById('judgePassCard');
+  const failCard = document.getElementById('judgeFailCard');
+  const supplementCard = document.getElementById('judgeSupplementCard');
+
+  const statusText = document.getElementById('certFinalStatusText');
+  const resultLine = document.getElementById('certFinalResultLine');
+
+  const issueBtn = document.getElementById('issueCertBtn');
+  const supplementBox = document.getElementById('supplementRequestBox');
+  const supplementSubmitBtn = document.getElementById('supplementSubmitBtn');
+
+  // hidden 값 갱신
+  if (hidden) {
+    hidden.value = value;
+  }
+
+  // 기존 상태 초기화
+  if (box) {
+    box.classList.remove('pass', 'fail', 'supplement');
+  }
+
+  if (passCard) {
+    passCard.classList.remove('selected');
+  }
+
+  if (failCard) {
+    failCard.classList.remove('selected');
+  }
+
+  if (supplementCard) {
+    supplementCard.classList.remove('selected');
+  }
+
+  // 기본값: 발급 버튼 숨김
+  if (issueBtn) {
+    issueBtn.style.display = 'none';
+    issueBtn.disabled = true;
+  }
+
+  // 기본값: 보완요청 영역 숨김
+  if (supplementBox) {
+    supplementBox.style.display = 'none';
+  }
+
+  // 기본값: 보완요청 등록 버튼 숨김
+  if (supplementSubmitBtn) {
+    supplementSubmitBtn.style.display = 'none';
+    supplementSubmitBtn.disabled = true;
+  }
+  
+  // 합격 선택 시
+  if (value === 'PASS') {
+    if (box) box.classList.add('pass');
+    if (passCard) passCard.classList.add('selected');
+    if (statusText) statusText.textContent = '발급 가능';
+
+    if (resultLine) {
+      resultLine.textContent = '최종 판정이 합격으로 선택되었습니다. 검역 합격 증명서 발급이 가능합니다.';
+    }
+
+    // 합격이면 바로 발급 버튼 표시
+    if (issueBtn) {
+      issueBtn.style.display = 'inline-flex';
+      issueBtn.disabled = false;
+      issueBtn.title = '검역 합격 증명서를 발급합니다.';
+    }
+
+  // 불합격 선택 시
+  } else if (value === 'FAIL') {
+    if (box) box.classList.add('fail');
+    if (failCard) failCard.classList.add('selected');
+    if (statusText) statusText.textContent = '발급 불가';
+    if (resultLine) {
+      resultLine.textContent = '최종 판정이 불합격으로 선택되었습니다. 검역 합격 증명서 발급이 불가합니다.';
+    }
+
+    // 불합격이면 발급 버튼 안 보임
+    if (issueBtn) {
+      issueBtn.style.display = 'none';
+      issueBtn.disabled = true;
+    }
+	
+  // 보완요청 선택 시
+  } else if (value === 'SUPP') {
+    if (box) box.classList.add('supplement');
+    if (supplementCard) supplementCard.classList.add('selected');
+    if (statusText) statusText.textContent = '보완 필요';
+    if (resultLine) {
+      resultLine.textContent = '보완요청이 선택되었습니다. 보완 요청 내용을 입력한 뒤 등록하세요.';
+    }
+
+    // 보완요청이면 발급 버튼 안 보임
+    if (issueBtn) {
+      issueBtn.style.display = 'none';
+      issueBtn.disabled = true;
+    }
+
+    // 보완요청 입력 영역 표시
+    if (supplementBox) {
+      supplementBox.style.display = 'block';
+    }
+
+	// 보완요청 등록 버튼 표시
+	if (supplementSubmitBtn) {
+	  supplementSubmitBtn.style.display = 'inline-flex';
+	  supplementSubmitBtn.disabled = false;
+	}
+	
+  // 아무 판정도 없을 때
+  } else {
+    if (statusText) statusText.textContent = '판정 대기';
+    if (resultLine) {
+      resultLine.textContent = '최종 판정 결과를 선택하세요.';
+    }
+
+    if (issueBtn) {
+      issueBtn.style.display = 'none';
+      issueBtn.disabled = true;
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const hidden = document.getElementById('certJudgeResult');
+
+  if (!hidden) {
+    return;
+  }
+
+  if (hidden.value === 'PASS') {
+    selectFinalJudge('PASS');
+  } else if (hidden.value === 'FAIL') {
+    selectFinalJudge('FAIL');
+  } else if (hidden.value === 'SUPP') {
+    selectFinalJudge('SUPP');
+  } else if (hidden.value) {
+    selectFinalJudge(hidden.value);
+  } else {
+    selectFinalJudge('');
+  }
+
+
+  // 보완요청 등록 / 증명서 발급 submit 검사
+  const finalJudgeForm = document.getElementById('finalJudgeForm');
+
+  if (finalJudgeForm) {
+    finalJudgeForm.addEventListener('submit', function (e) {
+      const submitter = e.submitter;
+
+      // 검역 합격 증명서 발급 버튼 클릭 시
+      // 합격 판정 여부만 확인한다.
+      if (submitter && submitter.id === 'issueCertBtn') {
+        const judgeValue = hidden ? hidden.value : '';
+
+        if (judgeValue !== 'PASS') {
+          e.preventDefault();
+          alert('합격 건만 검역 합격 증명서를 발급할 수 있습니다.');
+          return;
+        }
+
+        submitter.disabled = true;
+        submitter.innerHTML =
+          '<span class="material-symbols-outlined" style="font-size:14px">hourglass_empty</span> 발급 처리중';
+
+        return;
+      }
+
+      // 보완요청 등록 버튼이 아닌 경우는 검사하지 않음
+      if (!submitter || submitter.id !== 'supplementSubmitBtn') {
+        return;
+      }
+
+      const judgeValue = hidden ? hidden.value : '';
+      const suppReqCn = document.getElementById('suppReqCn');
+
+      // 최종 판정이 보완요청이 아니면 막음
+      if (judgeValue !== 'SUPP') {
+        e.preventDefault();
+        alert('보완요청을 선택한 뒤 등록할 수 있습니다.');
+        return;
+      }
+
+      // 보완 요청 사유 필수
+      if (!suppReqCn || suppReqCn.value.trim() === '') {
+        e.preventDefault();
+
+        if (window.Swal) {
+          Swal.fire({
+            icon: 'warning',
+            title: '보완요청 사유 필요',
+            text: '보완 요청 사유를 입력해 주세요.',
+            confirmButtonText: '확인'
+          });
+        } else {
+          alert('보완 요청 사유를 입력해 주세요.');
+        }
+
+        if (suppReqCn) {
+          suppReqCn.focus();
+        }
+
+        return;
+      }
+    });
+  }
+  });
+
+
+// =========================================================
+// 품목별 판정 결과 기준으로 최종 판정 자동 계산
+//
+// 규칙:
+// - 품목 중 하나라도 불합격이면 전체 최종 판정은 불합격
+// - 모든 품목이 합격이면 전체 최종 판정은 합격
+// =========================================================
+function recalcFinalJudgeByItems() {
+  const checkedItems = document.querySelectorAll('.item-judge-radio:checked');
+
+  if (!checkedItems || checkedItems.length === 0) {
+    return;
+  }
+
+  let hasFail = false;
+
+  checkedItems.forEach(function (radio) {
+    if (radio.value === 'FAIL') {
+      hasFail = true;
+    }
+  });
+
+  if (hasFail) {
+    // 최종 판정 hidden 값과 버튼 상태 변경
+    selectFinalJudge('FAIL');
+
+    // 최종 판정 라디오도 불합격으로 체크
+    const failRadio = document.querySelector('input[name="judgeResultRadio"][value="FAIL"]');
+    if (failRadio) {
+      failRadio.checked = true;
+    }
+
+  } else {
+    // 모든 품목이 합격이면 최종 판정 합격 처리
+    selectFinalJudge('PASS');
+
+    // 최종 판정 라디오도 합격으로 체크
+    const passRadio = document.querySelector('input[name="judgeResultRadio"][value="PASS"]');
+    if (passRadio) {
+      passRadio.checked = true;
+    }
+  }
+}
+
+
+/**
+ * 검역 합격 증명서 발급 목록 엑셀 다운로드
+ *
+ * 현재 검색 form의 조건을 그대로 queryString으로 만들어
+ * 서버의 엑셀 다운로드 URL로 이동한다.
+ */
+function downloadCertsExcel(ctx) {
+    const form = document.getElementById("certSearchForm");
+
+    if (!form) {
+        alert("검색 조건 form을 찾을 수 없습니다.");
+        return;
+    }
+
+    const params = new URLSearchParams(new FormData(form));
+
+    // 페이지 번호는 엑셀 다운로드에는 필요 없으므로 제거
+    params.delete("page");
+
+    location.href = ctx + "/fieldofficer/certs/excel.do?" + params.toString();
+}

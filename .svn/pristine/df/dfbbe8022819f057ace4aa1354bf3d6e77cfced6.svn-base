@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.owner.tariff.mapper.ITariffDutyMapper">
+
+    <!-- 관세 납부 목록 공통 검색 조건 -->
+    <sql id="brokerChargeSearchCondition">
+        <if test="keyword != null and keyword != ''">
+            AND (
+            UPPER(bc.bc_no) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(bc.bc_ir_no) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(bc.bc_broker_id) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(b.broker_nm) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(b.broker_office_nm) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(bc.bc_order_nm) LIKE '%' || UPPER(#{keyword}) || '%'
+            )
+        </if>
+
+        <if test="statusCd != null and statusCd != ''">
+            AND bc.bc_status_cd = #{statusCd}
+        </if>
+
+        <if test="startDate != null and startDate != ''">
+            <choose>
+                <when test="dateType == 'PAY_REQ'">
+                    AND bc.bc_pay_req_dt <![CDATA[>=]]> TO_DATE(#{startDate}, 'YYYY-MM-DD')
+                </when>
+                <when test="dateType == 'PAY_CMPL'">
+                    AND bc.bc_pay_cmpl_dt <![CDATA[>=]]> TO_DATE(#{startDate}, 'YYYY-MM-DD')
+                </when>
+                <otherwise>
+                    AND bc.bc_charge_dt <![CDATA[>=]]> TO_DATE(#{startDate}, 'YYYY-MM-DD')
+                </otherwise>
+            </choose>
+        </if>
+
+        <if test="endDate != null and endDate != ''">
+            <choose>
+                <when test="dateType == 'PAY_REQ'">
+                    AND bc.bc_pay_req_dt <![CDATA[<]]> TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+                </when>
+                <when test="dateType == 'PAY_CMPL'">
+                    AND bc.bc_pay_cmpl_dt <![CDATA[<]]> TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+                </when>
+                <otherwise>
+                    AND bc.bc_charge_dt <![CDATA[<]]> TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
+
+    <!-- 관세 납부 목록 총 개수 -->
+    <select id="selectBrokerChargeCount"
+            parameterType="kr.or.tacs.dto.owner.OwnerDutySearchDTO"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM broker_charge bc
+        LEFT JOIN broker b
+        ON bc.bc_broker_id = b.broker_id
+        LEFT JOIN com_code cc
+        ON bc.bc_status_cd = cc.cc_cd
+        WHERE bc.bc_owr_id = #{owrId}
+
+        <include refid="brokerChargeSearchCondition"/>
+    </select>
+
+
+    <!-- 관세 납부 목록 -->
+    <select id="selectBrokerChargeList"
+            parameterType="kr.or.tacs.dto.owner.OwnerDutySearchDTO"
+            resultType="kr.or.tacs.dto.owner.OwnerBrokerChargeDTO">
+        SELECT *
+        FROM (
+        SELECT
+        list_query.*
+        , ROW_NUMBER() OVER (
+        ORDER BY
+        CASE list_query.bc_status_cd
+        WHEN 'BC_CHARGED' THEN 1
+        WHEN 'BC_PAID' THEN 2
+        WHEN 'BC_CANCEL' THEN 3
+        ELSE 9
+        END
+        , NVL(list_query.bc_charge_dt, list_query.bc_regist_dt) DESC
+        , list_query.bc_no DESC
+        ) AS rn
+        FROM (
+        SELECT
+        bc.bc_no
+        , bc.bc_ct_no
+        , bc.bc_ir_no
+        , bc.bc_owr_id
+        , bc.bc_broker_id
+        , bc.bc_bfp_no
+        , bc.bc_tax_amt
+        , bc.bc_broker_fee_amt
+        , bc.bc_fee_vat_amt
+        , bc.bc_total_amt
+        , bc.bc_status_cd
+        , cc.cc_nm AS bc_status_nm
+        , bc.bc_order_nm
+        , bc.bc_payment_id
+        , bc.bc_charge_dt
+        , bc.bc_pay_cmpl_dt
+        , bc.bc_regist_dt
+        , bc.bc_updt_dt
+        , b.broker_nm
+        , b.broker_office_nm
+        FROM broker_charge bc
+        LEFT JOIN broker b
+        ON bc.bc_broker_id = b.broker_id
+        LEFT JOIN com_code cc
+        ON bc.bc_status_cd = cc.cc_cd
+        WHERE bc.bc_owr_id = #{owrId}
+
+        <include refid="brokerChargeSearchCondition"/>
+        ) list_query
+        )
+        WHERE rn BETWEEN #{startRow} AND #{endRow}
+    </select>
+
+    <select id="selectBrokerChargeDetail" resultType="kr.or.tacs.dto.owner.OwnerBrokerChargeDTO">
+        SELECT
+            bc.bc_no
+             , bc.bc_ct_no
+             , bc.bc_ir_no
+             , bc.bc_owr_id
+             , bc.bc_broker_id
+             , bc.bc_bfp_no
+             , bc.bc_tax_amt
+             , bc.bc_broker_fee_amt
+             , bc.bc_fee_vat_amt
+             , bc.bc_total_amt
+             , bc.bc_status_cd
+             , cc.cc_nm AS bc_status_nm
+             , bc.bc_order_nm
+             , bc.bc_payment_id
+             , bc.bc_charge_dt
+             , bc.bc_pay_cmpl_dt
+             , bc.bc_regist_dt
+             , bc.bc_updt_dt
+             , b.broker_nm
+             , b.broker_office_nm
+        FROM broker_charge bc
+                 LEFT JOIN broker b
+                           ON bc.bc_broker_id = b.broker_id
+                 LEFT JOIN com_code cc
+                           ON bc.bc_status_cd = cc.cc_cd
+        WHERE bc.bc_no = #{bcNo}
+          AND bc.bc_owr_id = #{owrId}
+    </select>
+
+</mapper>

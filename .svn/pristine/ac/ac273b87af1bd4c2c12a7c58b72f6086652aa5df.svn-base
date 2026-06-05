@@ -1,0 +1,24 @@
+package kr.or.tacs.dto.officer;
+
+import lombok.Data;
+
+@Data
+public class ReceiptListDTO {
+
+    private int no;
+    private String reqNo;
+    private String declareType;
+    private String companyName;
+    private String itemName;
+    private String requestDate;
+    private String statusCd;
+
+    // 검색조건
+    private String startDate;
+    private String endDate;
+    
+    // 반려정보
+    private String rejectReason;
+    private String rejectDate;
+    private String rejectType;
+}

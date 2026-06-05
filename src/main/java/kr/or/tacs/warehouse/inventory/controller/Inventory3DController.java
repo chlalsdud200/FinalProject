@@ -1,0 +1,77 @@
+package kr.or.tacs.warehouse.inventory.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import kr.or.tacs.common.security.MenuPermission;
+import kr.or.tacs.common.security.MenuPermissionAction;
+import kr.or.tacs.dto.warehouse.WarehouseInventory3DDTO;
+import kr.or.tacs.dto.warehouse.WarehouseZoneDTO;
+import kr.or.tacs.vo.common.CustomUser;
+import kr.or.tacs.warehouse.inventory.service.Inventory3DService;
+
+@RestController
+@RequestMapping("/api/tacs/warehouse")
+public class Inventory3DController {
+
+	@Autowired
+	private  Inventory3DService inventory3DService;
+	
+	@GetMapping("/3d/inventory.do")
+	@MenuPermission(menuUrl = "/warehouse/inventory.do", action = MenuPermissionAction.READ)
+	public List<WarehouseInventory3DDTO> retrieve3DInventory(){
+		
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		CustomUser user = (CustomUser) auth.getPrincipal();
+		String wmId = user.getLoginId();
+		return inventory3DService.selectInventory3DList(wmId);
+	}
+	
+	@GetMapping("/3d/inventory/search.do")
+	@MenuPermission(menuUrl = "/warehouse/inventory.do", action = MenuPermissionAction.READ)
+	public List<WarehouseInventory3DDTO> search3DInventory(
+	        @RequestParam(required = false) String zone,
+	        @RequestParam(required = false, name = "q") String keyword,
+	        @RequestParam(required = false) String searchType
+	) {
+
+	    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+	    CustomUser user = (CustomUser) auth.getPrincipal();
+	    String wmId = user.getLoginId();
+
+	    WarehouseInventory3DDTO searchDTO = new WarehouseInventory3DDTO();
+	    searchDTO.setZone(zone);
+	    searchDTO.setKeyword(keyword);
+	    searchDTO.setSearchType(searchType);
+
+	    // 새 3D 검색용 서비스 메서드 호출
+	    return inventory3DService.selectInventory3DSearchList(searchDTO, wmId);
+	}
+	
+	
+	@GetMapping("/3d/my-warehouse.do")
+	@MenuPermission(menuUrl = "/warehouse/inventory.do", action = MenuPermissionAction.READ)
+	public WarehouseZoneDTO retrieveMyWarehouse() {
+
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		CustomUser user = (CustomUser) auth.getPrincipal();
+		String wmId = user.getLoginId();
+
+		/*
+		 * React 3D 허브 화면에서 사용할 담당 창고 1개 조회 API
+		 *
+		 * inventory.do는 재고 목록 API라서 재고가 없으면 빈 배열이 나올 수 있다.
+		 * 하지만 허브 화면에는 재고가 없어도 담당 창고 건물은 보여야 하므로,
+		 * 로그인한 창고관리자 wmId 기준으로 WAREHOUSE에서 창고 1개를 따로 조회한다.
+		 */
+		return inventory3DService.selectMyWarehouse(wmId);
+	}
+
+}

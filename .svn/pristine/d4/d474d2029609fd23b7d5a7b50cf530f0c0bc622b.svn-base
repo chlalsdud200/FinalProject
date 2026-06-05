@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.broker.status.mapper.IStatusMapper">
+
+   <select id="selectImportDeclareCount" resultType="int">
+		    SELECT COUNT(*)
+		      FROM imp_dclr id
+		      JOIN imp_rqst ir
+		        ON ir.ir_no = id.id_ir_no
+		     WHERE ir.ir_broker_id = #{brokerId}
+		
+		    <if test="pageDTO.keyword != null and pageDTO.keyword != ''">
+		        <choose>
+		            <when test="pageDTO.searchType == 'irNo'">
+		                AND id.id_ir_no LIKE '%' || #{pageDTO.keyword} || '%'
+		            </when>
+		            <when test="pageDTO.searchType == 'owner'">
+		                AND (
+		                    id.id_impr_nm LIKE '%' || #{pageDTO.keyword} || '%'
+		                    OR ir.ir_owr_id LIKE '%' || #{pageDTO.keyword} || '%'
+		                )
+		            </when>
+		            <when test="pageDTO.searchType == 'item'">
+		                AND EXISTS (
+		                    SELECT 1
+		                      FROM imp_dclr_item si
+		                     WHERE si.idi_ir_no = id.id_ir_no
+		                       AND (
+		                           si.idi_dclr_gdsnm LIKE '%' || #{pageDTO.keyword} || '%'
+		                           OR si.idi_trdng_gdsnm LIKE '%' || #{pageDTO.keyword} || '%'
+		                           OR si.idi_hs_cd LIKE '%' || #{pageDTO.keyword} || '%'
+		                       )
+		                )
+		            </when>
+		            <otherwise>
+		                AND (
+		                    id.id_ir_no LIKE '%' || #{pageDTO.keyword} || '%'
+		                    OR id.id_impr_nm LIKE '%' || #{pageDTO.keyword} || '%'
+		                    OR ir.ir_owr_id LIKE '%' || #{pageDTO.keyword} || '%'
+		                    OR EXISTS (
+		                        SELECT 1
+		                          FROM imp_dclr_item si
+		                         WHERE si.idi_ir_no = id.id_ir_no
+		                           AND (
+		                               si.idi_dclr_gdsnm LIKE '%' || #{pageDTO.keyword} || '%'
+		                               OR si.idi_trdng_gdsnm LIKE '%' || #{pageDTO.keyword} || '%'
+		                               OR si.idi_hs_cd LIKE '%' || #{pageDTO.keyword} || '%'
+		                           )
+		                    )
+		                )
+		            </otherwise>
+		        </choose>
+		    </if>
+		
+		    <if test="pageDTO.statusCd != null and pageDTO.statusCd != ''">
+		        AND id.id_status_cd = #{pageDTO.statusCd}
+		    </if>
+		
+		    <if test="pageDTO.startDate != null and pageDTO.startDate != ''">
+		        AND TRUNC(NVL(id.id_dclr_dt, id.id_regist_dt)) <![CDATA[>=]]> TO_DATE(#{pageDTO.startDate}, 'YYYY-MM-DD')
+		    </if>
+		
+		    <if test="pageDTO.endDate != null and pageDTO.endDate != ''">
+		        AND TRUNC(NVL(id.id_dclr_dt, id.id_regist_dt)) <![CDATA[<=]]> TO_DATE(#{pageDTO.endDate}, 'YYYY-MM-DD')
+		    </if>
+		</select>
+		
+		
+		<select id="selectImportDeclareList" resultType="map">
+		    SELECT *
+		      FROM (
+		        SELECT ROWNUM AS RN, base.*
+		          FROM (
+		            SELECT
+		                id.id_ir_no AS IDIRNO,
+		                id.id_status_cd AS IDSTATUSCD,
+		                CASE id.id_status_cd
+		                    WHEN 'TEMP' THEN '임시저장'
+		                    WHEN 'SUBMIT' THEN '신고제출'
+		                    WHEN 'CSTM_INPRG' THEN '세관심사중'
+		                    WHEN 'CSTM_ACPT' THEN '수리'
+		                    WHEN 'CSTM_REJ' THEN '반려'
+		                    ELSE id.id_status_cd
+		                END AS IDSTATUSNM,
+		                TO_CHAR(NVL(id.id_dclr_dt, id.id_regist_dt), 'YYYY-MM-DD') AS IDDCLRDTSTR,
+		                id.id_impr_nm AS IDIMPRNM,
+		                ir.ir_owr_id AS IROWRID,
+		                ir.ir_broker_id AS IRBROKERID,
+		                ir.ir_bl_awb_no AS IRBLAWBNO,
+		                NVL(p.port_nm, ir.ir_arrv_port_cd) AS ARRVPORTNM,
+		                item.main_item_nm AS MAINITEMNM,
+		                item.main_hs_cd AS MAINHSCD,
+		                NVL(item.item_cnt, 0) AS ITEMCNT
+		              FROM imp_dclr id
+		              JOIN imp_rqst ir
+		                ON ir.ir_no = id.id_ir_no
+		              LEFT JOIN port p
+		                ON p.port_cd = ir.ir_arrv_port_cd
+		               AND p.port_use_yn = 'Y'
+		              LEFT JOIN (
+		                    SELECT
+		                        idi_ir_no,
+		                        MIN(idi_dclr_gdsnm) KEEP (DENSE_RANK FIRST ORDER BY idi_sn) AS main_item_nm,
+		                        MIN(idi_hs_cd) KEEP (DENSE_RANK FIRST ORDER BY idi_sn) AS main_hs_cd,
+		                        COUNT(*) AS item_cnt
+		                      FROM imp_dclr_item
+		                     GROUP BY idi_ir_no
+		              ) item
+		                ON item.idi_ir_no = id.id_ir_no
+		             WHERE ir.ir_broker_id = #{brokerId}
+		
+		            <if test="pageDTO.keyword != null and pageDTO.keyword != ''">
+		                <choose>
+		                    <when test="pageDTO.searchType == 'irNo'">
+		                        AND id.id_ir_no LIKE '%' || #{pageDTO.keyword} || '%'
+		                    </when>
+		                    <when test="pageDTO.searchType == 'owner'">
+		                        AND (
+		                            id.id_impr_nm LIKE '%' || #{pageDTO.keyword} || '%'
+		                            OR ir.ir_owr_id LIKE '%' || #{pageDTO.keyword} || '%'
+		                        )
+		                    </when>
+		                    <when test="pageDTO.searchType == 'item'">
+		                        AND EXISTS (
+		                            SELECT 1
+		                              FROM imp_dclr_item si
+		                             WHERE si.idi_ir_no = id.id_ir_no
+		                               AND (
+		                                   si.idi_dclr_gdsnm LIKE '%' || #{pageDTO.keyword} || '%'
+		                                   OR si.idi_trdng_gdsnm LIKE '%' || #{pageDTO.keyword} || '%'
+		                                   OR si.idi_hs_cd LIKE '%' || #{pageDTO.keyword} || '%'
+		                               )
+		                        )
+		                    </when>
+		                    <otherwise>
+		                        AND (
+		                            id.id_ir_no LIKE '%' || #{pageDTO.keyword} || '%'
+		                            OR id.id_impr_nm LIKE '%' || #{pageDTO.keyword} || '%'
+		                            OR ir.ir_owr_id LIKE '%' || #{pageDTO.keyword} || '%'
+		                            OR EXISTS (
+		                                SELECT 1
+		                                  FROM imp_dclr_item si
+		                                 WHERE si.idi_ir_no = id.id_ir_no
+		                                   AND (
+		                                       si.idi_dclr_gdsnm LIKE '%' || #{pageDTO.keyword} || '%'
+		                                       OR si.idi_trdng_gdsnm LIKE '%' || #{pageDTO.keyword} || '%'
+		                                       OR si.idi_hs_cd LIKE '%' || #{pageDTO.keyword} || '%'
+		                                   )
+		                            )
+		                        )
+		                    </otherwise>
+		                </choose>
+		            </if>
+		
+		            <if test="pageDTO.statusCd != null and pageDTO.statusCd != ''">
+		                AND id.id_status_cd = #{pageDTO.statusCd}
+		            </if>
+		
+		            <if test="pageDTO.startDate != null and pageDTO.startDate != ''">
+		                AND TRUNC(NVL(id.id_dclr_dt, id.id_regist_dt)) <![CDATA[>=]]> TO_DATE(#{pageDTO.startDate}, 'YYYY-MM-DD')
+		            </if>
+		
+		            <if test="pageDTO.endDate != null and pageDTO.endDate != ''">
+		                AND TRUNC(NVL(id.id_dclr_dt, id.id_regist_dt)) <![CDATA[<=]]> TO_DATE(#{pageDTO.endDate}, 'YYYY-MM-DD')
+		            </if>
+		
+		             ORDER BY NVL(id.id_dclr_dt, id.id_regist_dt) DESC
+		          ) base
+		         WHERE ROWNUM <![CDATA[<=]]> #{pageDTO.endRow}
+		      )
+		     WHERE RN <![CDATA[>=]]> #{pageDTO.startRow}
+		</select>
+
+        <select id="selectImportDeclareDetail" resultType="map">
+        SELECT
+            id.id_ir_no AS IDIRNO,
+            id.id_status_cd AS IDSTATUSCD,
+            CASE id.id_status_cd
+                WHEN 'TEMP' THEN '임시저장'
+                WHEN 'SUBMIT' THEN '신고제출'
+                WHEN 'CSTM_INPRG' THEN '세관심사중'
+                WHEN 'CSTM_ACPT' THEN '수리'
+                WHEN 'CSTM_REJ' THEN '반려'
+                ELSE id.id_status_cd
+            END AS IDSTATUSNM,
+            id.id_dclrnt_nm AS IDDCLRNTNM,
+            id.id_dclrnt_eml AS IDDCLRNTEML,
+            id.id_dclrnt_telno AS IDDCLRNTTELNO,
+            id.id_impr_nm AS IDIMPRNM,
+            id.id_impr_clnc_cd AS IDIMPRCLNCCD,
+            id.id_taxpyr_idnt_se AS IDTAXPYRIDNTSE,
+            id.id_taxpyr_idnt_no AS IDTAXPYRIDNTNO,
+            id.id_taxpyr_zip AS IDTAXPYRZIP,
+            id.id_taxpyr_addr AS IDTAXPYRADDR,
+            id.id_taxpyr_dtl_addr AS IDTAXPYRDTLADDR,
+            id.id_ovrss_nm AS IDOVRSSNM,
+            id.id_ovrss_cd AS IDOVRSSCD,
+            id.id_ovrss_cntry_cd AS IDOVRSSCNTRYCD,
+            id.id_tot_pkg_cnt AS IDTOTPKGCNT,
+            id.id_tot_wt AS IDTOTWT,
+            id.id_stlm_amt AS IDSTLMAMT,
+            id.id_tot_tax_amt AS IDTOTTAXAMT,
+            TO_CHAR(id.id_dclr_dt, 'YYYY-MM-DD HH24:MI') AS IDDCLRDTSTR,
+            ir.ir_no AS IRNO,
+            ir.ir_owr_id AS IROWRID,
+            ir.ir_broker_id AS IRBROKERID,
+            ir.ir_bl_awb_no AS IRBLAWBNO,
+            ir.ir_arrv_port_cd AS IRARRVPORTCD,
+            NVL(p.port_nm, ir.ir_arrv_port_cd) AS ARRVPORTNM
+        FROM imp_dclr id
+             JOIN imp_rqst ir
+               ON ir.ir_no = id.id_ir_no
+             LEFT JOIN port p
+               ON p.port_cd = ir.ir_arrv_port_cd
+              AND p.port_use_yn = 'Y'
+        WHERE id.id_ir_no = #{idIrNo}
+          AND ir.ir_broker_id = #{brokerId}
+    </select>
+
+
+            <select id="selectImportDeclareItemList" resultType="map">
+        SELECT
+            idi_sn AS IDISN,
+            idi_ir_no AS IDIIRNO,
+            idi_status_cd AS IDISTATUSCD,
+            CASE idi_status_cd
+                WHEN 'ITEM_DCLR' THEN '품목 신고'
+                WHEN 'ITEM_REVIEW' THEN '심사중'
+                WHEN 'ITEM_SUPP_REQ' THEN '보완요청'
+                WHEN 'ITEM_SUPP_SUB' THEN '보완제출'
+                WHEN 'ITEM_ACPT' THEN '수리'
+                WHEN 'ITEM_REJ' THEN '반려'
+                ELSE idi_status_cd
+            END AS IDISTATUSNM,
+            idi_hs_cd AS IDIHSCD,
+            idi_dclr_gdsnm AS IDIDCLRGDSNM,
+            idi_trdmk_nm AS IDITRDMKNM,
+            idi_trdng_gdsnm AS IDITRDNGGDSNM,
+            idi_qty AS IDIQTY,
+            idi_qty_unit_cd AS IDIQTYUNITCD,
+            idi_net_wt AS IDINETWT,
+            idi_taxt_prc_krw AS IDITAXTPRCKRW,
+            idi_orgn_cntry_cd AS IDIORGNCNTRYCD
+        FROM imp_dclr_item
+        WHERE idi_ir_no = #{idIrNo}
+        ORDER BY idi_sn
+    </select>
+
+            <select id="selectImportDeclareMdlspecList" resultType="map">
+        SELECT
+            idim_sn AS IDIMSN,
+            idim_ir_no AS IDIMIRNO,
+            idim_mdlspec_sn AS IDIMMDLSPECSN,
+            idim_mdlspec_no AS IDIMMDLSPECNO,
+            idim_mdlspec_nm AS IDIMMDLSPECNM,
+            idim_qty1 AS IDIMQTY1,
+            idim_qty1_unit_cd AS IDIMQTY1UNITCD,
+            idim_qty2 AS IDIMQTY2,
+            idim_qty2_unit_cd AS IDIMQTY2UNITCD,
+            idim_unit_prc AS IDIMUNITPRC,
+            idim_amt AS IDIMAMT
+        FROM imp_dclr_item_mdlspec
+        WHERE idim_ir_no = #{idIrNo}
+        ORDER BY idim_sn, idim_mdlspec_sn
+    </select>
+    
+    
+		        <select id="selectSupplementItem" resultType="map">
+        SELECT
+            item.idi_sn AS IDISN,
+            item.idi_ir_no AS IDIIRNO,
+            item.idi_status_cd AS IDISTATUSCD,
+            CASE item.idi_status_cd
+                WHEN 'ITEM_DCLR' THEN '품목 신고'
+                WHEN 'ITEM_REVIEW' THEN '심사중'
+                WHEN 'ITEM_SUPP_REQ' THEN '보완요청'
+                WHEN 'ITEM_SUPP_SUB' THEN '보완제출'
+                WHEN 'ITEM_ACPT' THEN '수리'
+                WHEN 'ITEM_REJ' THEN '반려'
+                ELSE item.idi_status_cd
+            END AS IDISTATUSNM,
+            item.idi_hs_cd AS IDIHSCD,
+            item.idi_dclr_gdsnm AS IDIDCLRGDSNM,
+            item.idi_trdmk_nm AS IDITRDMKNM,
+            item.idi_trdng_gdsnm AS IDITRDNGGDSNM,
+            item.idi_taxt_prc_krw AS IDITAXTPRCKRW,
+            item.idi_net_wt AS IDINETWT,
+            item.idi_qty AS IDIQTY,
+            item.idi_qty_unit_cd AS IDIQTYUNITCD,
+            item.idi_orgn_cntry_cd AS IDIORGNCNTRYCD
+        FROM imp_dclr_item item
+             JOIN imp_rqst ir
+               ON ir.ir_no = item.idi_ir_no
+        WHERE item.idi_ir_no = #{idIrNo}
+          AND item.idi_sn = #{idiSn}
+          AND ir.ir_broker_id = #{brokerId}
+    </select>
+	
+	
+	        <select id="selectSupplementMdlspecList" resultType="map">
+        SELECT
+            idim_sn AS IDIMSN,
+            idim_ir_no AS IDIMIRNO,
+            idim_mdlspec_sn AS IDIMMDLSPECSN,
+            idim_mdlspec_no AS IDIMMDLSPECNO,
+            idim_mdlspec_nm AS IDIMMDLSPECNM,
+            idim_qty1 AS IDIMQTY1,
+            idim_qty1_unit_cd AS IDIMQTY1UNITCD,
+            idim_unit_prc AS IDIMUNITPRC,
+            idim_amt AS IDIMAMT
+        FROM imp_dclr_item_mdlspec
+        WHERE idim_ir_no = #{idIrNo}
+          AND idim_sn = #{idiSn}
+        ORDER BY idim_mdlspec_sn
+    </select>
+	
+	
+	<update id="updateSupplementItem" parameterType="map">
+	    UPDATE imp_dclr_item
+	       SET idi_hs_cd          = #{idiHsCd},
+	           idi_dclr_gdsnm     = #{idiDclrGdsnm},
+	           idi_trdng_gdsnm    = #{idiTrdngGdsnm},
+	           idi_trdmk_nm       = #{idiTrdmkNm},
+	           idi_qty            = #{idiQty},
+	           idi_qty_unit_cd    = #{idiQtyUnitCd},
+	           idi_net_wt         = #{idiNetWt},
+	           idi_taxt_prc_krw   = #{idiTaxtPrcKrw},
+	           idi_orgn_cntry_cd  = #{idiOrgnCntryCd},
+	           idi_updt_dt        = SYSDATE
+	     WHERE idi_ir_no = #{idIrNo}
+	       AND idi_sn = #{idiSn}
+	       AND idi_status_cd = 'ITEM_SUPP_REQ'
+	</update>
+	
+	
+	<delete id="deleteSupplementMdlspecByItem">
+	    DELETE FROM imp_dclr_item_mdlspec
+	     WHERE idim_ir_no = #{idIrNo}
+	       AND idim_sn = #{idiSn}
+	</delete>
+	
+	
+	<insert id="insertSupplementMdlspec" parameterType="map">
+    INSERT INTO imp_dclr_item_mdlspec (
+        idim_sn,
+        idim_mdlspec_sn,
+        idim_ir_no,
+        idim_mdlspec_no,
+        idim_mdlspec_nm,
+        idim_qty1,
+        idim_qty1_unit_cd,
+        idim_unit_prc,
+        idim_amt
+    ) VALUES (
+        #{idimSn},
+        (
+            SELECT NVL(MAX(m.idim_mdlspec_sn), 0) + 1
+              FROM imp_dclr_item_mdlspec m
+             WHERE m.idim_ir_no = #{idimIrNo}
+               AND m.idim_sn = #{idimSn}
+        ),
+        #{idimIrNo},
+        #{idimMdlspecNo},
+        #{idimMdlspecNm},
+        #{idimQty1},
+        #{idimQty1UnitCd},
+        #{idimUnitPrc},
+        #{idimAmt}
+    )
+</insert>
+	
+	
+	<update id="updateItemStatusToSuppSub">
+	    UPDATE imp_dclr_item
+	       SET idi_status_cd = 'ITEM_SUPP_SUB',
+	           idi_updt_dt = SYSDATE
+	     WHERE idi_ir_no = #{idIrNo}
+	       AND idi_sn = #{idiSn}
+	       AND idi_status_cd = 'ITEM_SUPP_REQ'
+	</update>
+</mapper>

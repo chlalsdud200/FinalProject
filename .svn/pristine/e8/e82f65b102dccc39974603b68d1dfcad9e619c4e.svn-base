@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.owner.export.mapper.IExportMapper">
+
+    <select id="selectExpRqstSeq" resultType="long">
+        SELECT SEQ_EXP_RQST_NO.NEXTVAL
+        FROM DUAL
+    </select>
+
+    <select id="selectOwnerInfo" parameterType="string" resultType="kr.or.tacs.vo.OwnerVO">
+        SELECT
+            owr_id,
+            owr_password,
+            owr_ty_cd,
+            owr_nm,
+            owr_bizrno,
+            owr_ident_no,
+            owr_cstm_idf_no,
+            owr_email,
+            owr_telno,
+            owr_zip,
+            owr_adres,
+            owr_detail_adres,
+            owr_use_yn,
+            owr_regist_dt,
+            owr_updt_dt,
+            privacy_agree_yn,
+            owr_corp_reg_no
+        FROM owner
+        WHERE owr_id = #{owrId}
+    </select>
+
+    <select id="selectBrokerList" resultType="kr.or.tacs.vo.BrokerVO">
+        SELECT
+            broker_id,
+            broker_ty_cd,
+            broker_nm,
+            broker_office_nm,
+            broker_reg_no,
+            broker_bizrno,
+            broker_spclty_cd,
+            broker_email,
+            broker_telno,
+            broker_zip,
+            broker_adres,
+            broker_detail_adres,
+            broker_use_yn,
+            broker_regist_dt,
+            broker_updt_dt
+        FROM broker
+    </select>
+
+    <insert id="insertExp" parameterType="kr.or.tacs.dto.owner.OwnerExportRequestDTO">
+        INSERT INTO exp_rqst (er_no,
+                              er_owr_id,
+                              er_broker_id,
+                              er_tfg_no,
+                              er_status_cd,
+                              er_oner_nm,
+                              er_cstm_idf_no,
+                              er_corp_reg_no,
+                              er_load_schd_ymd,
+                              er_inco_terms_cd,
+                              er_load_port_cd,
+                              er_arrv_port_cd,
+                              er_co_issue_ty_cd,
+                              er_use_yn,
+                              er_regist_dt,
+                              er_comment,
+                              er_rqst_dt,
+                              er_refund_req_yn)
+        VALUES (
+                #{erNo},
+                #{erOwrId},
+                #{erBrokerId},
+                #{erTfgNo},
+                #{erStatusCd},
+                #{erOnerNm},
+                #{erCstmIdfNo},
+                #{erCorpRegNo},
+                REPLACE(#{erLoadSchdYmd}, '-', ''),
+                #{erIncoTermsCd},
+                #{erLoadPortCd},
+                #{erArrvPortCd},
+                #{erCoIssueTyCd},
+                'Y',
+                sysdate,
+                #{erComment},
+                sysdate,
+                #{erRefundReqYn})
+    </insert>
+
+    <select id="selectExpList"
+            parameterType="kr.or.tacs.dto.owner.OwnerExportSearchDTO"
+            resultType="kr.or.tacs.dto.owner.OwnerExportRequestDTO">
+        SELECT
+        er.er_no,
+        er.er_owr_id,
+        er.er_broker_id,
+        er.er_tfg_no,
+        er.er_status_cd,
+        er.er_oner_nm,
+        er.er_cstm_idf_no,
+        er.er_corp_reg_no,
+        er.er_load_schd_ymd,
+        er.er_inco_terms_cd,
+        er.er_load_port_cd,
+        er.er_arrv_port_cd,
+        er.er_co_issue_ty_cd,
+        er.er_rqst_dt,
+        er.er_acpt_dt,
+        er.er_cncl_dt,
+        er.er_use_yn,
+        er.er_regist_dt,
+        er.er_comment,
+        er.er_refund_req_yn,
+        br.broker_nm
+        FROM exp_rqst er
+        LEFT JOIN broker br
+        ON er.er_broker_id = br.broker_id
+        WHERE er.er_owr_id = #{owrId}
+        AND NVL(er.er_use_yn, 'Y') = 'Y'
+
+        <if test="erNo != null and erNo != ''">
+            AND er.er_no LIKE '%' || #{erNo} || '%'
+        </if>
+
+        <if test="statusCd != null and statusCd != ''">
+            AND er.er_status_cd = #{statusCd}
+        </if>
+
+        <if test="startDate != null and startDate != ''">
+            AND er.er_rqst_dt &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+        </if>
+
+        <if test="endDate != null and endDate != ''">
+            AND er.er_rqst_dt &lt; TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+        </if>
+
+        <if test="brokerNm != null and brokerNm != ''">
+            AND br.broker_nm LIKE '%' || #{brokerNm} || '%'
+        </if>
+
+        <if test="loadPortCd != null and loadPortCd != ''">
+            AND er.er_load_port_cd LIKE '%' || #{loadPortCd} || '%'
+        </if>
+
+        <if test="arrvPortCd != null and arrvPortCd != ''">
+            AND er.er_arrv_port_cd LIKE '%' || #{arrvPortCd} || '%'
+        </if>
+
+        <if test="keyword != null and keyword != ''">
+            AND (
+            er.er_comment LIKE '%' || #{keyword} || '%'
+            OR er.er_no LIKE '%' || #{keyword} || '%'
+            OR er.er_load_port_cd LIKE '%' || #{keyword} || '%'
+            OR er.er_arrv_port_cd LIKE '%' || #{keyword} || '%'
+            OR br.broker_nm LIKE '%' || #{keyword} || '%'
+            )
+        </if>
+
+        ORDER BY er.er_rqst_dt DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
+    </select>
+
+    <select id="selectExpCount"
+            parameterType="kr.or.tacs.dto.owner.OwnerExportSearchDTO"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM exp_rqst er
+        LEFT JOIN broker br
+        ON er.er_broker_id = br.broker_id
+        WHERE er.er_owr_id = #{owrId}
+        AND NVL(er.er_use_yn, 'Y') = 'Y'
+
+        <if test="erNo != null and erNo != ''">
+            AND er.er_no LIKE '%' || #{erNo} || '%'
+        </if>
+
+        <if test="statusCd != null and statusCd != ''">
+            AND er.er_status_cd = #{statusCd}
+        </if>
+
+        <if test="startDate != null and startDate != ''">
+            AND er.er_rqst_dt &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+        </if>
+
+        <if test="endDate != null and endDate != ''">
+            AND er.er_rqst_dt &lt; TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+        </if>
+
+        <if test="brokerNm != null and brokerNm != ''">
+            AND br.broker_nm LIKE '%' || #{brokerNm} || '%'
+        </if>
+
+        <if test="loadPortCd != null and loadPortCd != ''">
+            AND er.er_load_port_cd LIKE '%' || #{loadPortCd} || '%'
+        </if>
+
+        <if test="arrvPortCd != null and arrvPortCd != ''">
+            AND er.er_arrv_port_cd LIKE '%' || #{arrvPortCd} || '%'
+        </if>
+
+        <if test="keyword != null and keyword != ''">
+            AND (
+            er.er_comment LIKE '%' || #{keyword} || '%'
+            OR er.er_no LIKE '%' || #{keyword} || '%'
+            OR er.er_load_port_cd LIKE '%' || #{keyword} || '%'
+            OR er.er_arrv_port_cd LIKE '%' || #{keyword} || '%'
+            OR br.broker_nm LIKE '%' || #{keyword} || '%'
+            )
+        </if>
+    </select>
+
+    <select id="selectExp" parameterType="String" resultType="kr.or.tacs.dto.owner.OwnerExportRequestDTO">
+        SELECT er_no, er_owr_id, er_broker_id, er_tfg_no, er_status_cd, er_oner_nm, er_cstm_idf_no
+                , er_corp_reg_no, er_load_schd_ymd, er_inco_terms_cd, er_load_port_cd, er_arrv_port_cd
+                , er_co_issue_ty_cd, er_rqst_dt, er_acpt_dt, er_cncl_dt, er_use_yn, er_regist_dt
+                , er_comment, broker_nm, er_refund_req_yn
+        FROM exp_rqst er left join broker br on (er.er_broker_id = br.broker_id)
+        WHERE er_no = #{erNo}
+    </select>
+
+    <select id="selectSupp" parameterType="String" resultType="kr.or.tacs.dto.owner.OwnerExportRequestDTO">
+        SELECT sr_no, sr_ref_biz_cd, sr_ref_no, sender_id, sender_ty_cd, receiver_id,
+                receiver_ty_cd, sr_status_cd, sr_req_dt, sr_submit_dt, sr_appr_dt, sr_req_cn, sr_submit_cn
+        FROM supp_rqst
+        WHERE sr_ref_no = #{erNo}
+    </select>
+
+    <update id="update" parameterType="kr.or.tacs.dto.owner.OwnerExportRequestDTO">
+        UPDATE exp_rqst
+        SET er_load_schd_ymd = REPLACE(#{erLoadSchdYmd}, '-', ''),
+            er_inco_terms_cd = #{erIncoTermsCd},
+            er_load_port_cd = #{erLoadPortCd},
+            er_arrv_port_cd = #{erArrvPortCd},
+            er_co_issue_ty_cd = #{erCoIssueTyCd},
+            er_refund_req_yn = #{erRefundReqYn},
+            er_comment = #{erComment}
+        WHERE er_no = #{erNo}
+          AND er_owr_id = #{erOwrId}
+          AND er_status_cd IN ('CSTM_REQ', 'CSTM_SUPP')
+    </update>
+
+    <update id="updateExpSupp" parameterType="kr.or.tacs.dto.owner.OwnerExportRequestDTO">
+        UPDATE supp_rqst
+        SET sr_status_cd = #{srStatusCd},
+            sr_submit_dt = SYSDATE,
+            sr_submit_cn = #{srSubmitCn}
+        WHERE sr_ref_biz_cd = #{srRefBizCd}
+          AND sr_ref_no = #{erNo}
+          AND receiver_id = #{erOwrId}
+          AND sr_status_cd = #{beforeSrStatusCd}
+    </update>
+
+    <update id="updateExpStatus" parameterType="kr.or.tacs.dto.owner.OwnerExportRequestDTO">
+        UPDATE exp_rqst
+        SET er_status_cd = #{erStatusCd}
+        WHERE er_no = #{erNo}
+          AND er_owr_id = #{erOwrId}
+          AND er_status_cd = #{beforeErStatusCd}
+    </update>
+
+</mapper>

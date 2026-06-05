@@ -1,0 +1,121 @@
+package kr.or.tacs.common.file.controller;
+
+import kr.or.tacs.common.file.service.GoogleDriveService;
+import kr.or.tacs.common.file.service.IFileService;
+import kr.or.tacs.dto.FileInfoDTO;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.nio.charset.StandardCharsets;
+
+@Controller
+@RequiredArgsConstructor
+public class FileDownloadController {
+
+    private final IFileService fileService;
+    private final GoogleDriveService googleDriveService;
+
+    /**
+     * Google Drive 파일 공통 다운로드
+     *
+     * 예:
+     * /common/file/download.do?fileNo=93
+     */
+    @GetMapping("/common/file/download.do")
+    public ResponseEntity<byte[]> download(@RequestParam("fileNo") Long fileNo) {
+
+        // 1. DB 파일 정보 조회
+        FileInfoDTO fileInfo = fileService.getFileInfo(fileNo);
+
+        if (fileInfo == null) {
+            throw new IllegalArgumentException("파일 정보가 존재하지 않습니다. fileNo=" + fileNo);
+        }
+
+        if (fileInfo.getDfiDriveFileId() == null || fileInfo.getDfiDriveFileId().isBlank()) {
+            throw new IllegalStateException("Google Drive 파일 ID가 없습니다. fileNo=" + fileNo);
+        }
+
+        if (!"DONE".equals(fileInfo.getDfiUploadSttsCd())) {
+            throw new IllegalStateException("파일 업로드가 아직 완료되지 않았습니다.");
+        }
+
+        // 2. Google Drive에서 파일 다운로드
+        byte[] fileBytes = googleDriveService.downloadFile(fileInfo.getDfiDriveFileId());
+
+        // 3. 원본 파일명
+        String originalFileName = fileInfo.getDfiOrgNm();
+        if (originalFileName == null || originalFileName.isBlank()) {
+            originalFileName = "download";
+        }
+
+        // 4. MIME 타입
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        if (fileInfo.getDfiMimeTy() != null && !fileInfo.getDfiMimeTy().isBlank()) {
+            try {
+                mediaType = MediaType.parseMediaType(fileInfo.getDfiMimeTy());
+            } catch (Exception ignored) {
+                mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            }
+        }
+
+        // 5. 한글 파일명 대응
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+                .filename(originalFileName, StandardCharsets.UTF_8)
+                .build();
+
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .contentLength(fileBytes.length)
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+                .body(fileBytes);
+    }
+
+        /**
+         * Google Drive PDF 파일 공통 미리보기
+         *
+         * 다운로드와 달리 Content-Disposition을 inline으로 내려서
+         * 브라우저/iframe에서 PDF를 바로 열 수 있게 한다.
+         *
+         * 예:
+         * /common/file/preview.do?fileNo=93
+         */
+        @GetMapping("/common/file/preview.do")
+        public ResponseEntity<byte[]> preview(@RequestParam("fileNo") Long fileNo) {
+            FileInfoDTO fileInfo = fileService.getFileInfo(fileNo);
+
+            if (fileInfo == null) {
+                throw new IllegalArgumentException("파일 정보가 존재하지 않습니다. fileNo=" + fileNo);
+            }
+
+            if (fileInfo.getDfiDriveFileId() == null || fileInfo.getDfiDriveFileId().isBlank()) {
+                throw new IllegalStateException("Google Drive 파일 ID가 없습니다. fileNo=" + fileNo);
+            }
+
+            if (!"DONE".equals(fileInfo.getDfiUploadSttsCd())) {
+                throw new IllegalStateException("파일 업로드가 아직 완료되지 않았습니다.");
+            }
+
+            byte[] fileBytes = googleDriveService.downloadFile(fileInfo.getDfiDriveFileId());
+
+            String originalFileName = fileInfo.getDfiOrgNm();
+            if (originalFileName == null || originalFileName.isBlank()) {
+                originalFileName = "preview.pdf";
+            }
+
+            ContentDisposition contentDisposition = ContentDisposition.inline()
+                    .filename(originalFileName, StandardCharsets.UTF_8)
+                    .build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .contentLength(fileBytes.length)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+                    .body(fileBytes);
+        }
+}

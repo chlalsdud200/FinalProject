@@ -1,0 +1,29 @@
+/* ── Transport specific ── */
+.bl-review-card { background: #fff; border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 20px; }
+.bl-review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.bl-review-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+.bl-review-body { background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; margin-bottom: 14px; font-size: 12px; color: #475569; line-height: 1.8; }
+.bl-review-body strong { color: #0f172a; }
+
+/* ── B/L version select bar ── */
+.version-bar { display: flex; align-items: center; gap: 10px; }
+.version-bar label { font-size: 11px; font-weight: 700; color: #475569; }
+.version-bar select { padding: 6px 10px; border: 1px solid #e2e8f0; font-size: 12px; background: #fff; color: #203444; font-family: inherit; outline: none; }
+.version-bar select:focus { border-color: #565e74; }
+
+.prog-tab-bar a.prog-tab {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.prog-tab-bar a.prog-tab.active {
+    color: #0f172a;
+    font-weight: 800;
+}

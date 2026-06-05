@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.officer.fulfillmentandexport.mapper.IExportAndFulfillmentMapper">
+
+    <resultMap id="exportAndFulfillmentMap" type="kr.or.tacs.dto.officer.ExportAndFulfillmentDTO">
+        <result property="workType" column="WORK_TYPE" />
+        <result property="workTypeNm" column="WORK_TYPE_NM" />
+        <result property="detailType" column="DETAIL_TYPE" />
+        <result property="reqNo" column="REQ_NO" />
+        <result property="declareType" column="DECLARE_TYPE" />
+        <result property="declareTypeNm" column="DECLARE_TYPE_NM" />
+        <result property="ownerId" column="OWNER_ID" />
+        <result property="ownerName" column="OWNER_NAME" />
+        <result property="goodsName" column="GOODS_NAME" />
+        <result property="cargoMngNo" column="CARGO_MNG_NO" />
+        <result property="goodsGroupNo" column="GOODS_GROUP_NO" />
+        <result property="blNo" column="BL_NO" />
+        <result property="mblNo" column="MBL_NO" />
+        <result property="hblNo" column="HBL_NO" />
+        <result property="placeName" column="PLACE_NAME" />
+        <result property="whName" column="WH_NAME" />
+        <result property="zoneName" column="ZONE_NAME" />
+        <result property="loadPort" column="LOAD_PORT" />
+        <result property="arrivalPort" column="ARRIVAL_PORT" />
+        <result property="baseDate" column="BASE_DATE" />
+        <result property="declareDate" column="DECLARE_DATE" />
+        <result property="approveDate" column="APPROVE_DATE" />
+        <result property="requestDate" column="REQUEST_DATE" />
+        <result property="statusCd" column="STATUS_CD" />
+        <result property="statusNm" column="STATUS_NM" />
+        <result property="statusClass" column="STATUS_CLASS" />
+        <result property="totalQty" column="TOTAL_QTY" />
+        <result property="totalWeight" column="TOTAL_WEIGHT" />
+        <result property="memo" column="MEMO" />
+    </resultMap>
+
+    <select id="selectExportAndFulfillmentList" parameterType="map" resultMap="exportAndFulfillmentMap">
+        SELECT
+            X.WORK_TYPE,
+            X.WORK_TYPE_NM,
+            X.DETAIL_TYPE,
+            X.REQ_NO,
+            X.DECLARE_TYPE,
+            X.DECLARE_TYPE_NM,
+            X.OWNER_ID,
+            X.OWNER_NAME,
+            X.GOODS_NAME,
+            X.CARGO_MNG_NO,
+            X.GOODS_GROUP_NO,
+            X.BL_NO,
+            X.MBL_NO,
+            X.HBL_NO,
+            X.PLACE_NAME,
+            X.WH_NAME,
+            X.ZONE_NAME,
+            X.LOAD_PORT,
+            X.ARRIVAL_PORT,
+            X.BASE_DATE,
+            X.DECLARE_DATE,
+            X.APPROVE_DATE,
+            X.REQUEST_DATE,
+            X.STATUS_CD,
+            X.STATUS_NM,
+            X.STATUS_CLASS,
+            X.TOTAL_QTY,
+            X.TOTAL_WEIGHT,
+            X.MEMO
+        FROM (
+            /* 수입 반출 대상 */
+            SELECT
+                CASE
+                    WHEN ID.ID_IMPORT_CLFC_CD IN ('AP', 'AQ') THEN 'IMM_REL'
+                    ELSE 'IMP_REL'
+                END AS WORK_TYPE,
+                CASE
+                    WHEN ID.ID_IMPORT_CLFC_CD IN ('AP', 'AQ') THEN '즉시반출'
+                    ELSE '수입 반출'
+                END AS WORK_TYPE_NM,
+                CASE
+                    WHEN ID.ID_IMPORT_CLFC_CD IN ('AP', 'AQ') THEN 'immediate-release'
+                    ELSE 'import-release'
+                END AS DETAIL_TYPE,
+                ID.ID_IR_NO AS REQ_NO,
+                'IMPORT' AS DECLARE_TYPE,
+                '수입' AS DECLARE_TYPE_NM,
+                IR.IR_OWR_ID AS OWNER_ID,
+                NVL(ID.ID_IMPR_NM, NVL(IR.IR_CSTM_IDF_NO, IR.IR_OWR_ID)) AS OWNER_NAME,
+                NVL(IMP_ITEM.GOODS_NAME, '-') AS GOODS_NAME,
+                NVL(ID.ID_CGO_MNG_NO, WIR.WIR_CARGO_MGMT_NO) AS CARGO_MNG_NO,
+                TO_CHAR(ID.ID_GG_NO) AS GOODS_GROUP_NO,
+                NVL(ID.ID_MBL_NO, NVL(ICM.ICM_HBL_NO, ICM.ICM_MBL_NO)) AS BL_NO,
+                NVL(ID.ID_MBL_NO, ICM.ICM_MBL_NO) AS MBL_NO,
+                ICM.ICM_HBL_NO AS HBL_NO,
+                CASE
+                    WHEN WH.WH_NM IS NOT NULL AND WZ.WZ_NM IS NOT NULL THEN WH.WH_NM || ' · ' || WZ.WZ_NM
+                    WHEN WH.WH_NM IS NOT NULL THEN WH.WH_NM
+                    WHEN WZ.WZ_NM IS NOT NULL THEN WZ.WZ_NM
+                    ELSE '-'
+                END AS PLACE_NAME,
+                WH.WH_NM AS WH_NAME,
+                WZ.WZ_NM AS ZONE_NAME,
+                '-' AS LOAD_PORT,
+                IR.IR_ARRV_PORT_CD AS ARRIVAL_PORT,
+                TO_CHAR(NVL(WIR.WIR_IN_PLAN_DT, NVL(ID.ID_APRV_DT, ID.ID_DCLR_DT)), 'YYYY-MM-DD') AS BASE_DATE,
+                TO_CHAR(ID.ID_DCLR_DT, 'YYYY-MM-DD') AS DECLARE_DATE,
+                TO_CHAR(ID.ID_APRV_DT, 'YYYY-MM-DD') AS APPROVE_DATE,
+                TO_CHAR(WIR.WIR_IN_PLAN_DT, 'YYYY-MM-DD') AS REQUEST_DATE,
+                CASE
+                    WHEN ID.ID_STATUS_CD IN ('TAX_UNPAID', 'TAX_PAID', 'DCLR_REVIEW', 'DCLR_DONE', 'DCLR_REJ') THEN ID.ID_STATUS_CD
+                    WHEN ID.ID_STATUS_CD IN ('수리완료', '통관완료', 'DONE') THEN 'DCLR_DONE'
+                    WHEN ID.ID_STATUS_CD = '반려' THEN 'DCLR_REJ'
+                    ELSE NVL(ID.ID_STATUS_CD, '-')
+                END AS STATUS_CD,
+                CASE
+                    WHEN ID.ID_STATUS_CD = 'TAX_UNPAID' THEN '세금납부대기'
+                    WHEN ID.ID_STATUS_CD = 'TAX_PAID' THEN '세금납부완료'
+                    WHEN ID.ID_STATUS_CD = 'DCLR_REVIEW' THEN '심사중'
+                    WHEN ID.ID_STATUS_CD IN ('DCLR_DONE', '수리완료', '통관완료', 'DONE') THEN '신고완료'
+                    WHEN ID.ID_STATUS_CD IN ('DCLR_REJ', '반려') THEN '반려'
+                    ELSE NVL(ID.ID_STATUS_CD, '-')
+                END AS STATUS_NM,
+                CASE
+                    WHEN ID.ID_STATUS_CD IN ('DCLR_REJ', '반려') THEN 'badge-fail'
+                    WHEN ID.ID_STATUS_CD IN ('TAX_PAID', 'DCLR_DONE', '수리완료', '통관완료', 'DONE') THEN 'badge-done'
+                    WHEN ID.ID_STATUS_CD IN ('TAX_UNPAID', 'DCLR_REVIEW') THEN 'badge-progress'
+                    ELSE 'badge-progress'
+                END AS STATUS_CLASS,
+                TO_CHAR(ID.ID_TOT_PKG_CNT) || NVL2(ID.ID_TOT_PKG_UNIT_CD, ' ' || ID.ID_TOT_PKG_UNIT_CD, '') AS TOTAL_QTY,
+                TO_CHAR(ID.ID_TOT_WT) || ' KG' AS TOTAL_WEIGHT,
+                WIR.WIR_RQST_CN AS MEMO,
+                NVL(WIR.WIR_IN_PLAN_DT, NVL(ID.ID_APRV_DT, ID.ID_DCLR_DT)) AS SORT_DATE
+            FROM IMP_DCLR ID
+                LEFT JOIN IMP_RQST IR ON IR.IR_NO = ID.ID_IR_NO
+                LEFT JOIN WH_IN_RPT WIR ON WIR.WIR_GG_NO = ID.ID_GG_NO
+                LEFT JOIN WAREHOUSE_ZONE WZ ON WZ.WZ_NO = WIR.WIR_WZ_NO
+                LEFT JOIN WAREHOUSE WH ON WH.WH_NO = WZ.WZ_WH_NO
+                LEFT JOIN IMP_CARGO_MANIFEST ICM ON ICM.ICM_GG_NO = ID.ID_GG_NO
+                LEFT JOIN (
+                    SELECT
+                        IDI_IR_NO,
+                        MIN(IDI_DCLR_GDSNM)
+                            || CASE WHEN COUNT(*) > 1 THEN ' 외 ' || (COUNT(*) - 1) || '건' ELSE '' END AS GOODS_NAME
+                    FROM IMP_DCLR_ITEM
+                    GROUP BY IDI_IR_NO
+                ) IMP_ITEM ON IMP_ITEM.IDI_IR_NO = ID.ID_IR_NO
+            WHERE 1 = 1
+              AND ID.ID_STATUS_CD NOT IN ('접수대기')
+
+            UNION ALL
+
+            /* 수출 적재이행 대상 */
+            SELECT
+                'EXP_LOAD' AS WORK_TYPE,
+                '수출 적재이행' AS WORK_TYPE_NM,
+                'export-loading' AS DETAIL_TYPE,
+                ED.ED_ER_NO AS REQ_NO,
+                'EXPORT' AS DECLARE_TYPE,
+                '수출' AS DECLARE_TYPE_NM,
+                ER.ER_OWR_ID AS OWNER_ID,
+                NVL(ER.ER_ONER_NM, ER.ER_OWR_ID) AS OWNER_NAME,
+                NVL(EXP_ITEM.GOODS_NAME, '-') AS GOODS_NAME,
+                '-' AS CARGO_MNG_NO,
+                TO_CHAR(ED.ED_GG_NO) AS GOODS_GROUP_NO,
+                NVL(ECM.ECM_BL_NO, NVL(BI.BI_HBL_NO, BI.BI_MBL_NO)) AS BL_NO,
+                BI.BI_MBL_NO AS MBL_NO,
+                BI.BI_HBL_NO AS HBL_NO,
+                CASE
+                    WHEN BI.BI_MBL_NO IS NOT NULL THEN 'MBL ' || BI.BI_MBL_NO
+                    WHEN ECM.ECM_BL_NO IS NOT NULL THEN 'BL ' || ECM.ECM_BL_NO
+                    WHEN ED.ED_LOAD_PORT_CD IS NOT NULL THEN ED.ED_LOAD_PORT_CD
+                    ELSE '-'
+                END AS PLACE_NAME,
+                '-' AS WH_NAME,
+                '-' AS ZONE_NAME,
+                ED.ED_LOAD_PORT_CD AS LOAD_PORT,
+                ER.ER_ARRV_PORT_CD AS ARRIVAL_PORT,
+                TO_CHAR(NVL(ECM.ECM_SBMSN_DT, NVL(ED.ED_APRV_DT, ED.ED_DCLR_DT)), 'YYYY-MM-DD') AS BASE_DATE,
+                TO_CHAR(ED.ED_DCLR_DT, 'YYYY-MM-DD') AS DECLARE_DATE,
+                TO_CHAR(ED.ED_APRV_DT, 'YYYY-MM-DD') AS APPROVE_DATE,
+                TO_CHAR(ECM.ECM_SBMSN_DT, 'YYYY-MM-DD') AS REQUEST_DATE,
+                CASE
+                    WHEN ED.ED_STATUS_CD IN ('TAX_UNPAID', 'TAX_PAID', 'DCLR_REVIEW', 'DCLR_DONE', 'DCLR_REJ') THEN ED.ED_STATUS_CD
+                    WHEN ED.ED_STATUS_CD IN ('수리완료', '통관완료', 'DONE') THEN 'DCLR_DONE'
+                    WHEN ED.ED_STATUS_CD = '반려' THEN 'DCLR_REJ'
+                    ELSE NVL(ED.ED_STATUS_CD, '-')
+                END AS STATUS_CD,
+                CASE
+                    WHEN ED.ED_STATUS_CD = 'TAX_UNPAID' THEN '세금납부대기'
+                    WHEN ED.ED_STATUS_CD = 'TAX_PAID' THEN '세금납부완료'
+                    WHEN ED.ED_STATUS_CD = 'DCLR_REVIEW' THEN '심사중'
+                    WHEN ED.ED_STATUS_CD IN ('DCLR_DONE', '수리완료', '통관완료', 'DONE') THEN '신고완료'
+                    WHEN ED.ED_STATUS_CD IN ('DCLR_REJ', '반려') THEN '반려'
+                    ELSE NVL(ED.ED_STATUS_CD, '-')
+                END AS STATUS_NM,
+                CASE
+                    WHEN ED.ED_STATUS_CD IN ('DCLR_REJ', '반려') THEN 'badge-fail'
+                    WHEN ED.ED_STATUS_CD IN ('TAX_PAID', 'DCLR_DONE', '수리완료', '통관완료', 'DONE') THEN 'badge-done'
+                    WHEN ED.ED_STATUS_CD IN ('TAX_UNPAID', 'DCLR_REVIEW') THEN 'badge-progress'
+                    ELSE 'badge-progress'
+                END AS STATUS_CLASS,
+                TO_CHAR(ED.ED_TOT_PKG_QTY) || NVL2(ED.ED_TOT_PKG_UNIT_CD, ' ' || ED.ED_TOT_PKG_UNIT_CD, '') AS TOTAL_QTY,
+                TO_CHAR(ED.ED_TOT_GROSS_WT) || ' KG' AS TOTAL_WEIGHT,
+                ECM.ECM_RMRK_CN AS MEMO,
+                NVL(ECM.ECM_SBMSN_DT, NVL(ED.ED_APRV_DT, ED.ED_DCLR_DT)) AS SORT_DATE
+            FROM EXP_DCLR ED
+                LEFT JOIN EXP_RQST ER ON ER.ER_NO = ED.ED_ER_NO
+                LEFT JOIN EXP_CARGO_MANIFEST ECM ON ECM.ECM_GG_NO = ED.ED_GG_NO
+                LEFT JOIN BL_ISSU BI ON BI.BI_GG_NO = ED.ED_GG_NO
+                LEFT JOIN SHIP_INST_SUBMIT SIS ON SIS.SIS_ED_ER_NO = ED.ED_ER_NO
+                LEFT JOIN (
+                    SELECT
+                        EDI_ER_NO,
+                        MIN(EDI_EXPT_GDS_NM)
+                            || CASE WHEN COUNT(*) > 1 THEN ' 외 ' || (COUNT(*) - 1) || '건' ELSE '' END AS GOODS_NAME
+                    FROM EXP_DCLR_ITEM
+                    GROUP BY EDI_ER_NO
+                ) EXP_ITEM ON EXP_ITEM.EDI_ER_NO = ED.ED_ER_NO
+            WHERE 1 = 1
+              AND ED.ED_STATUS_CD NOT IN ('접수대기')
+        ) X
+        WHERE 1 = 1
+
+        <if test="reqNo != null and reqNo != ''">
+            AND X.REQ_NO LIKE '%' || #{reqNo} || '%'
+        </if>
+
+        <if test="workType != null and workType != '' and workType != 'ALL'">
+            AND X.WORK_TYPE = #{workType}
+        </if>
+
+        <if test="statusCd != null and statusCd != '' and statusCd != 'ALL'">
+            AND X.STATUS_CD = #{statusCd}
+        </if>
+
+        <if test="keyword != null and keyword != ''">
+            AND (
+                X.REQ_NO LIKE '%' || #{keyword} || '%'
+                OR X.OWNER_NAME LIKE '%' || #{keyword} || '%'
+                OR X.GOODS_NAME LIKE '%' || #{keyword} || '%'
+                OR X.CARGO_MNG_NO LIKE '%' || #{keyword} || '%'
+                OR X.BL_NO LIKE '%' || #{keyword} || '%'
+                OR X.GOODS_GROUP_NO LIKE '%' || #{keyword} || '%'
+            )
+        </if>
+
+        <if test="startDate != null and startDate != ''">
+            AND X.SORT_DATE &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+        </if>
+
+        <if test="endDate != null and endDate != ''">
+            AND X.SORT_DATE &lt; TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+        </if>
+
+        ORDER BY X.SORT_DATE DESC NULLS LAST, X.REQ_NO DESC
+    </select>
+
+    <!-- 반출/이행 상세: 품목 상세내역 조회 -->
+    <select id="selectExportAndFulfillmentItemList" parameterType="map" resultMap="exportAndFulfillmentMap">
+        <choose>
+            <when test="declareType == 'EXPORT'">
+                SELECT
+                    EDI_EXPT_GDS_NM AS GOODS_NAME,
+                    TO_CHAR(EDI_DCLR_QTY, 'FM999,999,999') AS TOTAL_QTY,
+                    TO_CHAR(EDI_NET_WT, 'FM999,999,999.000') AS TOTAL_WEIGHT
+                FROM EXP_DCLR_ITEM
+                WHERE EDI_ER_NO = #{reqNo}
+                ORDER BY EDI_SN
+            </when>
+            <otherwise>
+                SELECT
+                    IDI_DCLR_GDSNM AS GOODS_NAME,
+                    TO_CHAR(IDI_QTY, 'FM999,999,999') AS TOTAL_QTY,
+                    TO_CHAR(IDI_NET_WT, 'FM999,999,999.000') AS TOTAL_WEIGHT
+                FROM IMP_DCLR_ITEM
+                WHERE IDI_IR_NO = #{reqNo}
+                ORDER BY IDI_SN
+            </otherwise>
+        </choose>
+    </select>
+
+</mapper>

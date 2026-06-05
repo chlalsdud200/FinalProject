@@ -1,0 +1,25 @@
+package kr.or.tacs.dto.owner;
+
+import lombok.Data;
+
+@Data
+public class OwnerFreightDTO {
+
+    private String tcsNo;                 // 운임정산번호
+    private String tcsTrcNo;            // 운송의뢰번호
+    private String tcsOwrId;            // 화주아이디
+    private Long tcsGgNo;               // 물품그룹번호
+
+    private String tcsMblNo;            // Master B/L 번호
+    private String tcsHblNo;            // House B/L 번호
+
+    private String tcsOwrMsgCn;         // 화주 메시지 내용
+
+    private String tcsStlStatusCd;      // 정산상태코드
+
+    private Long tcsFrgtAmt;            // 운임금액
+    private Long tcsWhAmt;              // 창고금액
+    private Long tcsTotBillAmt;         // 총청구금액
+
+    private String tcsStlExpln;         // 정산설명
+}

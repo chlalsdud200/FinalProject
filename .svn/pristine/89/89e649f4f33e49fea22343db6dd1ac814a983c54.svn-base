@@ -1,0 +1,28 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%
+  request.setAttribute("transportInitialGroup", "dashboard");
+  request.setAttribute("transportInitialItem", "");
+%>
+<!DOCTYPE html>
+<html lang="ko" class="light">
+<head>
+<%@ include file="/WEB-INF/views/transport/common/head.jsp" %>
+<meta name="_csrf" content="${_csrf.token}">
+<meta name="_csrf_header" content="${_csrf.headerName}">
+</head>
+<body class="bg-background text-on-surface">
+<%@ include file="/WEB-INF/views/transport/common/sidebar.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/topbar.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/main-content.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/footer.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/modals.jsp" %>
+<script>
+  window.contextPath = '${pageContext.request.contextPath}';
+  window.TRANSPORT_INITIAL_VIEW = { group: 'dashboard', item: '' };
+  window.TRANSPORT_CSRF = { token: '${_csrf.token}', header: '${_csrf.headerName}' };
+  window.TRANSPORT_DEFER_PAGE_BOOT = false;
+</script>
+<script src="${pageContext.request.contextPath}/resources/js/transport/common.js?v=20260601-export-single-style2"></script>
+<script src="${pageContext.request.contextPath}/resources/js/transport/pages/dash.js?v=20260529-dashboard-async-route6"></script>
+</body>
+</html>

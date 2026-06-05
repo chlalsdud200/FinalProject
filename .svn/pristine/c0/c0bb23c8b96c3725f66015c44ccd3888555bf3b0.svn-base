@@ -1,0 +1,1466 @@
+/*
+ * outbound.js
+ * 보세반출 처리 화면 UI 전용 스크립트
+ *
+ * 문제 원인:
+ * - sidebar/navigation.js로 페이지를 AJAX 로드하면 DOMContentLoaded가 다시 실행되지 않는다.
+ * - 그래서 탭 버튼에 click 이벤트가 다시 붙지 않는다.
+ *
+ * 해결:
+ * - initOutboundPage()를 전역 함수로 만든다.
+ * - 직접 접속 시 DOMContentLoaded에서 실행한다.
+ * - AJAX 로드 후에도 navigation.js에서 initOutboundPage()를 다시 호출할 수 있게 한다.
+ */
+
+(function () {
+  /*
+   * 보세반출 처리 화면 초기화 함수
+   * navigation.js에서도 호출할 수 있도록 window에 등록한다.
+   */
+  window.initOutboundPage = function () {
+      initOutboundTabs();
+      initOutboundFileModal();
+      initOutboundProcessModal();
+      initOutboundSupplementModal();
+      initOutboundApproveButton();
+      initOutboundSearchEvents();
+
+      /*
+       * 보세반출 처리 목록 최초 조회
+       *
+       * 직접 URL 진입 / 사이드바 AJAX 진입 모두 처리한다.
+       * outboundTableBody가 없는 화면이면 loadOutboundProcessList 안에서 바로 return 된다.
+       */
+      loadOutboundProcessList(1);
+
+      console.log('Outbound page initialized');
+  };
+
+  /*
+   * 탭 전환 초기화
+   */
+  function initOutboundTabs() {
+    const tabButtons = document.querySelectorAll('[data-outbound-tab]');
+    const panels = document.querySelectorAll('.outbound-panel');
+
+	if (!panels.length) {
+	  return;
+	}
+
+	/*
+	 * 반출서류 수령관리 탭을 제거했기 때문에
+	 * 탭 버튼이 없으면 반출처리 패널을 기본으로 보여준다.
+	 *
+	 * AJAX로 다른 메뉴를 갔다가 다시 보세반출 처리 화면을 로드할 때도
+	 * outbound-release가 반드시 보이도록 처리한다.
+	 */
+	if (!tabButtons.length) {
+	  activateOutboundTab('release');
+	  return;
+	}
+
+    tabButtons.forEach(function (button) {
+      /*
+       * AJAX로 페이지가 다시 로드될 때 이벤트가 중복으로 붙는 것을 막기 위해
+       * 기존 onclick을 새로 덮어쓴다.
+       */
+      button.onclick = function () {
+        const tabName = button.dataset.outboundTab;
+        activateOutboundTab(tabName);
+      };
+    });
+
+    /*
+     * 현재 active 탭이 있으면 그 탭 유지.
+     * 없으면 기본 탭은 반출서류 수령관리.
+     */
+    const activeButton = document.querySelector('[data-outbound-tab].active');
+    const defaultTabName = activeButton ? activeButton.dataset.outboundTab : 'docs';
+
+    activateOutboundTab(defaultTabName);
+  }
+
+  /*
+   * 선택한 탭만 활성화
+   */
+  function activateOutboundTab(tabName) {
+    const tabButtons = document.querySelectorAll('[data-outbound-tab]');
+    const panels = document.querySelectorAll('.outbound-panel');
+
+    tabButtons.forEach(function (button) {
+      const isActive = button.dataset.outboundTab === tabName;
+      button.classList.toggle('active', isActive);
+    });
+
+    panels.forEach(function (panel) {
+      const isActive = panel.id === 'outbound-' + tabName;
+      panel.classList.toggle('active', isActive);
+    });
+  }
+
+  /*
+   * 첨부파일 모달 초기화
+   */
+  function initOutboundFileModal() {
+    const modal = document.getElementById('outboundFileModal');
+
+    if (!modal) {
+      return;
+    }
+
+    const closeButton = modal.querySelector('.outbound-modal-close');
+
+    if (closeButton) {
+      closeButton.onclick = function () {
+        closeOutboundFileModal();
+      };
+    }
+
+    /*
+     * 파일보기 버튼 이벤트 연결
+     *
+     * JSP의 파일보기 버튼에는 data-tfg-no 값이 들어있다.
+     * 이 값은 DO_ISSUANCE.DI_TFG_NO, 즉 D/O + 신고필증 파일그룹번호다.
+     */
+    const fileButtons = document.querySelectorAll('.outbound-file-btn');
+
+    fileButtons.forEach(function (button) {
+      /*
+       * 기존 onclick을 새로 덮어쓴다.
+       * AJAX 로드 후 initOutboundPage()가 다시 실행되어도 이벤트가 중복되지 않는다.
+       */
+      button.onclick = function () {
+        const tfgNo = button.dataset.tfgNo;
+
+        if (!tfgNo) {
+          alert('파일그룹번호가 없습니다.');
+          return;
+        }
+
+        openOutboundFileModal(tfgNo);
+      };
+    });
+
+    modal.onclick = function (event) {
+      if (event.target === modal) {
+        closeOutboundFileModal();
+      }
+    };
+  }
+  
+  /*
+   * 반출처리 상세보기 모달 초기화
+   *
+   * 반출처리관리 목록의 상세보기 버튼에 클릭 이벤트를 연결한다.
+   * 버튼에는 outbound.jsp에서 data-* 값으로 반출요청 정보가 들어간다.
+   */
+  /*
+  	버튼 각각 id를 부여 안하고 class 를 줘서 반복을 돌린 이유 -> 코드 중복 제거와 유지보수,데이터 동적 변화에 유연하게 대응
+  */
+  function initOutboundProcessModal() {
+    const processButtons = document.querySelectorAll('.outbound-process-detail-btn');
+
+    processButtons.forEach(function (button) {
+      /*
+       * AJAX 로드 후 initOutboundPage()가 다시 실행되어도
+       * 이벤트가 중복으로 붙지 않도록 onclick을 덮어쓴다.
+       */
+      button.onclick = function () {
+        openOutboundProcessModal(button);
+      };
+    });
+
+    const modal = document.getElementById('outboundProcessModal');
+
+    if (!modal) {
+      return;
+    }
+
+    const closeButton = modal.querySelector('.outbound-process-modal-close');
+
+    if (closeButton) {
+      closeButton.onclick = function () {
+        closeOutboundProcessModal();
+      };
+    }
+
+    modal.onclick = function (event) {
+      if (event.target === modal) {
+        closeOutboundProcessModal();
+      }
+    };
+  }
+  
+  /*
+   * 반출 보완요청 모달 초기화
+   *
+   * 반출 상세 모달의 보완요청 버튼을 누르면
+   * 보완요청 사유 입력 모달을 연다.
+   *
+   * 실제 저장은 보완요청 등록 버튼 클릭 시
+   * /warehouse/outbound/supplement.do 로 POST 전송한다.
+   */
+  function initOutboundSupplementModal() {
+    const suppButton = document.getElementById('outboundSuppBtn');
+
+    if (suppButton) {
+      suppButton.onclick = function () {
+        openOutboundSupplementModal();
+      };
+    }
+
+    const submitButton = document.getElementById('outboundSupplementSubmitBtn');
+
+    if (submitButton) {
+      submitButton.onclick = function () {
+        submitOutboundSupplementRequest();
+      };
+    }
+
+    const closeButton = document.querySelector('.outbound-supplement-modal-close');
+
+    if (closeButton) {
+      closeButton.onclick = function () {
+        closeOutboundSupplementModal();
+      };
+    }
+
+    const cancelButton = document.querySelector('.outbound-supplement-cancel-btn');
+
+    if (cancelButton) {
+      cancelButton.onclick = function () {
+        closeOutboundSupplementModal();
+      };
+    }
+
+    const modal = document.getElementById('outboundSupplementModal');
+
+    if (modal) {
+      modal.onclick = function (event) {
+        if (event.target === modal) {
+          closeOutboundSupplementModal();
+        }
+      };
+    }
+  }
+  
+  /*
+   * 반출승인 버튼 초기화
+   *
+   * 상세 모달의 [반출승인] 버튼을 클릭하면
+   * 반출승인 처리 요청을 서버로 전송한다.
+   */
+  function initOutboundApproveButton() {
+    const approveButton = document.getElementById('outboundApproveBtn');
+
+    if (!approveButton) {
+      return;
+    }
+
+    /*
+     * AJAX로 페이지가 다시 로드될 수 있으므로
+     * onclick을 덮어써서 이벤트 중복 등록을 방지한다.
+     */
+    approveButton.onclick = function () {
+      submitOutboundApprove();
+    };
+  }
+  
+  /*
+   * 반출 상세 모달 하단 버튼 표시 제어
+   *
+   * 기준:
+   * - 반출완료(REL_DONE)일 때만 이미 처리가 끝난 건이므로 취소 버튼만 표시한다.
+   * - 그 외 상태는 창고관리자가 처리할 수 있어야 하므로
+   *   보완요청 / 반출승인 버튼을 모두 보여준다.
+   *
+   * 반려 기능은 사용하지 않으므로 여기서 처리하지 않는다.
+   */
+  function applyOutboundProcessButtonState(statusCd) {
+    const supplementButton = document.getElementById('outboundSuppBtn');
+    const approveButton = document.getElementById('outboundApproveBtn');
+
+    if (!supplementButton || !approveButton) {
+      return;
+    }
+
+    /*
+     * 먼저 처리 버튼을 숨긴다.
+     * 취소 버튼은 항상 보여야 하므로 건드리지 않는다.
+     */
+    supplementButton.style.display = 'none';
+    approveButton.style.display = 'none';
+
+    /*
+     * 반출완료가 아닌 모든 상태에서는
+     * 보완요청 / 반출승인 버튼을 보여준다.
+     */
+    if (statusCd !== 'REL_DONE') {
+      supplementButton.style.display = '';
+      approveButton.style.display = '';
+    }
+  }
+
+  /*
+   * 반출 보완요청 사유 입력 모달 열기
+   *
+   * 반출 상세 모달에 이미 세팅된 반출요청번호와 반출마스터번호를
+   * 보완요청 모달 hidden input으로 옮긴다.
+   */
+  window.openOutboundSupplementModal = function () {
+	const crrNo = document.getElementById('process-crr-no')?.value || '';
+
+	    if (!crrNo) {
+	      alert('반출요청 정보를 찾을 수 없습니다.');
+	      return;
+	    }
+
+	    setInputValue('supp-crr-no', crrNo);
+	    setInputValue('supp-crr-no-view', crrNo);
+	    setInputValue('outbound-supp-reason', '');
+
+    const modal = document.getElementById('outboundSupplementModal');
+
+    if (modal) {
+      modal.classList.add('active');
+    }
+  };
+
+  /*
+   * 반출 보완요청 사유 입력 모달 닫기
+   */
+  window.closeOutboundSupplementModal = function () {
+    const modal = document.getElementById('outboundSupplementModal');
+
+    if (!modal) {
+      return;
+    }
+
+    modal.classList.remove('active');
+  };
+
+  /*
+   * 반출 보완요청 등록
+   *
+   * 서버 처리:
+   * POST /warehouse/outbound/supplement.do
+   *
+   * 전송 값:
+   * - crrNo        : CARGO_RELEASE_REQ.CRR_NO
+   * - crReleaseNo : CARGO_RELEASE.CR_RELEASE_NO
+   * - reason      : SUPP_RQST.SR_REQ_CN
+   */
+  function submitOutboundSupplementRequest() {
+    const crrNo = document.getElementById('supp-crr-no')?.value || '';
+    const reason = document.getElementById('outbound-supp-reason')?.value.trim() || '';
+
+    if (!crrNo) {
+      alert('반출요청번호가 없습니다.');
+      return;
+    }
+
+
+    if (!reason) {
+      alert('보완요청 사유를 입력하세요.');
+      document.getElementById('outbound-supp-reason')?.focus();
+      return;
+    }
+
+    if (!confirm('반출 보완요청을 등록하시겠습니까?')) {
+      return;
+    }
+
+    const requestBody = new URLSearchParams();
+    requestBody.append('crrNo', crrNo);
+    requestBody.append('reason', reason);
+
+	const csrfHeaderName = document.getElementById('csrfHeaderName')?.value;
+	const csrfToken = document.getElementById('csrfToken')?.value;
+
+	const headers = {
+	  'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+	  'X-Requested-With': 'XMLHttpRequest'
+	};
+
+	if (csrfHeaderName && csrfToken) {
+	  headers[csrfHeaderName] = csrfToken;
+	}
+
+	fetch('/warehouse/outbound/supplement.do', {
+	  method: 'POST',
+	  headers: headers,
+	  body: requestBody.toString()
+	})
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error('반출 보완요청 등록 실패');
+        }
+
+        return response.json();
+      })
+      .then(function (data) {
+          alert(data.message || data.msg || '반출 보완요청 처리가 완료되었습니다.');
+
+        if (data.result === 'success') {
+          closeOutboundSupplementModal();
+          closeOutboundProcessModal();
+          location.reload();
+        }
+      })
+      .catch(function (error) {
+        console.error(error);
+        alert('반출 보완요청 등록 중 오류가 발생했습니다.');
+      });
+  }
+  
+  /*
+   * 반출승인 처리
+   *
+   * 처리 흐름:
+   * 1. 상세 모달에 세팅된 반출요청번호를 가져온다.
+   * 2. 사용자에게 반출승인 여부를 확인한다.
+   * 3. CSRF 토큰을 포함해서 서버에 POST 요청한다.
+   * 4. 성공하면 상세 모달을 닫고 화면을 새로고침한다.
+   */
+  function submitOutboundApprove() {
+    const crrNo = document.getElementById('process-crr-no')?.value || '';
+
+    if (!crrNo) {
+      alert('반출요청번호가 없습니다.');
+      return;
+    }
+
+    if (!confirm('반출승인 처리하시겠습니까?')) {
+      return;
+    }
+
+	const requestBody = new URLSearchParams();
+	requestBody.append('crrNo', crrNo);
+
+	const csrfHeaderName = document.getElementById('csrfHeaderName')?.value || '';
+	const csrfParameterName = document.getElementById('csrfParameterName')?.value || '';
+	const csrfToken = document.getElementById('csrfToken')?.value || '';
+
+	if (!csrfToken) {
+	  alert('CSRF 토큰을 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도하세요.');
+	  return;
+	}
+
+	/*
+	 * Spring Security가 header 방식 / parameter 방식 중
+	 * 어느 쪽으로 검사해도 통과되도록 body에도 같이 넣는다.
+	 */
+	if (csrfParameterName) {
+	  requestBody.append(csrfParameterName, csrfToken);
+	}
+
+    const headers = {
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    if (csrfHeaderName && csrfToken) {
+      headers[csrfHeaderName] = csrfToken;
+    }
+
+    fetch('/warehouse/outbound/approve.do', {
+      method: 'POST',
+      headers: headers,
+      body: requestBody.toString()
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error('반출승인 처리 실패');
+        }
+
+        return response.json();
+      })
+      .then(function (data) {
+        alert(data.message || '반출승인 처리가 완료되었습니다.');
+
+        if (data.result === 'success') {
+          window.closeOutboundProcessModal();
+          location.reload();
+        }
+      })
+      .catch(function (error) {
+        console.error(error);
+        alert('반출승인 처리 중 오류가 발생했습니다.');
+      });
+  }
+
+  /*
+   * 반출처리 상세보기 모달 열기
+   *
+   * @param {HTMLElement} button
+   *        반출처리관리 목록의 상세보기 버튼
+   */
+  window.openOutboundProcessModal = function (button) {
+    const modal = document.getElementById('outboundProcessModal');
+
+    if (!modal || !button) {
+      return;
+    }
+
+    /*
+     * 1. 서버 처리용 hidden 값
+     */
+    setInputValue('process-di-tfg-no', button.dataset.diTfgNo);
+    setInputValue('process-di-trde-se-cd', button.dataset.diTrdeSeCd);
+    setInputValue('process-cr-status-cd', button.dataset.crStatusCd);
+	/*
+	 * 반출상태에 따라 하단 처리 버튼을 다시 세팅한다.
+	 * 같은 모달을 재사용하므로 상세보기 열 때마다 호출해야 한다.
+	 */
+	applyOutboundProcessButtonState(button.dataset.crStatusCd);
+
+    /*
+     * 2. 반출요청 기본 정보
+     */
+    setInputValue('process-crr-no', button.dataset.crrNo);
+    setInputValue('process-crr-cr-dt', button.dataset.crrCrDt);
+    setInputValue('process-crr-nm', button.dataset.crrNm);
+    setInputValue('process-crr-cert-no', button.dataset.crrCertNo);
+    setInputValue('process-di-trde-se-nm', button.dataset.diTrdeSeNm);
+    setInputValue('process-cr-status-nm', button.dataset.crStatusNm);
+
+    /*
+     * 3. 운송업체 정보
+     */
+    setInputValue('process-tm-cp-nm', button.dataset.tmCpNm);
+    setInputValue('process-tm-name', button.dataset.tmName);
+    setInputValue('process-tm-cp-telno', button.dataset.tmCpTelno);
+
+    /*
+     * 4. 창고 / 보관 위치 정보
+     */
+    setInputValue('process-cr-wh-no', button.dataset.crWhNo);
+    setInputValue('process-wh-nm', button.dataset.whNm);
+
+    /*
+     * 창고구역은 구역명이 있으면 구역명 우선,
+     * 없으면 구역번호를 보여준다.
+     */
+    setInputValue(
+      'process-wz-nm',
+      button.dataset.wzNm || button.dataset.crrWzNo
+    );
+
+    /*
+     * 보관위치는 가공 표시값이 있으면 locationNm,
+     * 없으면 원본 위치코드 locationCode를 보여준다.
+     */
+    setInputValue(
+      'process-location-nm',
+      button.dataset.locationNm || button.dataset.locationCode
+    );
+
+    setInputValue('process-crr-wz-no', button.dataset.crrWzNo);
+    setInputValue('process-location-code', button.dataset.locationCode);
+
+    /*
+     * 5. 물품 정보
+     */
+    setInputValue('process-goods-summary', button.dataset.goodsSummary);
+    setInputValue('process-goods-name', button.dataset.goodsName || button.dataset.goodsSummary);
+    setInputValue('process-item-cnt', button.dataset.itemCnt);
+    setInputValue('process-origin-summary', button.dataset.originSummary);
+    setInputValue('process-total-qty', button.dataset.totalQty);
+    setInputValue('process-total-weight', button.dataset.totalWeight);
+	
+	/*
+	 * 5-1. 물품 상세 목록
+	 *
+	 * 기존 data-* 값은 목록용 대표/요약 정보다.
+	 * 상세 모달의 물품 테이블은 반출요청번호 기준으로 다시 조회해서
+	 * 실제 물품 개수만큼 렌더링한다.
+	 */
+	loadOutboundGoodsList(button.dataset.crrNo);
+
+    /*
+     * 6. 첨부서류 정보
+     *
+     * 상세 모달 안의 첨부서류 표를 초기화하고,
+     * 파일그룹번호가 있으면 실제 파일 목록을 조회해서 렌더링한다.
+     */
+    renderDefaultOutboundProcessDocRows();
+
+    const fileCnt = button.dataset.fileCnt || '0';
+    const diTfgNo = button.dataset.diTfgNo;
+
+    if (diTfgNo && Number(fileCnt) > 0) {
+      loadOutboundProcessDocFiles(diTfgNo);
+    }
+
+    /*
+     * 7. 반출승인 버튼 제어
+     *
+     * D/O와 신고필증이 모두 수령완료일 때만 반출승인 가능.
+     * 둘 중 하나라도 수령전이면 승인 버튼을 비활성화한다.
+     */
+    controlOutboundApproveButton(
+      button.dataset.doStatusNm,
+      button.dataset.declarationStatusNm
+    );
+
+    /*
+     * 8. 반출요청 내용
+     */
+    setInputValue('process-crr-req-cn', button.dataset.crrReqCn);
+
+    modal.classList.add('active');
+  };
+
+  /*
+   * 반출승인 버튼 제어
+   *
+   * D/O와 신고필증이 모두 수령완료일 때만 승인 버튼을 활성화한다.
+   * 서류가 부족하면 승인 버튼은 비활성화하고,
+   * 서류가 부족하면 승인 버튼은 비활성화하고,
+   * 보완요청을 하도록 유도한다.
+   */
+  function controlOutboundApproveButton(doStatusNm, declarationStatusNm) {
+    const approveButton = document.getElementById('outboundApproveBtn');
+
+    if (!approveButton) {
+      return;
+    }
+
+    const isDoReceived = doStatusNm === '수령완료';
+    const isDeclarationReceived = declarationStatusNm === '수령완료';
+
+    if (isDoReceived && isDeclarationReceived) {
+      approveButton.disabled = false;
+      approveButton.title = '';
+      approveButton.style.opacity = '1';
+      approveButton.style.cursor = 'pointer';
+      return;
+    }
+
+    approveButton.disabled = true;
+    approveButton.title = 'D/O와 수출입신고필증이 모두 수령완료 상태여야 반출승인할 수 있습니다.';
+    approveButton.style.opacity = '0.45';
+    approveButton.style.cursor = 'not-allowed';
+  }
+  
+  /*
+   * 반출 상세 모달 물품 목록 로딩 행 렌더링
+   *
+   * 기존 상세 모달의 기본정보/서류/버튼 로직은 그대로 두고,
+   * 물품 상세 테이블 tbody만 새로 채운다.
+   */
+  function renderOutboundGoodsLoading() {
+    const tbody = document.getElementById('processGoodsListBody');
+
+    if (!tbody) {
+      return;
+    }
+
+    tbody.innerHTML = ''
+      + '<tr>'
+      + '  <td colspan="6" style="padding: 14px; border-top: 1px solid #e2e8f0; text-align: center; color: #64748b; font-size: 13px;">'
+      + '    물품 상세 정보를 불러오고 있습니다.'
+      + '  </td>'
+      + '</tr>';
+  }
+
+  /*
+   * 반출요청번호 기준 물품별 상세 목록 조회
+   *
+   * 사용 위치:
+   * - openOutboundProcessModal(button)
+   *
+   * 목적:
+   * - 목록/기본정보는 기존 대표값을 그대로 사용한다.
+   * - 상세 모달의 물품 테이블만 실제 물품 개수만큼 다시 그린다.
+   */
+  function loadOutboundGoodsList(crrNo) {
+    const tbody = document.getElementById('processGoodsListBody');
+
+    if (!tbody) {
+      return;
+    }
+
+    if (!crrNo) {
+      tbody.innerHTML = ''
+        + '<tr>'
+        + '  <td colspan="6" style="padding: 14px; border-top: 1px solid #e2e8f0; text-align: center; color: #ef4444; font-size: 13px;">'
+        + '    반출요청번호가 없어 물품 상세 정보를 조회할 수 없습니다.'
+        + '  </td>'
+        + '</tr>';
+      return;
+    }
+
+    renderOutboundGoodsLoading();
+
+    fetch('/warehouse/outbound/goodsList.do?crrNo=' + encodeURIComponent(crrNo), {
+      method: 'GET',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error('반출 물품 상세 목록 조회 실패: ' + response.status);
+        }
+
+        return response.json();
+      })
+      .then(function (list) {
+        if (!list || list.length === 0) {
+          tbody.innerHTML = ''
+            + '<tr>'
+            + '  <td colspan="6" style="padding: 14px; border-top: 1px solid #e2e8f0; text-align: center; color: #64748b; font-size: 13px;">'
+            + '    조회된 물품 상세 정보가 없습니다.'
+            + '  </td>'
+            + '</tr>';
+          return;
+        }
+
+        let html = '';
+
+        list.forEach(function (item) {
+          const goodsName = item.goodsName || '-';
+          const totalQty = item.totalQty || '-';
+          const totalWeight = item.totalWeight ? item.totalWeight + ' KG' : '-';
+          const originSummary = item.originSummary || '-';
+          const wzNm = item.wzNm || '-';
+          const locationNm = item.locationNm || item.locationCode || '-';
+
+          html += ''
+            + '<tr>'
+            + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0; font-size: 13px;">'
+            +      escapeHtml(goodsName)
+            + '  </td>'
+            + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 13px;">'
+            +      escapeHtml(totalQty)
+            + '  </td>'
+            + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 13px;">'
+            +      escapeHtml(totalWeight) 
+            + '  </td>'
+            + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 13px;">'
+            +      escapeHtml(originSummary)
+            + '  </td>'
+            + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 13px;">'
+            +      escapeHtml(wzNm)
+            + '  </td>'
+            + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 13px;">'
+            +      escapeHtml(locationNm)
+            + '  </td>'
+            + '</tr>';
+        });
+
+        tbody.innerHTML = html;
+      })
+      .catch(function (error) {
+        console.error(error);
+
+        tbody.innerHTML = ''
+          + '<tr>'
+          + '  <td colspan="6" style="padding: 14px; border-top: 1px solid #e2e8f0; text-align: center; color: #ef4444; font-size: 13px;">'
+          + '    물품 상세 정보를 불러오지 못했습니다.'
+          + '  </td>'
+          + '</tr>';
+      });
+  }
+  
+  /*
+   * 반출 상세 모달 첨부서류 기본 행 렌더링
+   *
+   * 파일 조회 전에는 D/O와 신고필증을 수령전 상태로 보여준다.
+   */
+  function renderDefaultOutboundProcessDocRows() {
+    const tbody = document.getElementById('process-doc-file-list');
+
+    if (!tbody) {
+      return;
+    }
+
+	tbody.innerHTML = ''
+	  + '<tr>'
+	  + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0;">-</td>'
+	  + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0; text-align: center;">'
+	  + '    <span class="outbound-badge wait">수령전</span>'
+	  + '  </td>'
+	  + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0; text-align: center;">-</td>'
+	  + '</tr>';
+  }
+
+
+  /*
+   * 반출 상세 모달 첨부서류 파일 목록 조회
+   *
+   * 기존 파일조회 API를 재사용한다.
+   * GET /warehouse/outbound/files.do?tfgNo=...
+   */
+  function loadOutboundProcessDocFiles(tfgNo) {
+    const tbody = document.getElementById('process-doc-file-list');
+
+    if (!tbody) {
+      return;
+    }
+
+    tbody.innerHTML = ''
+      + '<tr>'
+      + '  <td colspan="3" style="padding: 14px; text-align: center; color: #64748b;">'
+      + '    첨부서류를 불러오는 중입니다...'
+      + '  </td>'
+      + '</tr>';
+
+    fetch('/warehouse/outbound/files.do?tfgNo=' + encodeURIComponent(tfgNo), {
+      method: 'GET',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error('첨부서류 조회 실패: ' + response.status);
+        }
+
+        return response.json();
+      })
+      .then(function (fileList) {
+        renderOutboundProcessDocFileRows(fileList);
+      })
+      .catch(function (error) {
+        console.error(error);
+        renderDefaultOutboundProcessDocRows();
+      });
+  }
+  
+  /*
+   * 반출 상세 모달 첨부서류 파일 행 렌더링
+   *
+   * 파일명에 D/O, DO가 들어가면 D/O로 판단하고,
+   * 신고필증, 수입신고, declaration 등이 들어가면 신고필증으로 판단한다.
+   *
+   * 파일명이 애매하면 순서대로 D/O, 신고필증에 배치한다.
+   */
+  /*
+   * 반출 상세 모달 첨부서류 파일 행 렌더링
+   *
+   * 상세에서는 업로드된 실제 파일명 기준으로
+   * 파일명 / 수령상태 / 관리 형태로 표시한다.
+   */
+  function renderOutboundProcessDocFileRows(fileList) {
+    const tbody = document.getElementById('process-doc-file-list');
+
+    if (!tbody) {
+      return;
+    }
+
+    if (!fileList || fileList.length === 0) {
+      renderDefaultOutboundProcessDocRows();
+      return;
+    }
+
+    let html = '';
+
+    fileList.forEach(function (file) {
+      const fileNo = file.dfiFileNo;
+      const fileName = file.dfiOrgNm || '첨부파일';
+
+      html += ''
+        + '<tr>'
+        + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0;">'
+        +      escapeHtml(fileName)
+        + '  </td>'
+        + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0; text-align: center;">'
+        + '    <span class="outbound-badge success">수령완료</span>'
+        + '  </td>'
+        + '  <td style="padding: 12px; border-top: 1px solid #e2e8f0; text-align: center;">'
+        + '    <a class="outbound-file-download"'
+        + '       href="/common/file/download.do?fileNo=' + encodeURIComponent(fileNo) + '">'
+        + '      다운로드'
+        + '    </a>'
+        + '  </td>'
+        + '</tr>';
+    });
+
+    tbody.innerHTML = html;
+  }
+
+
+  /*
+   * D/O 파일명 판별
+   */
+  function isDoFile(fileName) {
+    const lowerName = String(fileName || '').toLowerCase();
+
+    return lowerName.indexOf('d/o') > -1
+      || lowerName.indexOf('do') > -1
+      || lowerName.indexOf('delivery') > -1
+      || lowerName.indexOf('order') > -1;
+  }
+
+
+  /*
+   * 신고필증 파일명 판별
+   */
+  function isDeclarationFile(fileName) {
+    const lowerName = String(fileName || '').toLowerCase();
+
+    return lowerName.indexOf('신고') > -1
+      || lowerName.indexOf('필증') > -1
+      || lowerName.indexOf('declaration') > -1
+      || lowerName.indexOf('import') > -1
+      || lowerName.indexOf('export') > -1;
+  }
+
+  /*
+   * input / textarea 값 세팅 공통 함수
+   */
+  function setInputValue(id, value) {
+    const element = document.getElementById(id);
+
+    if (!element) {
+      return;
+    }
+
+    element.value = value || '';
+  }
+
+  /*
+   * 반출처리 상세보기 모달 닫기
+   */
+  window.closeOutboundProcessModal = function () {
+    const modal = document.getElementById('outboundProcessModal');
+
+    if (!modal) {
+      return;
+    }
+
+    modal.classList.remove('active');
+  };
+
+  /*
+   * 파일보기 모달 열기
+   *
+   * @param {string|number} tfgNo
+   *        DO_ISSUANCE.DI_TFG_NO 값.
+   *        D/O + 신고필증이 묶인 파일그룹번호다.
+   */
+  window.openOutboundFileModal = function (tfgNo) {
+    const modal = document.getElementById('outboundFileModal');
+    const modalBody = modal ? modal.querySelector('.outbound-modal-body') : null;
+
+    if (!modal || !modalBody) {
+      return;
+    }
+
+    /*
+     * 먼저 모달을 열고 로딩 문구를 보여준다.
+     */
+    modal.classList.add('active');
+    modalBody.innerHTML = '<div class="outbound-file-empty">첨부파일을 불러오는 중입니다...</div>';
+
+    /*
+     * 파일그룹번호가 없으면 파일목록 조회가 불가능하다.
+     */
+    if (!tfgNo) {
+      modalBody.innerHTML = '<div class="outbound-file-empty">파일그룹번호가 없습니다.</div>';
+      return;
+    }
+
+    /*
+     * 파일그룹번호 기준으로 공통 파일 목록을 조회한다.
+     *
+     * Controller:
+     * GET /warehouse/outbound/files.do?tfgNo=93
+     *
+     * 다운로드:
+     * /common/file/download.do?fileNo=파일번호
+     */
+    fetch('/warehouse/outbound/files.do?tfgNo=' + encodeURIComponent(tfgNo), {
+      method: 'GET',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error('파일 목록 조회 실패: ' + response.status);
+        }
+
+        return response.json();
+      })
+      .then(function (fileList) {
+        renderOutboundFileList(fileList);
+      })
+      .catch(function (error) {
+        console.error(error);
+        modalBody.innerHTML = '<div class="outbound-file-empty">첨부파일을 불러오지 못했습니다.</div>';
+      });
+  };
+
+  /*
+   * 파일 목록 렌더링
+   *
+   * 서버에서 내려온 FileInfoDTO 목록을 모달 안에 표시한다.
+   *
+   * 필요한 값:
+   * - dfiFileNo : 다운로드 요청에 사용할 파일번호
+   * - dfiOrgNm  : 원본 파일명
+   * - dfiSize   : 파일 크기
+   */
+  function renderOutboundFileList(fileList) {
+    const modal = document.getElementById('outboundFileModal');
+    const modalBody = modal ? modal.querySelector('.outbound-modal-body') : null;
+
+    if (!modalBody) {
+      return;
+    }
+
+    if (!fileList || fileList.length === 0) {
+      modalBody.innerHTML = '<div class="outbound-file-empty">조회된 첨부파일이 없습니다.</div>';
+      return;
+    }
+
+    let html = '<div class="outbound-file-list">';
+
+    fileList.forEach(function (file) {
+      const fileNo = file.dfiFileNo;
+      const fileName = file.dfiOrgNm || '첨부파일';
+      const fileSize = formatFileSize(file.dfiSize);
+
+      html += ''
+        + '<div class="outbound-file-row">'
+        + '  <div class="outbound-file-info">'
+        + '    <span class="material-symbols-outlined outbound-file-icon">picture_as_pdf</span>'
+        + '    <div>'
+        + '      <div class="outbound-file-name">' + escapeHtml(fileName) + '</div>'
+        + '      <div class="outbound-file-meta">' + fileSize + '</div>'
+        + '    </div>'
+        + '  </div>'
+        + '  <a class="outbound-file-download"'
+        + '     href="/common/file/download.do?fileNo=' + encodeURIComponent(fileNo) + '">'
+        + '    다운로드'
+        + '  </a>'
+        + '</div>';
+    });
+
+    html += '</div>';
+
+    modalBody.innerHTML = html;
+  }
+
+  /*
+   * 파일 크기 표시용 함수
+   */
+  function formatFileSize(size) {
+    if (!size || isNaN(size)) {
+      return '-';
+    }
+
+    if (size < 1024) {
+      return size + ' B';
+    }
+
+    if (size < 1024 * 1024) {
+      return Math.round(size / 1024) + ' KB';
+    }
+
+    return (size / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  /*
+   * 파일명에 특수문자가 있을 때 HTML이 깨지거나
+   * 스크립트처럼 해석되는 것을 막기 위한 처리
+   */
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  /*
+   * 파일보기 모달 닫기
+   */
+  window.closeOutboundFileModal = function () {
+    const modal = document.getElementById('outboundFileModal');
+
+    if (!modal) {
+      return;
+    }
+
+    modal.classList.remove('active');
+  };
+  
+  /*
+   * 보세반출 목록 검색 이벤트 초기화
+   *
+   * AJAX로 페이지가 다시 로드될 수 있으므로
+   * onclick을 덮어써서 이벤트 중복 등록을 방지한다.
+   */
+  function initOutboundSearchEvents() {
+    const searchButton = document.getElementById('outboundSearchBtn');
+    const keywordInput = document.getElementById('outboundKeyword');
+
+    if (searchButton) {
+      searchButton.onclick = function () {
+        loadOutboundProcessList(1);
+      };
+    }
+
+    if (keywordInput) {
+      keywordInput.onkeydown = function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          loadOutboundProcessList(1);
+        }
+      };
+    }
+  }
+
+  /*
+   * 보세반출 처리 목록 조회
+   *
+   * Controller:
+   * GET /warehouse/outbound/search.do
+   */
+  function loadOutboundProcessList(page) {
+    const tbody = document.getElementById('outboundTableBody');
+
+    if (!tbody) {
+      return;
+    }
+
+    const startDate = document.getElementById('outboundStartDate')?.value || '';
+    const endDate = document.getElementById('outboundEndDate')?.value || '';
+    const type = document.getElementById('outboundType')?.value || '';
+    const status = document.getElementById('outboundStatus')?.value || '';
+    const keyword = document.getElementById('outboundKeyword')?.value || '';
+
+    tbody.innerHTML = ''
+      + '<tr>'
+      + '  <td colspan="10" class="outbound-empty">'
+      + '    조회 중입니다...'
+      + '  </td>'
+      + '</tr>';
+
+    const url =
+      '/warehouse/outbound/search.do'
+      + '?page=' + encodeURIComponent(page || 1)
+      + '&startDate=' + encodeURIComponent(startDate)
+      + '&endDate=' + encodeURIComponent(endDate)
+      + '&type=' + encodeURIComponent(type)
+      + '&status=' + encodeURIComponent(status)
+      + '&keyword=' + encodeURIComponent(keyword);
+
+    fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error('보세반출 목록 조회 실패: ' + response.status);
+        }
+
+        return response.json();
+      })
+      .then(function (data) {
+        renderOutboundProcessList(data.dataList, data.currentPage);
+        renderOutboundPagination(data);
+
+        /*
+         * AJAX로 목록 row를 새로 그렸으므로
+         * 상세보기 버튼 이벤트를 다시 연결한다.
+         */
+        initOutboundProcessModal();
+
+        // 알림 클릭으로 들어온 경우(?crrNo=) 해당 반출요청 상세를 자동으로 연다.
+        openOutboundFromUrl();
+      })
+      .catch(function (error) {
+        console.error(error);
+
+        tbody.innerHTML = ''
+          + '<tr>'
+          + '  <td colspan="10" class="outbound-empty">'
+          + '    보세반출 목록 조회 중 오류가 발생했습니다.'
+          + '  </td>'
+          + '</tr>';
+      });
+  }
+
+  /*
+   * 알림 딥링크: URL ?crrNo= 가 있으면 목록에서 그 행의 상세보기 버튼을 자동 클릭한다. (1회만)
+   */
+  var __outboundDeepLinkDone = false;
+  function openOutboundFromUrl() {
+    if (__outboundDeepLinkDone) return;
+    var crrNo = (new URLSearchParams(window.location.search)).get('crrNo');
+    if (!crrNo) { __outboundDeepLinkDone = true; return; }
+    var tbody = document.getElementById('outboundTableBody');
+    if (!tbody) return;
+    var btns = tbody.querySelectorAll('[data-crr-no]');
+    for (var i = 0; i < btns.length; i++) {
+      if (String(btns[i].getAttribute('data-crr-no')).trim() === crrNo.trim()) {
+        __outboundDeepLinkDone = true;
+        try { (btns[i].closest('tr') || btns[i]).scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+        btns[i].click();
+        return;
+      }
+    }
+  }
+
+  /*
+   * 보세반출 처리 목록 렌더링
+   *
+   * JSP 테이블 컬럼 구조와 동일하게 맞춘다.
+   *
+   * 컬럼:
+   * NO | 반출요청번호 | 반출요청일시 | 유형 | 요청업체 | 화주명 | 품명 | 보관위치 | D/O 및 신고필증 상태 | 반출상태 | 관리
+   */
+  function renderOutboundProcessList(list, currentPage) {
+    const tbody = document.getElementById('outboundTableBody');
+
+    if (!tbody) {
+      return;
+    }
+
+    const page = Number(currentPage || 1);
+    const pageSize = 10;
+    const startNo = (page - 1) * pageSize;
+
+    if (!list || list.length === 0) {
+      tbody.innerHTML = ''
+        + '<tr>'
+        + '  <td colspan="10" class="outbound-empty">'
+        + '    조회된 반출요청이 없습니다.'
+        + '  </td>'
+        + '</tr>';
+      return;
+    }
+
+    let html = '';
+
+    list.forEach(function (release, index) {
+      const typeBadge = makeOutboundTypeBadge(release);
+      const docBadge = makeOutboundDocBadge(release);
+      const statusBadge = makeOutboundStatusBadge(release);
+      const locationText = release.locationNm || release.locationCode || '-';
+      const goodsText = release.goodsSummary || '-';
+
+      html += ''
+        + '<tr>'
+        + '  <td class="td-no">' + (startNo + index + 1) + '</td>'
+        + '  <td>' + escapeHtml(release.crrNo || '') + '</td>'
+        + '  <td>' + escapeHtml(release.crrCrDt || '') + '</td>'
+        + '  <td>' + typeBadge + '</td>'
+        + '  <td>' + escapeHtml(release.tmCpNm || '') + '</td>'
+        + '  <td>' + escapeHtml(release.crrNm || '') + '</td>'
+        + '  <td>' + escapeHtml(goodsText) + '</td>'
+        + '  <td>' + docBadge + '</td>'
+        + '  <td>' + statusBadge + '</td>'
+        + '  <td>'
+        + makeOutboundDetailButton(release)
+        + '  </td>'
+        + '</tr>';
+    });
+
+    tbody.innerHTML = html;
+  }
+
+  /*
+   * 수입/수출 뱃지 생성
+   */
+  function makeOutboundTypeBadge(release) {
+    const code = release.diTrdeSeCd || '';
+    const name = release.diTrdeSeNm || '';
+
+    if (code === 'IMP' || code === 'IMPORT') {
+      return '<span class="outbound-type-badge import">' + escapeHtml(name || '수입') + '</span>';
+    }
+
+    if (code === 'EXP' || code === 'EXPORT') {
+      return '<span class="outbound-type-badge export">' + escapeHtml(name || '수출') + '</span>';
+    }
+
+    return '<span class="outbound-type-badge">-</span>';
+  }
+
+  /*
+   * D/O + 신고필증 상태 뱃지 생성
+   */
+  function makeOutboundDocBadge(release) {
+    const doStatusNm = release.doStatusNm || '';
+    const declarationStatusNm = release.declarationStatusNm || '';
+
+    if (doStatusNm === '수령완료' && declarationStatusNm === '수령완료') {
+      return '<span class="outbound-badge success">수령완료</span>';
+    }
+
+    if (doStatusNm === '수령완료' || declarationStatusNm === '수령완료') {
+      return '<span class="outbound-badge progress">일부수령</span>';
+    }
+
+    return '<span class="outbound-badge wait">수령전</span>';
+  }
+
+  /*
+   * 반출상태 뱃지 생성
+   */
+  function makeOutboundStatusBadge(release) {
+    const code = release.crStatusCd || '';
+    const name = release.crStatusNm || '';
+
+    if (code === 'REL_WAIT') {
+      return '<span class="outbound-badge release-wait">반출대기</span>';
+    }
+
+    if (code === 'REL_FIX') {
+      return '<span class="outbound-badge release-fix">보완요청</span>';
+    }
+
+    if (code === 'REL_SENT') {
+      return '<span class="outbound-badge release-sent">보완제출완료</span>';
+    }
+
+    if (code === 'REL_DONE') {
+      return '<span class="outbound-badge release-done">반출완료</span>';
+    }
+
+    return '<span class="outbound-badge release-default">' + escapeHtml(name || '-') + '</span>';
+  }
+
+  /*
+   * 상세보기 버튼 생성
+   *
+   * 기존 JSP의 data-* 구조를 그대로 맞춘다.
+   * openOutboundProcessModal(button)이 이 값들을 읽어서 상세 모달에 세팅한다.
+   */
+  function makeOutboundDetailButton(release) {
+    return ''
+      + '<button type="button"'
+      + '        class="mini mini-primary outbound-process-detail-btn"'
+      + '        data-crr-no="' + escapeHtml(release.crrNo || '') + '"'
+      + '        data-crr-cr-dt="' + escapeHtml(release.crrCrDt || '') + '"'
+      + '        data-crr-tre-id="' + escapeHtml(release.crrTreId || '') + '"'
+      + '        data-crr-owr-id="' + escapeHtml(release.crrOwrId || '') + '"'
+      + '        data-crr-nm="' + escapeHtml(release.crrNm || '') + '"'
+      + '        data-crr-cert-no="' + escapeHtml(release.crrCertNo || '') + '"'
+      + '        data-crr-req-cn="' + escapeHtml(release.crrReqCn || '') + '"'
+      + '        data-cr-status-cd="' + escapeHtml(release.crStatusCd || '') + '"'
+      + '        data-cr-status-nm="' + escapeHtml(release.crStatusNm || '') + '"'
+      + '        data-di-trde-se-cd="' + escapeHtml(release.diTrdeSeCd || '') + '"'
+      + '        data-di-trde-se-nm="' + escapeHtml(release.diTrdeSeNm || '') + '"'
+      + '        data-cr-dt="' + escapeHtml(release.crDt || '') + '"'
+      + '        data-tm-id="' + escapeHtml(release.tmId || '') + '"'
+      + '        data-tm-cp-nm="' + escapeHtml(release.tmCpNm || '') + '"'
+      + '        data-tm-name="' + escapeHtml(release.tmName || '') + '"'
+      + '        data-tm-cp-telno="' + escapeHtml(release.tmCpTelno || '') + '"'
+      + '        data-cr-wh-no="' + escapeHtml(release.crWhNo || '') + '"'
+      + '        data-wh-nm="' + escapeHtml(release.whNm || '') + '"'
+      + '        data-crr-wz-no="' + escapeHtml(release.crrWzNo || '') + '"'
+      + '        data-wz-nm="' + escapeHtml(release.wzNm || '') + '"'
+      + '        data-location-code="' + escapeHtml(release.locationCode || '') + '"'
+      + '        data-location-nm="' + escapeHtml(release.locationNm || '') + '"'
+      + '        data-goods-name="' + escapeHtml(release.goodsName || '') + '"'
+      + '        data-item-cnt="' + escapeHtml(release.itemCnt || '') + '"'
+      + '        data-goods-summary="' + escapeHtml(release.goodsSummary || '') + '"'
+      + '        data-total-qty="' + escapeHtml(release.totalQty || '') + '"'
+      + '        data-total-weight="' + escapeHtml(release.totalWeight || '') + '"'
+      + '        data-origin-summary="' + escapeHtml(release.originSummary || '') + '"'
+      + '        data-di-tfg-no="' + escapeHtml(release.diTfgNo || '') + '"'
+      + '        data-file-cnt="' + escapeHtml(release.fileCnt || '') + '"'
+      + '        data-doc-status-nm="' + escapeHtml(release.docStatusNm || '') + '"'
+      + '        data-do-status-nm="' + escapeHtml(release.doStatusNm || '') + '"'
+      + '        data-declaration-status-nm="' + escapeHtml(release.declarationStatusNm || '') + '">'
+      + '  상세보기'
+      + '</button>';
+  }
+
+  /*
+   * 보세반출 페이지네이션 렌더링
+   */
+  function renderOutboundPagination(paging) {
+    const pagination = document.getElementById('outboundPagination');
+
+    if (!pagination) {
+      return;
+    }
+
+    if (!paging || !paging.totalPage) {
+      pagination.innerHTML = '';
+      return;
+    }
+
+    const currentPage = Number(paging.currentPage || 1);
+    const startPage = Number(paging.startPage || 1);
+    const endPage = Number(paging.endPage || paging.totalPage);
+    const totalPage = Number(paging.totalPage || 1);
+
+    let html = '';
+
+    if (currentPage > 1) {
+      html += ''
+        + '<button type="button" class="page-btn" onclick="loadOutboundProcessList(' + (currentPage - 1) + ')">'
+        + '  &lt;'
+        + '</button>';
+    } else {
+      html += ''
+        + '<button type="button" class="page-btn disabled" disabled>'
+        + '  &lt;'
+        + '</button>';
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      html += ''
+        + '<button type="button"'
+        + '        class="page-btn ' + (i === currentPage ? 'active' : '') + '"'
+        + '        onclick="loadOutboundProcessList(' + i + ')">'
+        + i
+        + '</button>';
+    }
+
+    if (currentPage < totalPage) {
+      html += ''
+        + '<button type="button" class="page-btn" onclick="loadOutboundProcessList(' + (currentPage + 1) + ')">'
+        + '  &gt;'
+        + '</button>';
+    } else {
+      html += ''
+        + '<button type="button" class="page-btn disabled" disabled>'
+        + '  &gt;'
+        + '</button>';
+    }
+
+    pagination.innerHTML = html;
+  }
+
+  /*
+   * 페이지 버튼 onclick에서 접근할 수 있도록 전역 등록
+   */
+  window.loadOutboundProcessList = loadOutboundProcessList;
+
+  /*
+   * 직접 URL로 /warehouse/outbound.do 접속했을 때 실행
+   */
+  document.addEventListener('DOMContentLoaded', function () {
+    window.initOutboundPage();
+  });
+
+  /*
+   * ESC 키로 모달 닫기
+   */
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+      window.closeOutboundFileModal();
+
+      if (typeof window.closeOutboundProcessModal === 'function') {
+        window.closeOutboundProcessModal();
+      }
+
+      if (typeof window.closeOutboundSupplementModal === 'function') {
+        window.closeOutboundSupplementModal();
+      }
+    }
+  });
+})();

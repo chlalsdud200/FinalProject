@@ -1,0 +1,188 @@
+# [작업 지시] TACS 인앱 알림 - 누락 매트릭스 갭 분석 (코드 변경 0개)
+
+> 이 작업은 **읽기/검색만** 수행하고 분석 문서 1개를 산출합니다.
+> Java/XML/JSP/SQL 코드 일체 수정 금지. 새 정책 INSERT/트리거 박기 일체 금지.
+> 1~9차 PR이 완료된 상태에서 진행합니다.
+
+---
+
+## 0. 배경
+
+현재 알림 정책은 11건이 적용되어 있습니다:
+`DCLR_SUBMITTED`, `ITEM_SUPP_REQUESTED`, `ITEM_SUPP_SUBMITTED`, `ITEM_ACCEPTED`, `ITEM_REJECTED`, `CSTM_DONE`, `TAX_PAID`, `WH_INBOUND_DONE`, `WH_INBOUND_SUPP_REQ`, `WH_OUTBOUND_DONE`, `WH_OUTBOUND_SUPP_REQ`.
+
+`workspace/TACS/` 루트에 액터별 요구사항 MD 파일 6개가 있습니다:
+- `알림요구사항_화주.md`
+- `알림요구사항_관세사.md`
+- `알림요구사항_세관공무원.md`
+- `알림요구사항_창고관리자.md`
+- `알림요구사항_현장공무원.md`
+- `운송담당자수신알람.md`
+
+이 6개 파일이 정의한 **수신 요구사항**과 현재 적용된 11개 정책 간 **갭(누락분)** 을 매트릭스로 정리해 다음 PR(트리거 추가) 의 입력으로 사용합니다.
+
+진행 문서 `docs/notification_progress_current.md` 의 §5.4 "기능 자체가 없어서 보류된 이벤트" 와 교차 검증하되, **MD 요구사항 기반으로 다시 정리** 합니다. 진행 문서는 사전 조사 시점의 추정이고, 현재는 코드가 더 잡힐 수 있습니다.
+
+---
+
+## 1. 작업 범위
+
+### 1.1 입력 (읽기만)
+- 위 6개 MD 파일 전수
+- `workspace/TACS/docs/notification_plan.md` (전체 정책 의도)
+- `workspace/TACS/docs/notification_progress_current.md` (현재 상태)
+- `workspace/TACS/sql/notification_phase{1,2,3,7}_ddl.sql` (등록된 정책 SQL)
+- `workspace/TACS/src/main/java/kr/or/tacs/**/*ServiceImpl.java` (트리거 박을 후보 메서드 검색)
+- `workspace/TACS/src/main/resources/mybatis/mapper/**/*.xml` (상태 변경 쿼리 검색)
+
+### 1.2 산출물 (Write 한 번)
+- **신규 파일**: `workspace/TACS/docs/notification_gap_analysis.md`
+- 형식: 마크다운, 한글
+
+### 1.3 절대 비범위
+- Java/XML/JSP/SQL 일체 수정 금지
+- 새 정책 INSERT SQL 작성 금지
+- 트리거 박기 금지
+- 헤더/관리자 콘솔/공통 모듈 변경 금지
+
+---
+
+## 2. 산출 문서 구조
+
+### 2.1 헤더
+- 작성일, 분석 범위 한 줄
+
+### 2.2 액터별 요구사항 전수 매트릭스
+
+각 액터마다 다음 표:
+
+| # | 요구 한글명 (MD에서 추출) | 발생 액터 | 시간성 | 중요도 | 클릭 시 이동 페이지 | 현재 정책 매핑 | 갭 여부 |
+|---|---|---|---|---|---|---|---|
+| 1 | 수입운송의뢰 | OWNER | 즉시 | P0 | 운송의뢰 상세 | 없음 | **GAP** |
+| 2 | 입고완료 | WAREHOUSE_MANAGER | 즉시 | P0 | 운송의뢰 리스트 | `WH_INBOUND_DONE` | 적용 |
+| ... | | | | | | | |
+
+- "현재 정책 매핑": 11건 중 매칭되는 코드 명시 또는 "없음"
+- "갭 여부": 적용 / **GAP**
+
+### 2.3 갭 통합 매트릭스 (가장 중요)
+
+갭(누락) 항목을 한 표에 모음:
+
+| # | 제안 이벤트 코드 | 의미 | 수신자 | 발송자 | refKey 후보 | 본문 변수 | 발화 메서드 후보 | 코드 위치 확정도 |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `TR_REQUESTED` | 수입운송의뢰 접수 | TRANSPORT_MANAGER | OWNER | `TRC-{trcNo}` | `${trcNo}` | `???ServiceImpl.???()` | 🟢 / 🟡 / 🔴 |
+| 2 | `DO_ISSUED` | D/O 발급 | TRANSPORT_MANAGER, OWNER | BROKER | `DO-{doNo}` | `${doNo}` | (찾으면) | (...) |
+| ... | | | | | | | | |
+
+**확정도 신호**:
+- 🟢 **명백**: 메서드 위치 정확히 찾음. ServiceImpl + 라인 번호까지.
+- 🟡 **추정**: 후보 메서드 찾았으나 트리거 박을 정확한 라인이 불명확. 추가 분석 필요.
+- 🔴 **부재**: 해당 업무를 처리하는 ServiceImpl/메서드 자체를 못 찾음. PR 진행 불가 (UI 화면이 없거나 더미일 가능성).
+
+### 2.4 액터별 갭 요약
+
+각 액터의 요구 N건 중 적용 X건, 갭 Y건. 갭 중 🟢/🟡/🔴 분포.
+
+```
+화주: 요구 N건 / 적용 X건 / 갭 Y건 (🟢 a, 🟡 b, 🔴 c)
+관세사: ...
+세관공무원: ...
+현장공무원: ...
+창고관리자: ...
+운송담당자: ...
+```
+
+### 2.5 다음 PR 후보 정리
+
+🟢 항목만 모아서 "다음 PR 후보" 섹션. 우선순위(P0/P1 등)와 함께. 한 표에:
+
+| 제안 이벤트 코드 | 액터 | 발화 위치 | 추정 작업량 |
+|---|---|---|---|
+
+🟡/🔴 항목은 "추가 분석 필요" 또는 "코드 부재 - 향후 트랙" 으로 분리.
+
+### 2.6 발견된 운영 이슈 (있는 경우)
+
+분석 과정에서 발견한 것:
+- 중복 발화 가능성
+- 기존 11건 정책의 누락된 수신자 (예: MD가 OWNER도 받아야 한다는데 정책은 BROKER만)
+- refKey 키 공간 충돌 가능성
+- 기타 우려사항
+
+---
+
+## 3. 작업 가이드
+
+### 3.1 MD 읽는 법
+각 MD는 "알림 카드" 단위로 7건 내외 작성됨. 카드마다:
+- **언제 받고 싶은가**: 상태 변화 시점
+- **알림 발생 업무/프로세스**: 업무 도메인 단서
+- **알림을 발생시키는 액터**: 누가 트리거 일으키는지
+- **수신자 액터**: 누구한테 알림
+- **클릭 시 이동하고 싶은 페이지**: 링크 후보
+- **중요도**: P0/P1/...
+
+### 3.2 정책 매핑 판단 기준
+현재 11개 정책의 의미(np_biz_nm)는 phase1~3, phase7 DDL 파일에서 확인 가능. 같은 업무 흐름의 같은 액터 수신이면 적용으로 판단.
+
+### 3.3 코드 위치 찾는 방법
+- 업무 키워드(운송의뢰, 도착통지, D/O, 배송 등)로 ServiceImpl 광범위 grep
+- Mapper.xml 의 update/insert 쿼리에서 상태 컬럼명 검색
+- 관련 컨트롤러 메서드명 단서 확인
+- 이미 확정된 7차 패턴 참조:
+  - 입고: `InboundServiceImpl.approveInbound()`, `insertSupplementRequest()`
+  - 반출: `OutboundServiceImpl.approveOutbound()`, `insertOutboundSupplementRequest()`
+
+### 3.4 refKey 후보 결정
+- 통관/세금: IR_NO 또는 IR_NO-SN
+- 입고: WIR-{wirNo}
+- 반출: CRR-{crrNo}
+- 운송: TRC-{trcNo} (제안)
+- D/O: DO-{doNo} (제안)
+- 배송: TRC-{trcNo} 재활용? 또는 새 키 (제안 명시)
+
+### 3.5 수신자 산출 매퍼 재활용 vs 신규
+공통 모듈 `INotificationMapper.xml` 의 기존 매퍼:
+- `selectOwnerIdByIrNo`, `selectBrokerIdByIrNo`, `selectOfficerIdByIrNo` (IR_NO 기반)
+- `selectWarehouseManagerIdByIrNo`, `selectTransportManagerIdByIrNo` (IR_NO 기반)
+- `selectOwnerIdByWirNo`, `selectTransportManagerIdByWirNo` (WIR 기반)
+- `selectTransportManagerIdByCrrNo` (CRR 기반)
+
+새 refKey 키 공간이 등장하면 새 매퍼 필요 → 갭 매트릭스에 명시.
+
+---
+
+## 4. 산출 문서 품질 기준
+
+1. **누락 0**: 6개 MD의 모든 알림 카드가 표에 한 줄씩 등장
+2. **갭 정확성**: 11개 정책과 매핑 누락/오매핑 없음
+3. **확정도 신호 정확**: 🟢 표시한 항목은 ServiceImpl + 메서드명 + 대략 라인 명시 가능해야 함
+4. **🔴 명확**: 코드 못 찾은 항목은 "어디까지 찾아봤는지" 한 줄 기록
+5. **다음 PR 후보 명확**: 🟢 항목만 깔끔히 추려서 작업 가능한 단위로
+6. **컨벤션**: 마크다운, 한글, 표 형식 일관
+
+---
+
+## 5. 작업 완료 후 보고할 항목
+
+1. 생성한 문서 절대 경로
+2. 분석한 MD 6개 + 산출 갭 총 건수
+3. 각 액터별 갭 요약 한 줄
+4. 🟢 / 🟡 / 🔴 분포 숫자
+5. 다음 PR로 즉시 진행 가능한 🟢 항목 수
+6. **Java/XML/JSP/SQL 수정 0개 확인** — 반드시 명시
+
+---
+
+## 6. 셀프 체크리스트
+
+- [ ] 6개 MD 파일을 모두 읽었는가?
+- [ ] 모든 알림 카드가 표에 등장하는가? (누락 0)
+- [ ] 현재 11개 정책과의 매핑이 정확한가?
+- [ ] 🟢 표시 항목은 ServiceImpl + 메서드명 + 라인 후보 명시했는가?
+- [ ] 🔴 표시 항목은 "어디까지 찾았는지" 기록했는가?
+- [ ] 새 refKey/매퍼 필요한 항목을 명시했는가?
+- [ ] 코드 파일 수정 0개?
+- [ ] 새 SQL 파일 0개? (분석 문서 1개만 생성)
+- [ ] 진행 문서(`notification_progress_current.md`)의 보류 목록과 교차 검증했는가?

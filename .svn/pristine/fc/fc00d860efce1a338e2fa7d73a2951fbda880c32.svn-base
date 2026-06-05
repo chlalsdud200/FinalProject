@@ -1,0 +1,21 @@
+package kr.or.tacs.officer.fulfillmentandexport.mapper;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import kr.or.tacs.dto.officer.WarehouseCargoTrackingDTO;
+
+@Mapper
+public interface IWarehouseCargoTrackingMapper {
+
+    List<WarehouseCargoTrackingDTO> selectWarehouseCargoList(
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate,
+            @Param("reqNo") String reqNo,
+            @Param("declareType") String declareType,
+            @Param("warehouseName") String warehouseName,
+            @Param("cargoStatusCd") String cargoStatusCd
+    );
+}

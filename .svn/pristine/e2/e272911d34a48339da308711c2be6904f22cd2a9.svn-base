@@ -1,0 +1,583 @@
+@charset "UTF-8";
+
+ /* =========================
+   검색 영역
+========================= */
+.inventory-search-panel {
+  padding: 18px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.search-row {
+  display: grid;
+  grid-template-columns: 180px 140px 140px 300px minmax(360px, 1fr) 140px;
+  align-items: end;
+  gap: 12px;
+}
+
+/* 공통 form */
+.search-row .form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.search-row .form-item label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #334155;
+}
+
+/* select, input 공통 */
+.search-row select,
+.search-row input {
+  height: 38px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search-row select {
+  width: 100%;
+  padding: 0 12px;
+}
+
+.search-row input {
+  width: 100%;
+}
+
+/* =========================
+   날짜 범위
+========================= */
+.date-range {
+  display: grid;
+  grid-template-columns: 1fr 18px 1fr;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.date-range input {
+  padding: 0 12px;
+}
+
+.date-range span {
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* =========================
+   검색창
+========================= */
+.search-item {
+  min-width: 0;
+}
+
+.search-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: #64748b;
+  pointer-events: none;
+}
+
+.keyword-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px 0 38px !important;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.keyword-input::placeholder {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* 검색 버튼 */
+.inventory-search-btn {
+  width: 100%;
+  height: 38px;
+  padding: 0 18px;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* =========================
+   테이블 영역
+========================= */
+.inventory-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  background: #fff;
+}
+
+.inventory-table {
+  width: 100%;
+  min-width: 1400px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.inventory-table thead th {
+  height: 48px;
+  padding: 0 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.inventory-table tbody td {
+  height: 46px;
+  padding: 0 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty-table-result {
+  height: 150px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  color: #94a3b8 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  background: #fff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+/* =========================
+   3D 영역
+========================= */
+#inventory-3d-view {
+  display: none;
+  height: 650px;
+  overflow: hidden;
+}
+
+.wh3d-wrap {
+  position: relative;
+  width: 100%;
+  height: calc(100% - 54px);
+}
+
+#wh3d-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #0b1220;
+}
+
+#wh3d-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(2, 6, 23, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.wh3d-message-box {
+  max-width: 720px;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  padding: 18px 20px;
+}
+
+.wh3d-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.wh3d-status {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.wh3d-btn-row {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+#wh3d-overlay button {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* =========================
+   구역별 적재 현황 카드
+========================= */
+.zone-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.zone-status-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  padding: 18px 20px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.zone-status-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.zone-status-name {
+  font-size: 15px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.zone-status-no {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.zone-status-rate {
+  font-size: 24px;
+  font-weight: 900;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.zone-progress {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.zone-progress-bar {
+  height: 100%;
+  background: #2563eb;
+  transition: width 0.25s ease;
+}
+
+.zone-status-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #475569;
+}
+
+.zone-status-empty {
+  grid-column: 1 / -1;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* =========================
+   뱃지 스타일
+========================= */
+
+/* 공통 뱃지 */
+.inventory-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 수입 */
+.type-import {
+  color: #047857;
+  background: #d1fae5;
+}
+
+/* 수출 */
+.type-export {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+/* 입고완료 */
+.status-in-done {
+  color: #047857;
+  background: #d1fae5;
+}
+
+/* 입고요청완료 / 대기 계열 */
+.status-wait,
+.status-sent {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+/* 반려 / 오류 / 반출 계열 */
+/* 반려 */
+.status-reject {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+/* 반출완료 */
+.status-out,
+.status-out-done {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+/* =========================
+   반응형
+========================= */
+@media (max-width: 1200px) {
+  .search-row {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 12px;
+  }
+
+  .search-item {
+    grid-column: 1 / -1;
+  }
+
+  .inventory-search-btn {
+    grid-column: 1 / -1;
+    width: 140px;
+    justify-self: end;
+  }
+
+  .zone-status-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   보세재고 목록 컬럼 폭
+   - CSS만으로 주요 컬럼 폭을 고정한다.
+   - 화면이 좁으면 테이블을 찌그러뜨리지 않고 가로 스크롤로 처리한다.
+========================= */
+
+/* NO */
+.inventory-table th:nth-child(1),
+.inventory-table td:nth-child(1) {
+  width: 55px;
+  min-width: 55px;
+  max-width: 55px;
+}
+
+/* 입고의뢰번호 */
+.inventory-table th:nth-child(2),
+.inventory-table td:nth-child(2) {
+  width: 230px;
+  min-width: 230px;
+  max-width: 230px;
+}
+
+/* 물품/화주 */
+.inventory-table th:nth-child(3),
+.inventory-table td:nth-child(3) {
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
+}
+
+/* 창고구역 */
+.inventory-table th:nth-child(4),
+.inventory-table td:nth-child(4) {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+/* 유형 */
+.inventory-table th:nth-child(5),
+.inventory-table td:nth-child(5) {
+  width: 90px;
+  min-width: 90px;
+  max-width: 90px;
+}
+
+/* 보관위치 */
+.inventory-table th:nth-child(6),
+.inventory-table td:nth-child(6) {
+  width: 210px;
+  min-width: 210px;
+  max-width: 210px;
+}
+
+/* 위치반입일시 / 위치반출일시 */
+.inventory-table th:nth-child(7),
+.inventory-table td:nth-child(7),
+.inventory-table th:nth-child(8),
+.inventory-table td:nth-child(8) {
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
+}
+
+/* 상태 */
+.inventory-table th:nth-child(9),
+.inventory-table td:nth-child(9) {
+  width: 110px;
+  min-width: 110px;
+  max-width: 110px;
+}
+
+/* NO 컬럼 텍스트 */
+.inventory-table .td-no {
+  text-align: left !important;
+  font-weight: 700;
+}
+
+/* 입고의뢰번호는 식별번호라 말줄임 없이 한 줄 전체 표시 */
+.inventory-table tbody td:nth-child(2) {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* =========================
+   보세재고 목록 페이지네이션
+========================= */
+.inventory-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+
+  padding: 16px 0;
+  background: #fff;
+  border-top: 1px solid #eef2f7;
+}
+
+.inventory-pagination .page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 30px;
+  text-align: center;
+
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.inventory-pagination .page-btn.active {
+  background: #334155;
+  border-color: #334155;
+  color: #fff;
+}
+
+.inventory-pagination .page-btn.disabled,
+.inventory-pagination .page-btn:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+}
+
+.inventory-pagination .page-btn:not(.active):not(:disabled):hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* 보세재고 목록 물품/화주 컬럼
+   - 물품명과 화주명이 길어도 말줄임하지 않고 줄바꿈으로 표시
+   - 다른 날짜/상태/위치 컬럼은 기존 한 줄 정렬 유지
+*/
+.inventory-table tbody td:nth-child(3) {
+  height: auto;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  vertical-align: middle;
+}
+
+/* 화주/물품 컬럼 표시 스타일 */
+.inventory-goods-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.inventory-owner-name {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.25;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}

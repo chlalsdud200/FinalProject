@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.common.notification.mapper.INotificationMapper">
+
+    <resultMap id="notificationPolicyMap"
+               type="kr.or.tacs.vo.common.notification.NotificationPolicyVO">
+        <result property="npEventCd" column="np_event_cd"/>
+        <result property="npBizNm" column="np_biz_nm"/>
+        <result property="npReceiverUserType" column="np_receiver_user_type"/>
+        <result property="npTitleTpl" column="np_title_tpl"/>
+        <result property="npBodyTpl" column="np_body_tpl"/>
+        <result property="npLinkTpl" column="np_link_tpl"/>
+        <result property="npUseYn" column="np_use_yn"/>
+        <result property="npRegDt" column="np_reg_dt"/>
+    </resultMap>
+
+    <select id="selectNotificationPolicy"
+            resultMap="notificationPolicyMap">
+        SELECT
+            np_event_cd
+          , np_biz_nm
+          , np_receiver_user_type
+          , np_title_tpl
+          , np_body_tpl
+          , np_link_tpl
+          , np_use_yn
+          , np_reg_dt
+        FROM noti_policy
+        WHERE np_event_cd = #{eventCd}
+    </select>
+
+    <select id="selectOwnerIdByIrNo"
+            resultType="string">
+        SELECT
+            ir_owr_id
+        FROM imp_rqst
+        WHERE ir_no     = #{irNo}
+          AND ir_use_yn = 'Y'
+    </select>
+
+    <select id="selectBrokerIdByIrNo"
+            resultType="string">
+        SELECT
+            ir_broker_id
+        FROM imp_rqst
+        WHERE ir_no     = #{irNo}
+          AND ir_use_yn = 'Y'
+    </select>
+
+    <select id="selectOfficerIdByIrNo"
+            resultType="string">
+        SELECT
+            id_officer_id
+        FROM imp_dclr
+        WHERE id_ir_no = #{irNo}
+    </select>
+
+    <insert id="insertNotification"
+            parameterType="kr.or.tacs.vo.common.notification.NotificationVO">
+        INSERT INTO notification (
+            noti_no
+          , noti_event_cd
+          , noti_ref_key
+          , noti_receiver_id
+          , noti_sender_id
+          , noti_title
+          , noti_body
+          , noti_link_url
+          , noti_read_yn
+          , noti_read_dt
+          , noti_send_status
+          , noti_retry_count
+          , noti_last_error
+          , noti_send_dt
+        ) VALUES (
+            seq_notification.NEXTVAL
+          , #{notiEventCd}
+          , #{notiRefKey}
+          , #{notiReceiverId}
+          , #{notiSenderId}
+          , #{notiTitle}
+          , #{notiBody}
+          , #{notiLinkUrl}
+          , 'N'
+          , NULL
+          , #{notiSendStatus}
+          , 0
+          , NULL
+          , SYSDATE
+        )
+    </insert>
+
+</mapper>

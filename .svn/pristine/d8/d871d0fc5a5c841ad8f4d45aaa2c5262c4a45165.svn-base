@@ -1,0 +1,315 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ include file="/WEB-INF/views/officer/common/taglibs.jsp" %>
+<%@ taglib uri="http://www.springframework.org/security/tags" prefix="sec" %>
+
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="activeMenu" value="cargo" />
+<c:set var="activeSub" value="warehouseCargoTracking" />
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <%@ include file="/WEB-INF/views/officer/header/head.jsp" %>
+    <title>TACS · 창고(보세구역) 화물 조회</title>
+    <link rel="stylesheet" href="${ctx}/resources/css/officer/pages/warehouseCargoTracking.css">
+</head>
+
+<body>
+<%@ include file="/WEB-INF/views/officer/header/sidebar.jsp" %>
+<%@ include file="/WEB-INF/views/officer/header/header.jsp" %>
+
+<main class="officer-main">
+    <div class="page-content warehouseCargoTracking-page">
+
+        <div class="section-head">
+            <div class="breadcrumb-bar">
+                <span class="breadcrumb-text">이행·반출 및 화물 조회</span>
+                <span class="breadcrumb-sep">›</span>
+                <span class="breadcrumb-tag">TACS-AD-019</span>
+            </div>
+            <h2 class="page-heading">창고(보세구역) 화물 조회</h2>
+        </div>
+
+        <div class="inline-screen-host">
+            <div class="inline-screen-header">
+                <h3 class="screen-title">창고(보세구역) 화물 조회</h3>
+                <p class="screen-desc">창고에 배치된 화물의 화물관리번호, MBL번호, 화주명, 보관 위치와 반입·반출 상태를 조회합니다.</p>
+            </div>
+
+            <div class="inline-screen-body">
+
+                <form method="get" action="${ctx}/officer/warehouseCargoTracking.do" class="receipt-search-panel">
+                    <p class="receipt-search-title">검색조건</p>
+
+   					 <div class="receipt-search-row">
+                        <div class="receipt-search-label">화물정보</div>
+                        <div class="receipt-search-field receipt-search-field-wide">
+                            <input class="receipt-search-input"
+                                   type="text"
+                                   name="reqNo"
+                                   value="<c:out value='${reqNo}'/>"
+                                   placeholder="화물관리번호, MBL번호, 신고번호 입력">
+                        </div>
+                    </div>
+                  
+
+                    <div class="receipt-search-row">
+                        <div class="receipt-search-label">화물상태</div>
+                        <div class="receipt-search-field receipt-search-field-md">
+                            <select class="receipt-search-select" name="cargoStatusCd">
+                                <option value="ALL" <c:if test="${empty cargoStatusCd or cargoStatusCd eq 'ALL'}">selected="selected"</c:if>>전체</option>
+                                <option value="IN_WAIT" <c:if test="${cargoStatusCd eq 'IN_WAIT'}">selected="selected"</c:if>>반입대기</option>
+                                <option value="IN_DONE" <c:if test="${cargoStatusCd eq 'IN_DONE'}">selected="selected"</c:if>>반입완료</option>
+                                <option value="STORAGE" <c:if test="${cargoStatusCd eq 'STORAGE'}">selected="selected"</c:if>>보관중</option>
+                                <option value="RELEASE_WAIT" <c:if test="${cargoStatusCd eq 'RELEASE_WAIT'}">selected="selected"</c:if>>반출대기</option>
+                                <option value="RELEASE_DONE" <c:if test="${cargoStatusCd eq 'RELEASE_DONE'}">selected="selected"</c:if>>반출완료</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="receipt-search-row">
+                        <div class="receipt-search-label">구분</div>
+                        <div class="receipt-search-radio-group">
+                            <label class="receipt-check-item">
+                                <input type="radio" name="declareType" value="ALL"
+                                       <c:if test="${empty declareType or declareType eq 'ALL'}">checked="checked"</c:if>>
+                                전체
+                            </label>
+                            <label class="receipt-check-item">
+                                <input type="radio" name="declareType" value="IMPORT"
+                                       <c:if test="${declareType eq 'IMPORT' or declareType eq '수입'}">checked="checked"</c:if>>
+                                수입
+                            </label>
+                            <label class="receipt-check-item">
+                                <input type="radio" name="declareType" value="EXPORT"
+                                       <c:if test="${declareType eq 'EXPORT' or declareType eq '수출'}">checked="checked"</c:if>>
+                                수출
+                            </label>
+                        </div>
+                    </div>
+
+               		<div class="receipt-search-row">
+                        <div class="receipt-search-label">반입 일자</div>
+                        <div class="receipt-search-date-wrap">
+                            <input class="receipt-search-date" type="date" name="startDate" value="<c:out value='${startDate}'/>">
+                            <span class="receipt-search-date-sep">~</span>
+                            <input class="receipt-search-date" type="date" name="endDate" value="<c:out value='${endDate}'/>">
+                            <button class="receipt-inline-btn" type="button">최근 1주일</button>
+                        </div>
+                    </div>
+
+                    <div class="receipt-search-row receipt-search-row-last">
+                        <div class="receipt-search-label">통합검색</div>
+                        <div class="receipt-search-bottom">
+                            <input class="receipt-search-input"
+                                   type="text"
+                                   name="warehouseName"
+                                   value="<c:out value='${warehouseName}'/>"
+                                   placeholder="창고명, 보세구역, 품명, 화물관리번호 입력">
+
+                            <button class="btn-primary receipt-action-btn" type="submit">조회</button>
+                            <button class="btn-secondary receipt-action-btn"
+                                    type="button"
+                                    onclick="location.href='${ctx}/officer/warehouseCargoTracking.do'">초기화</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="result-bar">
+                    <div class="result-title">
+                        창고별 화물 목록
+                        <span class="result-count"><c:out value="${cargoCount}" />건</span>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>화물관리번호</th>
+                                <th>구분</th>
+                                <th>MBL번호</th>
+                                <th>화주명</th>
+                                <th>창고명</th>
+                                <th>품명</th>
+                                <th>반입일</th>
+                                <th>상태</th>
+                                <th>상세</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <c:choose>
+                                <c:when test="${not empty cargoList}">
+                                    <c:forEach var="item" items="${cargoList}">
+                                        <tr class="warehouse-master-row" onclick="toggleSimpleDetail(this, 'warehouse-detail-row')">
+                                            <td><c:out value="${item.no}" /></td>
+                                            <td class="td-bold"><c:out value="${item.cargoMgmtNo}" default="-" /></td>
+                                            <td><c:out value="${item.declareType}" default="-" /></td>
+                                            <td class="td-bold"><c:out value="${item.mblNo}" default="-" /></td>
+                                            <td><c:out value="${item.declarantName}" default="-" /></td>
+                                            <td><c:out value="${item.warehouseName}" default="-" /></td>
+                                            <td><c:out value="${item.itemName}" default="-" /></td>
+                                            <td><c:out value="${item.inboundDate}" default="-" /></td>
+                                            <td><span class="badge-progress"><c:out value="${item.cargoStatus}" default="-" /></span></td>
+                                            <td>
+                                                <button class="btn-secondary btn-sm"
+                                                        type="button"
+                                                        onclick="event.stopPropagation(); toggleSimpleDetail(this, 'warehouse-detail-row')">상세</button>
+                                            </td>
+                                        </tr>
+
+                                        <tr class="warehouse-detail-row" style="display:none;">
+                                            <td class="p-zero" colspan="10">
+                                                <div class="detail-content">
+                                                    <div class="grid-3 grid-sm">
+                                                        <div class="info-card">
+                                                            <p class="section-title">화물 기본정보</p>
+                                                            <table class="data-table" style="pointer-events:none;">
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td class="td-bold">화물관리번호</td>
+                                                                        <td><c:out value="${item.cargoMgmtNo}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">화물그룹번호</td>
+                                                                        <td><c:out value="${item.goodsGroupNo}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">구분</td>
+                                                                        <td><c:out value="${item.declareType}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">대표품명</td>
+                                                                        <td><c:out value="${item.itemName}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">품목수</td>
+                                                                        <td><c:out value="${item.itemCount}" default="-" />개</td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">총수량 / 총중량</td>
+                                                                        <td><c:out value="${item.totalQtyWeight}" default="-" /></td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+
+                                                        <div class="info-card">
+                                                            <p class="section-title">창고 위치 정보</p>
+                                                            <table class="data-table" style="pointer-events:none;">
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td class="td-bold">창고명</td>
+                                                                        <td><c:out value="${item.warehouseName}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">보세구역코드</td>
+                                                                        <td><c:out value="${item.bondedAreaCode}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">보관위치</td>
+                                                                        <td><c:out value="${item.storageLocation}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">반입일</td>
+                                                                        <td><c:out value="${item.inboundDate}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">반출일</td>
+                                                                        <td><c:out value="${item.releaseDate}" default="-" /></td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+
+                                                        <div class="info-card">
+                                                            <p class="section-title">신고 추적 정보</p>
+                                                            <table class="data-table" style="pointer-events:none;">
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td class="td-bold">MBL번호</td>
+                                                                        <td><c:out value="${item.mblNo}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">HBL번호</td>
+                                                                        <td><c:out value="${item.hblNo}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">화주명</td>
+                                                                        <td><c:out value="${item.declarantName}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">BL상태</td>
+                                                                        <td><c:out value="${item.blStatusCd}" default="-" /></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td class="td-bold">운송요청번호</td>
+                                                                        <td><c:out value="${item.transportReqNo}" default="-" /></td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="info-card" style="margin-top:16px;">
+                                                        <p class="section-title">품목 상세</p>
+                                                        <table class="item-detail-table" style="pointer-events:none;">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>품명</th>
+                                                                    <th>수량</th>
+                                                                    <th>중량</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <c:choose>
+                                                                    <c:when test="${not empty item.itemDetailRows}">
+                                                                        <c:forEach var="detailRow" items="${fn:split(item.itemDetailRows, '§')}">
+                                                                            <c:set var="detailCols" value="${fn:split(detailRow, '|')}" />
+                                                                            <tr>
+                                                                                <td><c:out value="${detailCols[0]}" default="-" /></td>
+                                                                                <td><c:out value="${detailCols[1]}" default="-" /></td>
+                                                                                <td><c:out value="${detailCols[2]}" default="-" /></td>
+                                                                            </tr>
+                                                                        </c:forEach>
+                                                                    </c:when>
+                                                                    <c:otherwise>
+                                                                        <tr>
+                                                                            <td colspan="3">품목 상세 정보가 없습니다.</td>
+                                                                        </tr>
+                                                                    </c:otherwise>
+                                                                </c:choose>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                                                            </c:forEach>
+                                </c:when>
+
+                                <c:otherwise>
+                                    <tr>
+                                        <td colspan="10" class="empty-row">조회된 화물 정보가 없습니다.</td>
+                                    </tr>
+                                </c:otherwise>
+                            </c:choose>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<%@ include file="/WEB-INF/views/officer/footer/footer.jsp" %>
+<%@ include file="/WEB-INF/views/officer/footer/scripts.jsp" %>
+<script defer src="${ctx}/resources/js/officer/pages/warehouseCargoTracking.js"></script>
+</body>
+</html>

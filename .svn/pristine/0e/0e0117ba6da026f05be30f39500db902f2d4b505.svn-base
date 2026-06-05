@@ -1,0 +1,534 @@
+@charset "UTF-8";
+
+/* =========================================================
+   dashboard.css
+   대시보드 디자인 정리본
+   - 기존 JSP/데이터 내용 변경 없음
+   - 보세창고 통합현황 이미지 톤 참고
+   - 상단 통계 카드 / 최근 신고접수 테이블만 스타일 정리
+========================================================= */
+
+:root {
+  --dash-bg: #f3f7fc;
+  --dash-white: #ffffff;
+  --dash-navy: #334057;
+  --dash-navy-dark: #1e3054;
+  --dash-text: #0f1f3d;
+  --dash-muted: #7b8ca8;
+  --dash-line: #d9e6f5;
+  --dash-line-2: #e6eef8;
+  --dash-head: #f8fbff;
+  --dash-soft: #eef5ff;
+  --dash-blue: #3b82f6;
+  --dash-red: #b91c1c;
+  --dash-purple: #7c3aed;
+  --dash-green: #16a34a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#page-dashboard {
+  width: 100% !important;
+  padding: 20px 24px 28px !important;
+  background: var(--dash-bg) !important;
+  color: var(--dash-text) !important;
+}
+
+#page-dashboard.page-section:not(.active) {
+  display: none !important;
+}
+
+#page-dashboard.page-section.active {
+  display: block !important;
+}
+
+/* =========================================================
+   상단 제목 영역
+========================================================= */
+
+#page-dashboard .dashboard-head {
+  position: relative !important;
+  margin: 0 0 22px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  max-width: none !important;
+}
+
+#page-dashboard .dashboard-kicker {
+  display: none !important;
+}
+
+#page-dashboard .dashboard-head h1 {
+  margin: 0 0 6px !important;
+  color: #071936 !important;
+  font-size: 24px !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.04em !important;
+}
+
+#page-dashboard .dashboard-desc {
+  margin: 0 !important;
+  color: #6f819d !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  word-break: keep-all !important;
+}
+
+/* =========================================================
+   상단 통계 카드
+========================================================= */
+
+.dashboard-stat-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  margin: 0 0 22px !important;
+}
+
+.dashboard-stat-card {
+  position: relative !important;
+  min-height: 118px !important;
+  padding: 24px 22px 20px !important;
+  background: #fff !important;
+  border: 1px solid var(--dash-line) !important;
+  border-left: 4px solid #56627a !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  overflow: hidden !important;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease !important;
+}
+
+.dashboard-stat-card:hover {
+  background: #fbfdff !important;
+  border-color: #c7d9ef !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 우측 흐린 아이콘 느낌 */
+.dashboard-stat-card::after {
+  content: '' !important;
+  position: absolute !important;
+  right: 14px !important;
+  bottom: -4px !important;
+  width: 54px !important;
+  height: 54px !important;
+  opacity: .08 !important;
+  border: 6px solid #334057 !important;
+  border-radius: 8px !important;
+}
+
+.dashboard-stat-card:nth-child(1) { border-left-color: #56627a !important; }
+.dashboard-stat-card:nth-child(2) { border-left-color: #b91c1c !important; }
+.dashboard-stat-card:nth-child(3) { border-left-color: #3b82f6 !important; }
+.dashboard-stat-card:nth-child(4) { border-left-color: #7c3aed !important; }
+
+.stat-label {
+  display: block !important;
+  margin: 0 0 8px !important;
+  color: #263956 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+.dashboard-stat-card strong {
+  display: block !important;
+  margin: 0 !important;
+  color: #071936 !important;
+  font-size: 26px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.stat-sub {
+  display: block !important;
+  margin-top: 10px !important;
+  color: #7c8fae !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.45 !important;
+  word-break: keep-all !important;
+}
+
+/* =========================================================
+   하단 레이아웃
+========================================================= */
+
+.dashboard-layout {
+  display: grid !important;
+  gap: 20px !important;
+  margin: 0 !important;
+}
+
+.dashboard-layout-top {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.dashboard-card {
+  min-width: 0 !important;
+  padding: 0 !important;
+  background: #fff !important;
+  border: 1px solid var(--dash-line) !important;
+  border-left: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+.dashboard-card-head {
+  min-height: 42px !important;
+  margin: 0 !important;
+  padding: 0 18px !important;
+  background: var(--dash-navy) !important;
+  color: #fff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+
+.dashboard-card-head > div {
+  min-width: 0 !important;
+}
+
+.dashboard-card-head h2 {
+  margin: 0 !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.dashboard-card-head h2::before {
+  display: none !important;
+}
+
+.dashboard-card-head p {
+  display: none !important;
+}
+
+.dash-link-btn {
+  height: 26px !important;
+  min-width: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #a7c3e4 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+
+.dash-link-btn:hover {
+  background: transparent !important;
+  color: #fff !important;
+}
+
+/* =========================================================
+   테이블
+========================================================= */
+
+.dashboard-table-wrap {
+  width: 100% !important;
+  overflow-x: auto !important;
+  border-top: 0 !important;
+  background: #fff !important;
+}
+
+.dashboard-table {
+  width: 100% !important;
+  min-width: 760px !important;
+  border-collapse: collapse !important;
+  background: #fff !important;
+}
+
+.dashboard-table thead tr {
+  background: #f7faff !important;
+}
+
+.dashboard-table th {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid var(--dash-line) !important;
+  color: #5c6f8c !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.dashboard-table td {
+  padding: 13px 16px !important;
+  border-bottom: 1px solid var(--dash-line-2) !important;
+  color: var(--dash-text) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+}
+
+.dashboard-table tbody tr[data-href] {
+  cursor: pointer !important;
+}
+
+.dashboard-table tbody tr:hover {
+  background: #f8fbff !important;
+}
+
+.dashboard-table strong {
+  color: #14294a !important;
+  font-weight: 900 !important;
+}
+
+.dashboard-empty {
+  height: 92px !important;
+  text-align: center !important;
+  color: #8ea0bd !important;
+  font-weight: 500 !important;
+  background: #fff !important;
+  vertical-align: middle !important;
+}
+
+.dashboard-empty .empty-icon {
+  display: none !important;
+}
+
+.dashboard-empty .empty-msg {
+  display: block !important;
+  color: #8ea0bd !important;
+  font-size: 13px !important;
+}
+
+/* 신규 신고접수 테이블 컬럼 비율 */
+.dashboard-table-receipt {
+  table-layout: fixed !important;
+}
+
+.dashboard-table-receipt th:nth-child(1),
+.dashboard-table-receipt td:nth-child(1) {
+  width: 26% !important;
+}
+
+.dashboard-table-receipt th:nth-child(2),
+.dashboard-table-receipt td:nth-child(2) {
+  width: 10% !important;
+}
+
+.dashboard-table-receipt th:nth-child(3),
+.dashboard-table-receipt td:nth-child(3) {
+  width: 15% !important;
+}
+
+.dashboard-table-receipt th:nth-child(4),
+.dashboard-table-receipt td:nth-child(4) {
+  width: 24% !important;
+}
+
+.dashboard-table-receipt th:nth-child(5),
+.dashboard-table-receipt td:nth-child(5) {
+  width: 15% !important;
+}
+
+.dashboard-table-receipt th:nth-child(6),
+.dashboard-table-receipt td:nth-child(6) {
+  width: 10% !important;
+  text-align: center !important;
+}
+
+/* NEW 배지 */
+.new-line-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 20px !important;
+  margin-right: 8px !important;
+  padding: 0 7px !important;
+  border: 1px solid #c7d9ef !important;
+  border-radius: 0 !important;
+  background: #eef5ff !important;
+  color: #1e3054 !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+/* 버튼 */
+#page-dashboard button,
+#page-dashboard .btn-sm,
+#page-dashboard .btn-secondary {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 28px !important;
+  min-width: 54px !important;
+  padding: 0 10px !important;
+  border: 1px solid #cbd8e8 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  color: #1e3054 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+
+#page-dashboard button:hover,
+#page-dashboard .btn-sm:hover,
+#page-dashboard .btn-secondary:hover {
+  background: #eef5ff !important;
+  border-color: #a9bdd8 !important;
+}
+
+/* 혹시 기존 JSP에 남아 있을 수 있는 보조 요소 */
+.dashboard-head-tag,
+.my-task-list,
+.my-task-item,
+.my-task-notice,
+.status-pill {
+  font-family: inherit !important;
+}
+
+/* =========================================================
+   반응형
+========================================================= */
+
+@media (max-width: 1280px) {
+  .dashboard-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  #page-dashboard {
+    padding: 16px !important;
+  }
+
+  .dashboard-stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-card-head {
+    display: block !important;
+    height: auto !important;
+    padding: 12px 14px !important;
+  }
+
+  .dash-link-btn {
+    margin-top: 8px !important;
+  }
+}
+
+
+/* =========================================================
+   업무 알림 카드 - 신규 신고접수 옆 배치
+========================================================= */
+
+#page-dashboard .dashboard-layout-top {
+  grid-template-columns: minmax(0, 1.65fr) minmax(360px, .95fr) !important;
+  align-items: start !important;
+}
+
+#page-dashboard .dashboard-alert-card {
+  min-height: 100% !important;
+}
+
+#page-dashboard .dashboard-alert-body {
+  min-height: 120px !important;
+  padding: 18px 20px !important;
+  background: #fff !important;
+}
+
+#page-dashboard .dashboard-alert-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 11px 0 !important;
+  border-bottom: 1px solid var(--dash-line-2) !important;
+  cursor: pointer !important;
+}
+
+#page-dashboard .dashboard-alert-item:last-child {
+  border-bottom: 0 !important;
+}
+
+#page-dashboard .dashboard-alert-item:hover {
+  background: #f8fbff !important;
+}
+
+#page-dashboard .alert-dot {
+  width: 8px !important;
+  height: 8px !important;
+  margin-top: 5px !important;
+  border-radius: 50% !important;
+  flex: 0 0 8px !important;
+}
+
+#page-dashboard .alert-dot-orange { background: #d97706 !important; }
+#page-dashboard .alert-dot-green { background: #16a34a !important; }
+#page-dashboard .alert-dot-blue { background: #2563eb !important; }
+#page-dashboard .alert-dot-navy { background: #334057 !important; }
+
+#page-dashboard .alert-text {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+#page-dashboard .alert-text strong {
+  color: #0f1f3d !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  line-height: 1.3 !important;
+}
+
+#page-dashboard .alert-text span {
+  color: #7b8ca8 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.45 !important;
+}
+
+#page-dashboard .alert-text em {
+  color: #1e3054 !important;
+  font-style: normal !important;
+  font-weight: 900 !important;
+}
+
+#page-dashboard .dashboard-alert-empty {
+  height: 120px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #8ea0bd !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+@media (max-width: 1280px) {
+  #page-dashboard .dashboard-layout-top {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* =========================================================
+   상단 통계 카드 - 이동 없이 정보 표시용
+========================================================= */
+#page-dashboard .dashboard-stat-card {
+  cursor: default !important;
+}
+
+#page-dashboard .dashboard-stat-card:hover {
+  transform: none !important;
+  background: #fff !important;
+  border-color: var(--dash-line) !important;
+}

@@ -1,0 +1,817 @@
+package kr.or.tacs.broker.declare.service;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import kr.or.tacs.broker.declare.mapper.IBrokerDeclareMapper;
+import kr.or.tacs.vo.BrokerVO;
+import kr.or.tacs.vo.broker.declare.ImpDclrItemMdlspecVO;
+import kr.or.tacs.vo.broker.declare.ImpDclrItemVO;
+import kr.or.tacs.vo.broker.declare.ImpDclrVO;
+import kr.or.tacs.vo.broker.declare.ImpRqstVO;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+
+import kr.or.tacs.common.file.service.IFileService;
+import kr.or.tacs.dto.FileInfoDTO;
+import kr.or.tacs.cmmenums.TacsCstmSt;
+import kr.or.tacs.cmmenums.TacsUserType;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Collections;
+import java.util.List;
+@Service
+public class BrokerDeclareServiceImpl implements IBrokerDeclareService {
+
+    @Autowired
+    private IBrokerDeclareMapper brokerDeclareMapper;
+    
+    @Value("${hs.ai-recommend.enabled:false}")
+    private boolean hsAiRecommendEnabled;
+
+    /*
+     * 8D-ATTACH
+     * 공통 파일 업로드 서비스
+     *
+     * uploadFiles       : 새 파일그룹 생성 + 파일 등록
+     * uploadFilesToGroup: 기존 파일그룹에 파일 추가
+     * getFileList       : 파일그룹번호 기준 목록 조회
+     * deleteFile        : 파일번호 기준 삭제
+     */
+    @Autowired
+    private  IFileService fileService;
+    
+    @Autowired
+    private ObjectProvider<VectorStore> vectorStoreProvider;
+    /**
+     * 임시저장
+     *  · idIrNo 는 IMP_RQST.IR_NO 와 동일 — 의뢰서 없이 신고서 못 만듦 (NOT NULL)
+     *  · 같은 idIrNo 가 IMP_DCLR 에 이미 있으면 UPDATE, 없으면 INSERT
+     *  · 자식 1: 란사항 (delete-all + bulk insert)
+     *  · 자식 2: 모델/규격 (delete-all + bulk insert)
+     */
+    @Override
+    @Transactional
+    public String saveImpDraft(ImpDclrVO vo, String brokerId) {
+        // 의뢰번호 필수 — 의뢰서(IMP_RQST.IR_NO) 없이는 신고서 작성 불가
+        if (vo.getIdIrNo() == null || vo.getIdIrNo().trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                "통관의뢰번호가 없습니다. 의뢰서를 먼저 조회해주세요.");
+        }
+
+        vo.setIdStatusCd("DCLR_TEMP");
+
+        /*
+         * 8E-SAVE
+         * ID_OFFICER_ID는 세관 담당 공무원 ID이다.
+         *
+         * 현재 화면은 관세사가 신고서를 작성/전송하는 단계이므로
+         * 공무원은 아직 배정되지 않았다.
+         *
+         * 따라서 ID_OFFICER_ID에는 로그인 관세사 ID를 넣지 않고 NULL로 둔다.
+         */
+        vo.setIdOfficerId(null);
+
+        /*
+         * 8E-SAVE
+         * IMP_DCLR.ID_TOT_LN_CNT 필수값 세팅
+         *
+         * ID_TOT_LN_CNT는 부모 신고서의 총 란 수.
+         * DB NOT NULL 컬럼이므로 INSERT/UPDATE 전에 반드시 세팅한다.
+         */
+        int totalLineCount = (vo.getItems() == null) ? 0 : vo.getItems().size();
+        vo.setIdTotLnCnt(totalLineCount);
+
+        // 1) 이미 IMP_DCLR 에 같은 idIrNo 행이 있는지 확인 → 없으면 INSERT, 있으면 UPDATE
+        ImpDclrVO existing = brokerDeclareMapper.selectImpDclrById(vo.getIdIrNo(), brokerId);
+
+        if (existing == null) {
+            // 신규 — INSERT (idIrNo 는 사용자가 입력한 값 그대로 사용)
+            brokerDeclareMapper.insertImpDclr(vo);
+        } else {
+            // 이어쓰기 — UPDATE
+            int affected = brokerDeclareMapper.updateImpDclr(vo);
+            if (affected == 0) {
+                throw new IllegalStateException(
+                    "수정할 수 없는 신고서입니다. (본인 임시저장 건이 아니거나 이미 전송됨)");
+            }
+        }
+
+        // 2) 자식 — 란사항
+        saveItems(vo);
+
+        // 3) 자식 — 모델/규격
+        saveMdlspecs(vo);
+
+        return vo.getIdIrNo();
+    }
+
+    /** 란사항 IMP_DCLR_ITEM 일괄 저장 (delete-all + insert) */
+    private void saveItems(ImpDclrVO vo) {
+        String idIrNo = vo.getIdIrNo();
+        if (idIrNo == null) return;
+
+        brokerDeclareMapper.deleteImpDclrItemsByIrNo(idIrNo);
+
+        List<ImpDclrItemVO> items = vo.getItems();
+        if (items == null || items.isEmpty()) return;
+
+        int sn = 1;
+        for (ImpDclrItemVO item : items) {
+            item.setIdiIrNo(idIrNo);
+            item.setIdiSn(sn++);
+            brokerDeclareMapper.insertImpDclrItem(item);
+        }
+    }
+
+    /** 모델/규격 IMP_DCLR_ITEM_MDLSPEC 일괄 저장 (delete-all + insert) */
+    private void saveMdlspecs(ImpDclrVO vo) {
+        String idIrNo = vo.getIdIrNo();
+        if (idIrNo == null) return;
+
+        brokerDeclareMapper.deleteImpDclrItemMdlspecsByIrNo(idIrNo);
+
+        List<ImpDclrItemMdlspecVO> mdlspecs = vo.getMdlspecs();
+        if (mdlspecs == null || mdlspecs.isEmpty()) return;
+
+        // 란번호(idimSn)별 모델규격순번 관리
+        Map<Integer, Integer> mdlspecSnMap = new HashMap<>();
+
+        for (ImpDclrItemMdlspecVO m : mdlspecs) {
+            m.setIdimIrNo(idIrNo);
+
+            // idimSn은 모델/규격 행번호가 아니라 소속 란번호다.
+            // 프론트에서 impItems index 기준으로 세팅한 값을 유지해야 FK가 맞는다.
+            if (m.getIdimSn() == null) {
+                throw new IllegalArgumentException("모델/규격의 소속 란번호(idimSn)가 없습니다.");
+            }
+
+            int nextMdlspecSn = mdlspecSnMap.getOrDefault(m.getIdimSn(), 0) + 1;
+            mdlspecSnMap.put(m.getIdimSn(), nextMdlspecSn);
+
+            m.setIdimMdlspecSn(nextMdlspecSn);
+
+            brokerDeclareMapper.insertImpDclrItemMdlspec(m);
+        }
+    }
+
+    @Override
+    public ImpDclrVO findImpDclrById(String brokerId, String idIrNo) {
+        if (idIrNo == null || idIrNo.trim().isEmpty()) return null;
+        ImpDclrVO vo = brokerDeclareMapper.selectImpDclrById(idIrNo, brokerId);
+        if (vo != null) {
+            vo.setItems(brokerDeclareMapper.selectImpDclrItemListByIrNo(idIrNo));
+            vo.setMdlspecs(brokerDeclareMapper.selectImpDclrItemMdlspecListByIrNo(idIrNo));
+        }
+        return vo;
+    }
+
+    @Override
+    public List<ImpDclrVO> findImpDraftList(String brokerId) {
+        return brokerDeclareMapper.selectImpDraftList(brokerId);
+    }
+
+    /**
+     * 의뢰번호 1건 조회 — [조회] 버튼 응답용
+     * 본인 담당 또는 미배정 의뢰서만 반환
+     */
+    @Override
+    public ImpRqstVO findImpRqstById(String brokerId, String irNo) {
+        if (irNo == null || irNo.trim().isEmpty()) return null;
+        return brokerDeclareMapper.selectImpRqstById(irNo.trim(), brokerId);
+    }
+
+    /**
+     * 의뢰서 검색 — 돋보기 모달 응답용
+     * keyword 가 null/빈문자면 본인 의뢰서 전체 목록
+     */
+    @Override
+    public List<ImpRqstVO> findImpRqstList(String brokerId, String keyword) {
+        String trimmed = (keyword == null) ? "" : keyword.trim();
+        return brokerDeclareMapper.selectImpRqstList(brokerId, trimmed);
+    }
+
+    /** 로그인 사용자(관세사) BROKER 정보 조회 */
+    @Override
+    public BrokerVO findCurrentBroker(String brokerId) {
+        if (brokerId == null || brokerId.trim().isEmpty()) return null;
+        return brokerDeclareMapper.selectBrokerById(brokerId);
+    }
+
+    /**
+     * 전송: 마지막 저장 + status 변경
+     */
+    @Override
+    @Transactional
+    public String sendImp(ImpDclrVO vo, String brokerId) {
+        String idIrNo = saveImpDraft(vo, brokerId);
+
+        int affected = brokerDeclareMapper.submitImpDclr(idIrNo, brokerId);
+        if (affected == 0) {
+            throw new IllegalStateException(
+                "전송할 수 없는 신고서입니다. (본인 임시저장 건이 아니거나 이미 전송됨)");
+        }
+        return idIrNo;
+    }
+    
+    
+    
+    /**
+     * 국가코드 조회
+     */
+    @Override
+    public List<Map<String, Object>> selectCountryList(String keyword) {
+        return brokerDeclareMapper.selectCountryList(keyword);
+    }
+    
+    
+    /**
+     * 상호조회 
+     */
+    @Override
+    public List<Map<String, Object>> selectOwnerList(String keyword) {
+        return brokerDeclareMapper.selectOwnerList(keyword);
+    }
+    
+    @Value("${exim.api.authkey}")
+    private String eximAuthKey;
+
+    private static final ObjectMapper exchangeObjectMapper = new ObjectMapper();
+    
+    
+    @Override
+    public Map<String, Object> findExchangeRate(String currency) throws Exception {
+        if (currency == null || currency.trim().isEmpty()) {
+            return null;
+        }
+
+        String targetCurrency = currency.trim().toUpperCase();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+        /*
+         * 한국수출입은행 환율 API는 주말/공휴일 데이터가 없을 수 있음.
+         * 그래서 오늘부터 최대 7일 전까지 조회해서 가장 가까운 영업일 환율을 사용.
+         */
+        for (int i = 0; i < 7; i++) {
+            String searchDate = LocalDate.now().minusDays(i).format(fmt);
+
+            String apiUrl =
+                "https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON"
+              + "?authkey=" + eximAuthKey
+              + "&searchdate=" + searchDate
+              + "&data=AP01";
+
+            String json = callExchangeApi(apiUrl);
+
+            if (json == null || json.trim().isEmpty()) {
+                continue;
+            }
+
+            List<Map<String, Object>> list =
+                exchangeObjectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
+
+            for (Map<String, Object> row : list) {
+                String curUnit = String.valueOf(row.get("cur_unit")).toUpperCase();
+
+                // API에서 JPY는 JPY(100)처럼 내려올 수 있어서 startsWith 처리
+                if (curUnit.equals(targetCurrency) || curUnit.startsWith(targetCurrency)) {
+                    String dealBasR = String.valueOf(row.get("deal_bas_r")); // 예: 1,382.50
+                    BigDecimal rate = parseRate(dealBasR);
+
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("currency", targetCurrency);
+                    result.put("curUnit", row.get("cur_unit"));
+                    result.put("curName", row.get("cur_nm"));
+                    result.put("dealBasR", dealBasR);
+                    result.put("rate", rate);
+                    result.put("searchDate", searchDate);
+
+                    return result;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private String callExchangeApi(String apiUrl) throws Exception {
+        HttpURLConnection conn = null;
+        BufferedReader br = null;
+
+        try {
+            URL url = new URL(apiUrl);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+
+            int status = conn.getResponseCode();
+
+            if (status < 200 || status >= 300) {
+                return null;
+            }
+
+            br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+
+            StringBuilder sb = new StringBuilder();
+            String line;
+
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+
+            return sb.toString();
+        } finally {
+            if (br != null) {
+                br.close();
+            }
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    private BigDecimal parseRate(String rateText) {
+        if (rateText == null) {
+            return null;
+        }
+
+        String cleaned = rateText.replace(",", "").trim();
+
+        if (cleaned.isEmpty()) {
+            return null;
+        }
+
+        return new BigDecimal(cleaned);
+    }
+    
+    
+    /**수량코드 */
+    @Override
+    public List<Map<String, Object>> selectCommonCodeList(String groupId, String keyword) {
+        Map<String, Object> param = new HashMap<>();
+        param.put("groupId", groupId);
+        param.put("keyword", keyword);
+
+        return brokerDeclareMapper.selectCommonCodeList(param);
+    }
+    
+    @Override
+    public List<Map<String, Object>> selectHsCodeList(String keyword) {
+        String trimmed = (keyword == null) ? "" : keyword.trim();
+        return brokerDeclareMapper.selectHsCodeList(trimmed);
+    }
+    
+    @Override
+    public List<Map<String, Object>> selectHsClassChildren(String parentCd) {
+        String trimmed = (parentCd == null) ? "" : parentCd.trim();
+        return brokerDeclareMapper.selectHsClassChildren(trimmed);
+    }
+    
+    @Override
+    public Map<String, Object> findHsCodeInfo(String hsCode, String countryCd, String orgnCertYn) {
+        if (hsCode == null || hsCode.trim().isEmpty()) {
+            return null;
+        }
+
+        String cleanHsCode = hsCode.trim()
+                                   .replace(".", "")
+                                   .replace("-", "")
+                                   .replace(" ", "")
+                                   .toUpperCase();
+
+        Map<String, Object> hs = brokerDeclareMapper.selectHsCodeInfo(cleanHsCode);
+        if (hs == null) {
+            return null;
+        }
+
+        Object basicRateObj = hs.get("basicTariffRate");
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("hsCode", cleanHsCode);
+        result.put("hsName", hs.get("hsName"));
+        result.put("basicTariffRate", basicRateObj);
+        result.put("appliedTariffRate", basicRateObj);
+        result.put("appliedType", "BASIC");
+
+        boolean useFta = "Y".equalsIgnoreCase(orgnCertYn)
+                      && countryCd != null
+                      && !countryCd.trim().isEmpty();
+
+        if (useFta) {
+            Map<String, Object> param = new HashMap<>();
+            param.put("hsCode", cleanHsCode);
+            param.put("countryCd", countryCd.trim().toUpperCase());
+            param.put("baseYmd", LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
+
+            Map<String, Object> fta = brokerDeclareMapper.selectFtaTariffInfo(param);
+
+            if (fta != null) {
+                result.put("appliedType", "FTA");
+                result.put("ftaTariffRate", fta.get("ftaTariffRate"));
+                result.put("appliedTariffRate", fta.get("ftaTariffRate"));
+                result.put("agreementCd", fta.get("agreementCd"));
+                result.put("agreementNm", fta.get("agreementNm"));
+                result.put("orgnDtrmnCd", fta.get("orgnDtrmnCd"));
+            }
+        }
+
+        return result;
+    }
+    
+    
+    
+    /**
+     * HS AI추천 기능 사용 가능 여부
+     * - Milvus가 아직 연결되지 않았거나, 서버가 꺼진 환경에서는 false 유지
+     */
+    @Override
+    public boolean isHsAiRecommendEnabled() {
+        return hsAiRecommendEnabled;
+    }
+
+    
+    
+    
+    
+    
+    
+    
+    
+    /**
+     * Milvus 검색 결과 Document 목록을 HS코드 추천 후보 목록으로 변환
+     */
+    private List<Map<String, Object>> buildHsRecommendListFromDocuments(List<Document> docs) {
+        List<Map<String, Object>> resultList = new ArrayList<>();
+
+        if (docs == null || docs.isEmpty()) {
+            return resultList;
+        }
+
+        List<String> docIds = new ArrayList<>();
+        Map<String, Document> docMap = new LinkedHashMap<>();
+
+        for (Document doc : docs) {
+            if (doc == null) continue;
+
+            String docId = doc.getId();
+
+            /*
+             * 혹시 doc.getId()가 비어있고 metadata에 doc_id가 있을 경우 대비
+             */
+            if ((docId == null || docId.trim().isEmpty()) && doc.getMetadata() != null) {
+                Object metaDocId = doc.getMetadata().get("doc_id");
+                if (metaDocId != null) {
+                    docId = String.valueOf(metaDocId);
+                }
+            }
+
+            if (docId == null || docId.trim().isEmpty()) {
+                continue;
+            }
+
+            docIds.add(docId);
+            docMap.put(docId, doc);
+        }
+
+        if (docIds.isEmpty()) {
+            return resultList;
+        }
+
+        List<Map<String, Object>> matchedList = brokerDeclareMapper.selectHsRecommendByDocIds(docIds);
+        if (matchedList == null || matchedList.isEmpty()) {
+            return resultList;
+        }
+
+        Map<String, Map<String, Object>> hsGrouped = new LinkedHashMap<>();
+
+        for (Map<String, Object> row : matchedList) {
+            String hsCode = str(row.get("hsCode"));
+            String hsDocId = str(row.get("hsDocId"));
+
+            if (hsCode.isEmpty()) {
+                continue;
+            }
+
+            Document doc = docMap.get(hsDocId);
+
+            Map<String, Object> target = hsGrouped.get(hsCode);
+            if (target == null) {
+                target = new HashMap<>(row);
+                target.put("rank", hsGrouped.size() + 1);
+                target.put("recommendMode", "MILVUS");
+                target.put("score", doc != null ? doc.getScore() : null);
+                target.put("recommendReason", buildMilvusReason(doc));
+                hsGrouped.put(hsCode, target);
+            }
+        }
+
+        resultList.addAll(hsGrouped.values());
+        return resultList;
+    }
+
+    /**
+     * Milvus 추천 근거 문구 생성
+     */
+    private String buildMilvusReason(Document doc) {
+        if (doc == null) {
+            return "Milvus 기준문서 청크와 의미가 유사한 HS코드 후보입니다.";
+        }
+
+        String text = doc.getText();
+        if (text == null || text.trim().isEmpty()) {
+            return "Milvus 기준문서 청크와 의미가 유사한 HS코드 후보입니다.";
+        }
+
+        String clean = text.replaceAll("\\s+", " ").trim();
+        if (clean.length() > 160) {
+            clean = clean.substring(0, 160) + "...";
+        }
+
+        return "Milvus 기준문서 유사 청크 근거: " + clean;
+    }
+
+    /**
+     * Milvus 실패 또는 결과 없음 시 기존 DB 검색으로 fallback
+     */
+    private List<Map<String, Object>> recommendHsCodeByDbFallback(String keyword) {
+        List<Map<String, Object>> rawList = brokerDeclareMapper.selectHsCodeList(keyword);
+        List<Map<String, Object>> resultList = new ArrayList<>();
+
+        if (rawList == null) {
+            return resultList;
+        }
+
+        int limit = Math.min(rawList.size(), 5);
+        for (int i = 0; i < limit; i++) {
+            Map<String, Object> src = rawList.get(i);
+            Map<String, Object> row = new HashMap<>(src);
+
+            row.put("rank", i + 1);
+            row.put("score", null);
+            row.put("recommendReason", "Milvus 검색 결과가 없거나 연결되지 않아 DB 키워드 검색으로 대체한 후보입니다.");
+            row.put("recommendMode", "DB_FALLBACK");
+
+            resultList.add(row);
+        }
+
+        return resultList;
+    }
+    
+    
+    private String str(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+    
+    
+    
+    /**
+     * HS AI추천 후보 조회
+     *
+     * 1차 구현:
+     * - 프로젝트 안전성을 위해 Milvus 직접 연결은 아직 하지 않음
+     * - hs.ai-recommend.enabled=false 이면 즉시 차단
+     * - true 일 때는 기존 HS_CODE / HS_KEYWORD 검색을 이용한 후보 반환
+     *
+     * 2차 구현:
+     * - 이 메서드 내부를 Milvus VectorStore 검색으로 교체
+     */
+    @Override
+    public List<Map<String, Object>> recommendHsCode(Map<String, Object> param) {
+        if (!hsAiRecommendEnabled) {
+            throw new IllegalStateException("HS AI추천 기능이 비활성화되어 있습니다.");
+        }
+
+        String dclrGdsnm = str(param.get("dclrGdsnm"));
+        String trdngGdsnm = str(param.get("trdngGdsnm"));
+        String trdmkNm = str(param.get("trdmkNm"));
+        String orgnCntryCd = str(param.get("orgnCntryCd"));
+
+        String keyword = (dclrGdsnm + " " + trdngGdsnm + " " + trdmkNm + " " + orgnCntryCd).trim();
+
+        if (keyword.isEmpty()) {
+            throw new IllegalArgumentException("AI추천에 사용할 신고품명 또는 거래품명을 입력해주세요.");
+        }
+
+        /*
+         * 1순위: Milvus VectorStore 검색
+         * - VectorStore Bean이 없거나
+         * - Milvus 컬렉션에 데이터가 없거나
+         * - 검색 중 오류가 나면
+         * 기존 DB fallback으로 내려간다.
+         */
+        try {
+            VectorStore vectorStore = vectorStoreProvider.getIfAvailable();
+
+            if (vectorStore != null) {
+                List<Document> docs = vectorStore.similaritySearch(
+                    SearchRequest.builder()
+                        .query(keyword)
+                        .topK(5)
+                        .similarityThreshold(0.60)
+                        .build()
+                );
+
+                List<Map<String, Object>> milvusList = buildHsRecommendListFromDocuments(docs);
+
+                if (!milvusList.isEmpty()) {
+                    return milvusList;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Milvus 오류가 나도 신고서 작성 전체를 막지 않고 DB fallback으로 내려간다.
+        }
+
+        /*
+         * 2순위: DB fallback
+         */
+        return recommendHsCodeByDbFallback(keyword);
+    }
+    
+    /*
+     * 8D-ATTACH
+     * 수입신고서 첨부파일 업로드
+     *
+     * 핵심 구조:
+     * - 수입신고서는 통관의뢰번호 IR_NO를 기준으로 작성됨
+     * - 첨부파일은 IMP_DCLR이 아니라 IMP_RQST.IR_TFG_NO에 연결
+     *
+     * 처리 흐름:
+     * 1. irNo로 수입의뢰 조회
+     * 2. 기존 IR_TFG_NO 확인
+     * 3. 없으면 새 파일그룹 생성 후 IMP_RQST.IR_TFG_NO 업데이트
+     * 4. 있으면 기존 파일그룹에 파일만 추가
+     */
+    @Override
+    @Transactional
+    public Long uploadImpDocs(String irNo,
+                              List<MultipartFile> files,
+                              String brokerId) throws Exception {
+
+        if (irNo == null || irNo.trim().isEmpty()) {
+            throw new IllegalArgumentException("통관의뢰번호가 없습니다.");
+        }
+
+        /*
+         * 8D-ATTACH
+         * 현재 로그인한 관세사 기준으로 해당 수입의뢰 조회.
+         * selectImpRqstById가 brokerId 조건을 이미 가지고 있다면 그대로 사용.
+         */
+        ImpRqstVO rqst = brokerDeclareMapper.selectImpRqstById(irNo.trim(), brokerId);
+
+        if (rqst == null) {
+            throw new IllegalStateException("수입의뢰 정보를 찾을 수 없습니다.");
+        }
+
+        Long tfgNo = rqst.getIrTfgNo();
+
+        /*
+         * 8D-ATTACH
+         * 기존 파일그룹이 없는 경우:
+         * - 공통 파일서비스 uploadFiles()로 새 파일그룹 생성
+         * - 생성된 tfgNo를 IMP_RQST.IR_TFG_NO에 연결
+         */
+        if (tfgNo == null) {
+            tfgNo = fileService.uploadFiles(
+                TacsCstmSt.CSTM_REQ.name(),
+                files,
+                brokerId,
+                TacsUserType.BROKER.name()
+            );
+
+            if (tfgNo != null) {
+                brokerDeclareMapper.updateImpRqstTfgNo(irNo.trim(), tfgNo);
+            }
+
+            return tfgNo;
+        }
+
+        /*
+         * 8D-ATTACH
+         * 기존 파일그룹이 있는 경우:
+         * - 새 파일그룹을 만들지 않음
+         * - 기존 tfgNo에 파일만 추가
+         */
+        fileService.uploadFilesToGroup(
+            tfgNo,
+            TacsCstmSt.CSTM_REQ.name(),
+            files,
+            brokerId,
+            TacsUserType.BROKER.name()
+        );
+
+        return tfgNo;
+    }
+
+    /*
+     * 8D-ATTACH
+     * 수입신고서 첨부파일 목록 조회
+     *
+     * 처리 흐름:
+     * irNo → IMP_RQST.IR_TFG_NO → fileService.getFileList(tfgNo)
+     */
+    @Override
+    public List<FileInfoDTO> getImpDocList(String irNo,
+                                           String brokerId) {
+
+        if (irNo == null || irNo.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        ImpRqstVO rqst = brokerDeclareMapper.selectImpRqstById(irNo.trim(), brokerId);
+
+        if (rqst == null || rqst.getIrTfgNo() == null) {
+            return Collections.emptyList();
+        }
+
+        return fileService.getFileList(rqst.getIrTfgNo());
+    }
+
+    /*
+     * 8D-ATTACH
+     * 수입신고서 첨부파일 삭제
+     *
+     * 현재 MVP:
+     * - fileNo 기준 공통 삭제 호출
+     *
+     * 추후 보강:
+     * - fileNo가 해당 irNo의 IR_TFG_NO에 속하는지 검증하는 쿼리 추가 권장
+     */
+    @Override
+    @Transactional
+    public void deleteImpDoc(String irNo,
+                             Long fileNo,
+                             String brokerId) {
+
+        if (irNo == null || irNo.trim().isEmpty()) {
+            throw new IllegalArgumentException("통관의뢰번호가 없습니다.");
+        }
+
+        if (fileNo == null) {
+            throw new IllegalArgumentException("삭제할 파일번호가 없습니다.");
+        }
+
+        ImpRqstVO rqst = brokerDeclareMapper.selectImpRqstById(irNo.trim(), brokerId);
+
+        if (rqst == null || rqst.getIrTfgNo() == null) {
+            throw new IllegalStateException("첨부파일 그룹을 찾을 수 없습니다.");
+        }
+
+        /*
+         * 8D-ATTACH
+         * 공통 파일 삭제.
+         * fileService.deleteFile()은 dfiFileNo 기준 삭제.
+         */
+        fileService.deleteFile(fileNo);
+    }
+
+    /*
+     * 8E-DELETE
+     * 수입신고서 임시저장 삭제
+     *
+     * 처리 순서:
+     * 1. 모델/규격 삭제
+     * 2. 란사항 삭제
+     * 3. 부모 IMP_DCLR 삭제
+     *
+     * SUBMIT 상태는 삭제 불가.
+     */
+    @Override
+    @Transactional
+    public void deleteImpDraft(String idIrNo, String brokerId) {
+        if (idIrNo == null || idIrNo.trim().isEmpty()) {
+            throw new IllegalArgumentException("삭제할 통관의뢰번호가 없습니다.");
+        }
+
+        if (brokerId == null || brokerId.trim().isEmpty()) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
+
+        String trimmedIdIrNo = idIrNo.trim();
+
+        brokerDeclareMapper.deleteImpDclrItemMdlspecsByIrNo(trimmedIdIrNo);
+        brokerDeclareMapper.deleteImpDclrItemsByIrNo(trimmedIdIrNo);
+
+        int affected = brokerDeclareMapper.deleteImpDclr(trimmedIdIrNo, brokerId);
+
+        if (affected == 0) {
+            throw new IllegalStateException("삭제할 수 없는 신고서입니다. 본인 임시저장 건이 아니거나 이미 전송된 신고서입니다.");
+        }
+    }
+}

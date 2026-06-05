@@ -1,0 +1,9 @@
+package kr.or.tacs.owner.dashboard.service;
+
+import kr.or.tacs.dto.owner.OwnerDashboardDTO;
+
+import java.util.List;
+
+public interface IDashboardService {
+    public List<OwnerDashboardDTO> list();
+}

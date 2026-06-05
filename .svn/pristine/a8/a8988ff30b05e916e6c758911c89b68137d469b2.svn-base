@@ -1,0 +1,798 @@
+var documentArchiveTabs = {
+  temp: {
+    label: '임시문서함',
+    summary: [
+      ['임시저장 문서','14'],
+      ['금일 발송 문서','9'],
+      ['확인 필요 수신문서','3']
+    ],
+    rows: [
+      ['TEMP-2026-0417-001','Draft House B/L','한빛무역','2026-04-17 09:40','임시저장','이어쓰기'],
+      ['TEMP-2026-0417-002','D/O 발급 요청서','네오코퍼레이션','2026-04-17 10:30','전송가능','이어쓰기']
+    ],
+    detail: {
+      no:'TEMP-2026-0417-001', type:'Draft House B/L', client:'한빛무역', box:'임시문서함', date:'2026-04-17 09:40', status:'임시저장',
+      memo:'화주 검토 전 임시 저장된 Draft House B/L 문서입니다. 검토 완료 후 발송 문서함으로 이동 예정입니다.'
+    }
+  },
+  sent: {
+    label: '발신문서함',
+    summary: [
+      ['임시저장 문서','14'],
+      ['금일 발송 문서','9'],
+      ['확인 필요 수신문서','3']
+    ],
+    rows: [
+      ['SENT-2026-0417-021','Original House B/L','에이스테크','2026-04-17 14:20','발송완료','상세'],
+      ['SENT-2026-0417-022','Arrival Notice','세림상사','2026-04-17 15:05','발송완료','상세']
+    ],
+    detail: {
+      no:'SENT-2026-0417-021', type:'Original House B/L', client:'에이스테크', box:'발신문서함', date:'2026-04-17 14:20', status:'발송완료',
+      memo:'화주 전달이 완료된 Original House B/L 문서입니다. 발송 이력과 전달 일시가 저장되어 있습니다.'
+    }
+  },
+  recv: {
+    label: '수신문서함',
+    summary: [
+      ['임시저장 문서','14'],
+      ['금일 발송 문서','9'],
+      ['확인 필요 수신문서','3']
+    ],
+    rows: [
+      ['RECV-2026-0417-011','정정 요청서','한빛무역','2026-04-17 10:15','미확인','확인'],
+      ['RECV-2026-0417-012','Shipping Advice','다온로지스','2026-04-17 11:22','미확인','확인']
+    ],
+    detail: {
+      no:'RECV-2026-0417-011', type:'정정 요청서', client:'한빛무역', box:'수신문서함', date:'2026-04-17 10:15', status:'미확인',
+      memo:'화주가 수신한 B/L 정정 요청 문서입니다. 요청 항목을 검토한 뒤 정정 화면으로 연계할 수 있습니다.'
+    }
+  },
+  error: {
+    label: '오류문서함',
+    summary: [
+      ['임시저장 문서','14'],
+      ['금일 발송 문서','9'],
+      ['확인 필요 수신문서','3']
+    ],
+    rows: [
+      ['ERR-2026-0417-003','D/O 전송문서','미르전자','2026-04-17 16:10','오류','재처리'],
+      ['ERR-2026-0417-004','Original House B/L','오사카파트너스','2026-04-17 16:45','오류','재처리']
+    ],
+    detail: {
+      no:'ERR-2026-0417-003', type:'D/O 전송문서', client:'미르전자', box:'오류문서함', date:'2026-04-17 16:10', status:'오류',
+      memo:'전송 중 오류가 발생한 문서입니다. 오류 사유 확인 후 재처리 또는 문서함 이동이 가능합니다.'
+    }
+  }
+};
+
+function buildDocumentArchivePlaceholderPanel(activeTab = 'temp') {
+  return `
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>문서함</h2>
+          <p>문서함 내용은 삭제된 상태입니다.</p>
+        </div>
+      </div>
+      <div class="empty-state" style="padding:48px 20px;text-align:center;color:#64748b;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;">
+        표시할 문서함 내용이 없습니다.
+      </div>
+    </div>
+  `;
+}
+
+function switchDocArchiveTab(tabKey) {
+  buildDocArchiveTabInPlace(tabKey);
+}
+
+function switchDocArchiveSelect(label) {
+  const map = {
+    '임시문서함':'temp',
+    '발신문서함':'sent',
+    '수신문서함':'recv',
+    '오류문서함':'error'
+  };
+  buildDocArchiveTabInPlace(map[label] || 'temp');
+}
+
+function buildDocArchiveTabInPlace(tabKey) {
+  const root = document.getElementById('docArchiveRoot');
+  if (root) root.outerHTML = `<div id="docArchiveRoot">${buildDocumentArchivePlaceholderPanel(tabKey)}</div>`;
+}
+
+
+
+/* ===== transport community shared assets ===== */
+var __transportCommunityAssetPromises = window.__transportCommunityAssetPromises || {};
+window.__transportCommunityAssetPromises = __transportCommunityAssetPromises;
+
+function clearTransportCommunitySavedState(){
+  try {
+    Object.keys(sessionStorage).forEach(function(key){
+      if (key.indexOf('TACS_TRANSPORT_VIEW_STATE__community__') === 0) {
+        sessionStorage.removeItem(key);
+      }
+    });
+  } catch (e) {}
+}
+clearTransportCommunitySavedState();
+
+function transportContextPath(){
+  if (window.contextPath) return window.contextPath;
+  const meta = document.querySelector('meta[name="ctx-path"]');
+  return meta && meta.content ? meta.content : '';
+}
+
+function loadTransportCommunityCss(href){
+  const base = transportContextPath();
+  const fullHref = base + href;
+  const key = 'css:' + href.split('?')[0];
+  if (document.querySelector('link[data-transport-community-asset="' + key + '"]')) return;
+  if (Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(link => (link.getAttribute('href') || '').indexOf(href.split('?')[0]) > -1)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = fullHref;
+  link.dataset.transportCommunityAsset = key;
+  document.head.appendChild(link);
+}
+
+function loadTransportCommunityScript(src, readyCheck){
+  if (typeof readyCheck === 'function' && readyCheck()) return Promise.resolve();
+  const key = src.split('?')[0];
+  if (__transportCommunityAssetPromises[key]) return __transportCommunityAssetPromises[key];
+  const existing = Array.from(document.querySelectorAll('script[src]')).find(script => (script.getAttribute('src') || '').indexOf(key) > -1);
+  if (existing) {
+    __transportCommunityAssetPromises[key] = new Promise(function(resolve){
+      if (typeof readyCheck === 'function' && readyCheck()) {
+        resolve();
+        return;
+      }
+
+      let attempts = 0;
+      const done = function(){
+        resolve();
+      };
+      const waitUntilReady = function(){
+        if (typeof readyCheck !== 'function' || readyCheck() || attempts++ > 50) {
+          resolve();
+          return;
+        }
+        setTimeout(waitUntilReady, 40);
+      };
+
+      existing.addEventListener('load', done, { once: true });
+      existing.addEventListener('error', done, { once: true });
+      waitUntilReady();
+    });
+    return __transportCommunityAssetPromises[key];
+  }
+  __transportCommunityAssetPromises[key] = new Promise(function(resolve){
+    const script = document.createElement('script');
+    script.src = transportContextPath() + src;
+    script.async = false;
+    script.onload = resolve;
+    script.onerror = function(){
+      console.error('운송담당자 커뮤니티 공통 스크립트 로드 실패:', src);
+      resolve();
+    };
+    document.head.appendChild(script);
+  });
+  return __transportCommunityAssetPromises[key];
+}
+
+function ensureTransportCommunityAssets(){
+loadTransportCommunityCss('/resources/css/transport/pages/community.css?v=20260506-community-fix5');
+  loadTransportCommunityCss('/resources/css/common/resourceArchive.css?v=20260506-community-fix5');
+  return Promise.all([
+    loadTransportCommunityScript('/resources/js/common/notice.js?v=20260506-community-fix5', function(){ return typeof window.initCommonNotice === 'function'; }),
+    loadTransportCommunityScript('/resources/js/common/faq.js?v=20260506-community-fix5', function(){ return typeof window.initCommonFaq === 'function'; }),
+    loadTransportCommunityScript('/resources/js/common/resourceArchive.js?v=20260506-community-fix5', function(){ return !!window.TacsResourceArchive; })
+  ]);
+}
+
+function getTransportCommunityTargetByItem(itemId){
+  if (itemId === 'TACS-CM-003') return 'download';
+  if (itemId === 'TACS-CM-004') return 'cs';
+  return 'notice';
+}
+
+function getTransportCommunityItemByTarget(target){
+  const itemMap = { notice: 'TACS-CM-001', download: 'TACS-CM-003', cs: 'TACS-CM-004' };
+  return itemMap[target] || itemMap.notice;
+}
+
+function mountTransportNoticePanel(){
+  const panel = document.getElementById('cm-notice');
+  if (!panel) return;
+  ensureTransportCommunityAssets().then(function(){
+    if (typeof window.initCommonNotice === 'function') window.initCommonNotice();
+    else if (typeof window.renderNoticeList === 'function') window.renderNoticeList();
+  });
+}
+
+function buildTransportFaqShell(){
+  return ''
+      + '<div class="section-card overflow-hidden bg-white">'
+      + '  <div class="p-6" data-faq-root>'
+      + '    <div class="tacs-faq-info-bar"><span class="material-symbols-outlined" style="font-size:18px">support_agent</span> 자주 묻는 질문(FAQ)을 확인하실 수 있습니다.</div>'
+      + '    <div id="faq-container" class="tacs-faq-container"></div>'
+      + '    <div id="faq-pagination" class="tacs-faq-pagination"></div>'
+      + '  </div>'
+      + '</div>';
+}
+
+function mountTransportFaqPanel(){
+  const panel = document.getElementById('cm-cs');
+  if (!panel) return;
+  const template = document.getElementById('transport-faq-template');
+  if (template && panel.dataset.templateLoaded !== 'Y') {
+    panel.innerHTML = template.innerHTML;
+    panel.dataset.templateLoaded = 'Y';
+  } else if (!panel.querySelector('[data-faq-root], #faq-container, .tacs-faq-container')) {
+    panel.innerHTML = buildTransportFaqShell();
+    panel.dataset.templateLoaded = 'Y';
+  }
+  ensureTransportCommunityAssets().then(function(){
+    if (typeof window.renderFaqList === 'function') {
+      window.renderFaqList(1);
+    } else if (typeof window.initCommonFaq === 'function') {
+      window.initCommonFaq();
+    } else {
+      bootTransportFaqPanel();
+    }
+  });
+}
+
+function bootTransportFaqPanel(attempt){
+  const panel = document.getElementById('cm-cs');
+  if (!panel) return;
+
+  attempt = attempt || 0;
+  if (typeof window.initCommonFaq === 'function') {
+    window.initCommonFaq();
+    return; // Stop retrying if initialized
+  }
+
+  if (attempt >= 20) return;
+
+  setTimeout(function(){
+    bootTransportFaqPanel(attempt + 1);
+  }, 100);
+}
+
+function buildTransportResourceArchiveShell(){
+  return ''
+      + '<div class="section-card overflow-hidden bg-white">'
+      + '  <div class="bg-on-primary-fixed px-6 py-4 flex justify-between items-center">'
+      + '    <h4 class="text-sm font-bold text-white">자료실</h4>'
+      + '    <div class="info-chip bg-white !text-slate-700">공통 자료 보관소</div>'
+      + '  </div>'
+      + '  <div class="p-6">'
+      + '    <div class="resource-archive-wrap" data-context-path="' + transportContextPath() + '">'
+      + '      <div class="resource-archive-toolbar">'
+      + '        <select id="res-archive-doc-ty" title="문서 유형">'
+      + '          <option value="all">전체 유형</option>'
+      + '          <option value="INVOICE">송장</option>'
+      + '          <option value="PACKING_LIST">포장명세서</option>'
+      + '          <option value="BL">선하증권</option>'
+      + '          <option value="IMPORT_DECL">수입신고서</option>'
+      + '          <option value="EXPORT_DECL">수출신고서</option>'
+      + '          <option value="MANUAL">매뉴얼</option>'
+      + '          <option value="ETC">기타</option>'
+      + '        </select>'
+      + '        <input id="res-archive-from" type="date" title="시작일">'
+      + '        <span class="resource-archive-sep">~</span>'
+      + '        <input id="res-archive-to" type="date" title="종료일">'
+      + '        <input id="res-archive-keyword" type="text" placeholder="자료명 또는 파일명 검색" style="width: 100px;">'
+      + '        <button type="button" id="res-archive-search-btn">조회</button>'
+      + '      </div>'
+      + '      <table class="resource-archive-table">'
+      + '        <thead>'
+      + '          <tr>'
+      + '            <th>자료명</th>'
+      + '            <th style="width:130px">유형</th>'
+      + '            <th style="width:180px">파일명</th>'
+      + '            <th style="width:100px">용량</th>'
+      + '            <th style="width:120px">등록일</th>'
+      + '            <th style="width:100px">다운로드</th>'
+      + '          </tr>'
+      + '        </thead>'
+      + '        <tbody id="res-archive-tbody">'
+      + '          <tr><td colspan="6" class="resource-archive-empty">자료를 조회 중입니다.</td></tr>'
+      + '        </tbody>'
+      + '      </table>'
+      + '    </div>'
+      + '  </div>'
+      + '</div>';
+}
+
+function mountTransportResourceArchivePanel(){
+  const panel = document.getElementById('cm-download');
+  if (!panel) return;
+  const template = document.getElementById('transport-resource-archive-template');
+  if (template && panel.dataset.templateLoaded !== 'Y') {
+    panel.innerHTML = template.innerHTML;
+    panel.dataset.templateLoaded = 'Y';
+  } else if (!panel.querySelector('.resource-archive-wrap')) {
+    panel.innerHTML = buildTransportResourceArchiveShell();
+    panel.dataset.templateLoaded = 'Y';
+  }
+  ensureTransportCommunityAssets().then(function(){
+    if (window.TacsResourceArchive) {
+      window.TacsResourceArchive.bind();
+      window.TacsResourceArchive.load();
+    }
+  });
+}
+
+function buildCommunityNoticePanel() {
+  return `
+    <div class="space-y-6">
+      <div class="section-card overflow-hidden">
+        <div class="bg-on-primary-fixed px-6 py-4 flex justify-between items-center">
+          <div>
+            <h4 class="text-sm font-bold text-white">공지사항</h4>          </div>
+          <div class="info-chip bg-white !text-slate-700">관리자 게시글 전용</div>
+        </div>
+        <div class="p-6 space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div><label class="field-label">공지구분</label><select class="field-select"><option>전체</option><option>긴급</option><option>업데이트</option><option>공지</option></select></div>
+            <div><label class="field-label">제목 검색</label><input class="field-input" type="text" placeholder="제목 입력" /></div>
+            <div><label class="field-label">등록기간</label><input class="field-input" type="date" /></div>
+            <div class="flex items-end"><button class="px-4 py-2 bg-primary text-on-primary text-xs font-bold hover:bg-primary-dim">조회</button></div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full tbl">
+              <thead>
+                <tr><th>제목</th><th>작성자</th><th>등록일시</th><th>첨부</th><th>조회수</th></tr>
+              </thead>
+              <tbody class="text-sm text-slate-700">
+                <tr>
+                  <td class="font-bold">[필독] 운송담당자 화면 기능 개선 안내</td>
+                  <td>시스템관리자</td>
+                  <td>2026-04-18 09:20</td>
+                  <td>1건</td>
+                  <td>128</td>
+                </tr>
+                <tr>
+                  <td class="font-bold">4월 수입 반출 마감시간 운영 공지</td>
+                  <td>운영관리자</td>
+                  <td>2026-04-17 14:10</td>
+                  <td>2건</td>
+                  <td>86</td>
+                </tr>
+                <tr>
+                  <td class="font-bold">주말 시스템 점검 안내 및 서비스 영향 범위</td>
+                  <td>관리자</td>
+                  <td>2026-04-16 16:00</td>
+                  <td>1건</td>
+                  <td>43</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildCommunityBoardPanel() {
+  return `
+    <div class="space-y-6">
+      <div class="section-card overflow-hidden">
+        <div class="bg-on-primary-fixed px-6 py-4 flex justify-between items-center">
+          <div>
+            <h4 class="text-sm font-bold text-white">게시판</h4>          </div>
+          <button class="px-4 py-2 bg-white text-slate-700 text-xs font-bold">글쓰기</button>
+        </div>
+        <div class="p-6 space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div><label class="field-label">카테고리</label><select class="field-select"><option>전체</option><option>업무공유</option><option>질문답변</option><option>자유게시글</option></select></div>
+            <div><label class="field-label">작성자</label><input class="field-input" type="text" placeholder="작성자 검색" /></div>
+            <div><label class="field-label">제목</label><input class="field-input" type="text" placeholder="제목 검색" /></div>
+            <div class="flex items-end"><button class="px-4 py-2 bg-primary text-on-primary text-xs font-bold hover:bg-primary-dim">검색</button></div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full tbl">
+              <thead>
+                <tr><th>카테고리</th><th>제목</th><th>작성자</th><th>등록일</th><th>조회수</th><th>댓글</th></tr>
+              </thead>
+              <tbody class="text-sm text-slate-700">
+                <tr><td><span class="info-chip">업무공유</span></td><td class="font-bold">인천항 반출 시 D/O 확인 팁 공유합니다</td><td>박운송</td><td>2026-04-18</td><td>42</td><td>5</td></tr>
+                <tr><td><span class="info-chip">질문답변</span></td><td class="font-bold">CY 반입완료 후 상태 공유 타이밍 문의</td><td>정물류</td><td>2026-04-18</td><td>31</td><td>7</td></tr>
+                <tr><td><span class="info-chip">자유게시글</span></td><td class="font-bold">신규 운송담당자 교육자료 추천 부탁드립니다</td><td>김초보</td><td>2026-04-17</td><td>18</td><td>4</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="section-card p-5 border border-slate-200">
+            <div class="flex items-start justify-between gap-4 mb-4">
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildCommunityLibraryPanel() {
+  return `
+    <div class="space-y-6">
+      <div class="section-card overflow-hidden">
+        <div class="bg-on-primary-fixed px-6 py-4 flex justify-between items-center">
+          <div>
+            <h4 class="text-sm font-bold text-white">자료실</h4>
+          </div>
+          <div class="info-chip bg-white !text-slate-700">파일 다운로드 가능</div>
+        </div>
+        <div class="p-6 space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div><label class="field-label">자료구분</label><select class="field-select"><option>전체</option><option>매뉴얼</option><option>업무서식</option><option>교육자료</option></select></div>
+            <div><label class="field-label">자료명</label><input class="field-input" type="text" placeholder="자료명 검색" /></div>
+            <div><label class="field-label">등록부서</label><input class="field-input" type="text" placeholder="등록부서 검색" /></div>
+            <div class="flex items-end"><button class="px-4 py-2 bg-primary text-on-primary text-xs font-bold hover:bg-primary-dim">조회</button></div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full tbl">
+              <thead>
+                <tr><th>자료구분</th><th>자료명</th><th>등록부서</th><th>등록일</th><th>파일명</th><th>다운로드</th></tr>
+              </thead>
+              <tbody class="text-sm text-slate-700">
+                <tr><td><span class="info-chip">매뉴얼</span></td><td class="font-bold">운송담당자 업무 매뉴얼 v2.1</td><td>운영지원팀</td><td>2026-04-18</td><td>transport_manual_v2.1.pdf</td><td><button class="px-3 py-1 bg-slate-800 text-white text-xs font-bold">다운로드</button></td></tr>
+                <tr><td><span class="info-chip">업무서식</span></td><td class="font-bold">반출 확인 체크리스트 양식</td><td>시스템관리팀</td><td>2026-04-15</td><td>checklist_form.xlsx</td><td><button class="px-3 py-1 bg-slate-800 text-white text-xs font-bold">다운로드</button></td></tr>
+                <tr><td><span class="info-chip">교육자료</span></td><td class="font-bold">신규 담당자 교육 자료</td><td>교육운영팀</td><td>2026-04-12</td><td>onboarding_guide.pptx</td><td><button class="px-3 py-1 bg-slate-800 text-white text-xs font-bold">다운로드</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-50 border border-slate-200 p-4"><p class="text-[11px] font-bold text-slate-500 uppercase mb-2">최근 업로드</p><p class="font-black text-slate-900">8건</p></div>
+            <div class="bg-slate-50 border border-slate-200 p-4"><p class="text-[11px] font-bold text-slate-500 uppercase mb-2">다운로드 가능</p><p class="font-black text-slate-900">전체 파일</p></div>
+            <div class="bg-slate-50 border border-slate-200 p-4"><p class="text-[11px] font-bold text-slate-500 uppercase mb-2">업데이트 주기</p><p class="font-black text-slate-900">주간 반영</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildCommunitySupportPanel() {
+  return buildTransportFaqShell();
+}
+
+function buildMyPageProfilePanel() {
+  return `
+    <div class="space-y-6">
+      <div class="section-card overflow-hidden">
+        <div class="bg-on-primary-fixed px-6 py-4 flex justify-between items-center">
+          <div>
+            <h4 class="text-sm font-bold text-white">마이페이지</h4>          </div>
+          <button class="px-4 py-2 bg-white text-slate-700 text-xs font-bold">저장</button>
+        </div>
+        <div class="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-4 section-card border border-slate-200 p-6 bg-slate-50">
+            <div class="flex flex-col items-center text-center">
+              <div class="w-20 h-20 bg-primary text-on-primary flex items-center justify-center text-3xl font-black">홍</div>
+              <h5 class="mt-4 text-lg font-black text-slate-900">홍길동</h5>
+              <p class="text-sm text-slate-500">운송담당자 / 수입운영팀</p>
+              <div class="mt-4 w-full space-y-3 text-left">
+                <div class="bg-white border border-slate-200 p-3"><p class="text-[10px] font-bold text-slate-500 uppercase">사번</p><p class="font-semibold text-slate-800">TR-240418</p></div>
+                <div class="bg-white border border-slate-200 p-3"><p class="text-[10px] font-bold text-slate-500 uppercase">권한</p><p class="font-semibold text-slate-800">운송담당자</p></div>
+                <div class="bg-white border border-slate-200 p-3"><p class="text-[10px] font-bold text-slate-500 uppercase">최근 로그인</p><p class="font-semibold text-slate-800">2026-04-18 09:12</p></div>
+              </div>
+            </div>
+          </div>
+          <div class="lg:col-span-8 section-card border border-slate-200">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+              <h5 class="text-sm font-bold text-slate-900">개인정보관리</h5>
+            </div>
+            <div class="p-6 space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div><label class="field-label">이름</label><input class="field-input" type="text" value="홍길동" /></div>
+                <div><label class="field-label">직책</label><input class="field-input" type="text" value="대리" /></div>
+                <div><label class="field-label">부서</label><input class="field-input" type="text" value="수입운영팀" /></div>
+                <div><label class="field-label">연락처</label><input class="field-input" type="text" value="010-2222-3333" /></div>
+                <div><label class="field-label">이메일</label><input class="field-input" type="email" value="transport.manager@tacs.co.kr" /></div>
+                <div><label class="field-label">전자서명 표시명</label><input class="field-input" type="text" value="홍길동 / 운송담당자" /></div>
+              </div>
+              <div>
+                <h5 class="text-[11px] font-black uppercase tracking-widest mb-4 border-l-4 border-slate-700 pl-3 text-slate-700">비밀번호 변경</h5>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div><label class="field-label">현재 비밀번호</label><input class="field-input" type="password" /></div>
+                  <div><label class="field-label">새 비밀번호</label><input class="field-input" type="password" /></div>
+                  <div><label class="field-label">새 비밀번호 확인</label><input class="field-input" type="password" /></div>
+                </div>
+              </div>
+              <div>
+                <label class="field-label">비고</label>
+                <textarea class="field-textarea h-24" placeholder="개인 설정 메모"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildMyPageNotificationPanel() {
+  return `
+    <div class="space-y-6">
+      <div class="section-card overflow-hidden">
+        <div class="bg-on-primary-fixed px-6 py-4 flex justify-between items-center">
+          <div>
+            <h4 class="text-sm font-bold text-white">마이페이지</h4>          </div>
+          <button class="px-4 py-2 bg-white text-slate-700 text-xs font-bold">설정 저장</button>
+        </div>
+        <div class="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-8 section-card border border-slate-200 overflow-hidden">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+              <h5 class="text-sm font-bold text-slate-900">알림수신 설정</h5>
+            </div>
+            <div class="p-6 space-y-5">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="bg-slate-50 border border-slate-200 p-4 flex items-center justify-between"><div><p class="font-bold text-slate-900">ETA 변경 알림</p><p class="text-xs text-slate-500 mt-1">입항 예정일 변경 시 알림</p></div><label><input type="checkbox" checked /></label></div>
+                <div class="bg-slate-50 border border-slate-200 p-4 flex items-center justify-between"><div><p class="font-bold text-slate-900">도착통지 알림</p><p class="text-xs text-slate-500 mt-1">도착통지 등록 시 알림</p></div><label><input type="checkbox" checked /></label></div>
+                <div class="bg-slate-50 border border-slate-200 p-4 flex items-center justify-between"><div><p class="font-bold text-slate-900">반입완료 알림</p><p class="text-xs text-slate-500 mt-1">CY/CFS 반입완료 상태 알림</p></div><label><input type="checkbox" checked /></label></div>
+                <div class="bg-slate-50 border border-slate-200 p-4 flex items-center justify-between"><div><p class="font-bold text-slate-900">D/O 발급 알림</p><p class="text-xs text-slate-500 mt-1">발급 확인 시 알림</p></div><label><input type="checkbox" /></label></div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div><label class="field-label">알림 수신 채널</label><select class="field-select"><option>시스템 알림</option><option>이메일</option><option>문자</option><option>복수 채널</option></select></div>
+                <div><label class="field-label">기본 시작 화면</label><select class="field-select"><option>대시보드</option><option>수입운송</option><option>커뮤니티</option><option>마이페이지</option></select></div>
+                <div><label class="field-label">테마 설정</label><select class="field-select"><option>기본</option><option>밝은 테마</option><option>고대비</option></select></div>
+              </div>
+            </div>
+          </div>
+          <div class="lg:col-span-4 section-card border border-slate-200 p-6 bg-slate-50">
+            <h5 class="text-sm font-bold text-slate-900 mb-4">현재 알림 요약</h5>
+            <div class="space-y-4 text-sm">
+              <div class="bg-white border border-slate-200 p-4"><p class="text-[10px] font-bold text-slate-500 uppercase">시스템 알림</p><p class="font-semibold text-slate-800 mt-1">사용 중</p></div>
+              <div class="bg-white border border-slate-200 p-4"><p class="text-[10px] font-bold text-slate-500 uppercase">이메일 연동</p><p class="font-semibold text-slate-800 mt-1">transport.manager@tacs.co.kr</p></div>
+              <div class="bg-white border border-slate-200 p-4"><p class="text-[10px] font-bold text-slate-500 uppercase">긴급 알림</p><p class="font-semibold text-slate-800 mt-1">ETA 변경 / 반입완료</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildMyPageActivityPanel() {
+  return `
+    <div class="space-y-6">
+      <div class="section-card overflow-hidden">
+        <div class="bg-on-primary-fixed px-6 py-4 flex justify-between items-center">
+          <div>
+            <h4 class="text-sm font-bold text-white">마이페이지</h4>          </div>
+          <button class="px-4 py-2 bg-white text-slate-700 text-xs font-bold">엑셀 다운로드</button>
+        </div>
+        <div class="p-6 space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div><label class="field-label">기간</label><input class="field-input" type="date" /></div>
+            <div><label class="field-label">활동구분</label><select class="field-select"><option>전체</option><option>업무 처리</option><option>게시글 작성</option><option>문의 등록</option></select></div>
+            <div><label class="field-label">상태</label><select class="field-select"><option>전체</option><option>처리완료</option><option>처리중</option><option>대기</option></select></div>
+            <div class="flex items-end"><button class="px-4 py-2 bg-primary text-on-primary text-xs font-bold hover:bg-primary-dim">조회</button></div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-50 border border-slate-200 p-4"><p class="text-[11px] font-bold text-slate-500 uppercase mb-2">이번 주 처리건</p><p class="text-2xl font-black text-slate-900">18</p></div>
+            <div class="bg-slate-50 border border-slate-200 p-4"><p class="text-[11px] font-bold text-slate-500 uppercase mb-2">작성 게시글</p><p class="text-2xl font-black text-slate-900">4</p></div>
+            <div class="bg-slate-50 border border-slate-200 p-4"><p class="text-[11px] font-bold text-slate-500 uppercase mb-2">업무 확인</p><p class="text-2xl font-black text-slate-900">2</p></div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full tbl">
+              <thead><tr><th>일시</th><th>활동구분</th><th>제목</th><th>관련번호</th><th>처리상태</th></tr></thead>
+              <tbody class="text-sm text-slate-700">
+                <tr><td>2026-04-18 10:12</td><td>업무 처리</td><td>수입운송 의뢰 접수 검토</td><td>IMP-2026-0418-002</td><td><span class="info-chip">처리완료</span></td></tr>
+                <tr><td>2026-04-18 09:40</td><td>게시글 작성</td><td>인천항 반출 시 D/O 확인 팁 공유합니다</td><td>COMM-148</td><td><span class="info-chip">처리완료</span></td></tr>
+                <tr><td>2026-04-17 17:23</td><td>업무 처리</td><td>반입완료 상태 공유 기준 확인</td><td>TACS-FW-044</td><td><span class="info-chip">처리중</span></td></tr>
+                <tr><td>2026-04-17 15:15</td><td>업무 처리</td><td>상태변경 알림 발송</td><td>TACS-FW-043</td><td><span class="info-chip">대기</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+
+
+function buildBrokerCommunityPanel(){
+  clearTransportCommunitySavedState();
+  ensureTransportCommunityAssets();
+  return `
+<div class="broker-scope transport-community-scope">
+  <div class="page active" id="pg-community">
+    <div class="breadcrumb"><span onclick="go('dash')">Home</span><span class="sep">›</span><span>커뮤니티</span></div>
+    <div class="sub-page">
+      <h2><span class="material-symbols-outlined">forum</span> 커뮤니티</h2>
+      <div class="sub-tabs" id="tabs-cm">
+        <button type="button" class="sub-tab active" onclick="cTab('cm','notice')">공지사항</button>
+        <button type="button" class="sub-tab" onclick="cTab('cm','download')">자료실</button>
+        <button type="button" class="sub-tab" onclick="cTab('cm','cs')">고객센터</button>
+      </div>
+
+      <div id="cm-notice">
+        <div class="alert-bar info"><span class="material-symbols-outlined" style="font-size:18px">campaign</span> TACS 시스템 공지사항 및 운송 업무 안내를 확인하세요.</div>
+      </div>
+
+      <div id="cm-download" style="display:none"></div>
+
+      <div id="cm-cs" style="display:none">
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+function buildBrokerMyPagePanel(){
+  return "<div class=\"broker-scope\">\n<div class=\"page active\" id=\"pg-mypage\">\n<div class=\"breadcrumb\"><span onclick=\"go('dash')\">Home</span><span class=\"sep\">›</span><span>마이페이지</span></div>\n<div class=\"sub-page\">\n<h2><span class=\"material-symbols-outlined\">person</span> 마이페이지</h2>\n<div class=\"sub-tabs\" id=\"tabs-my\">\n<button class=\"sub-tab active\" onclick=\"cTab('my','profile')\">개인정보 관리</button>\n</div>\n\n<!-- 개인정보 관리 -->\n<div id=\"my-profile\">\n<div class=\"profile-card\">\n  <div class=\"profile-avatar\">김</div>\n  <div class=\"profile-info\">\n    <h3>운송담당자 김운송</h3>\n    <div class=\"role-tag\">TACS 운송관리팀 · 담당자번호 TR-20241</div>\n    <div class=\"profile-meta\">\n      <div>아이디: <span>kimtr</span></div>\n      <div>이메일: <span>kimtr@transport.com</span></div>\n      <div>연락처: <span>032-123-4567</span></div>\n      <div>소속: <span>노태호 운송관리팀</span></div>\n      <div>가입일: <span>2024-01-15</span></div>\n      <div>최근 로그인: <span id=\"lastLogin\">2026-04-17 09:32</span></div>\n    </div>\n  </div>\n</div>\n\n<div class=\"edit-form\">\n  <h4><span class=\"material-symbols-outlined\" style=\"font-size:18px;color:#565e74\">edit</span> 기본정보 수정</h4>\n  <div class=\"form-grid\">\n    <div class=\"form-item\"><label>이름 <span class=\"req\">*</span></label><input type=\"text\" value=\"김운송\"></div>\n    <div class=\"form-item\"><label>연락처 <span class=\"req\">*</span></label><input type=\"tel\" value=\"032-123-4567\"></div>\n    <div class=\"form-item\"><label>이메일 <span class=\"req\">*</span></label><input type=\"email\" value=\"kimtr@transport.com\"></div>\n    <div class=\"form-item\"><label>휴대폰 <span class=\"req\">*</span></label><input type=\"tel\" value=\"010-1234-5678\"></div>\n    <div class=\"form-item full\"><label>주소</label>\n      <div style=\"display:flex;gap:8px\">\n        <input type=\"text\" value=\"21547\" style=\"width:100px\">\n        <button class=\"btn btn-secondary\" style=\"padding:8px 12px;font-size:11px\">우편번호</button>\n        <input type=\"text\" value=\"인천광역시 남동구 관세로 123\" style=\"flex:1\">\n      </div>\n    </div>\n  </div>\n\n  <h4 style=\"margin-top:24px\"><span class=\"material-symbols-outlined\" style=\"font-size:18px;color:#9f403d\">lock</span> 비밀번호 변경</h4>\n  <div class=\"form-grid\">\n    <div class=\"form-item\"><label>현재 비밀번호 <span class=\"req\">*</span></label><input type=\"password\" placeholder=\"현재 비밀번호\"></div>\n    <div class=\"form-item\"><label>새 비밀번호 <span class=\"req\">*</span></label><input type=\"password\" placeholder=\"8자 이상, 영문+숫자+특수문자\"></div>\n    <div class=\"form-item\"><label>새 비밀번호 확인 <span class=\"req\">*</span></label><input type=\"password\" placeholder=\"새 비밀번호 재입력\"></div>\n  </div>\n\n  <div class=\"btn-row\" style=\"margin-top:20px;justify-content:flex-end\">\n    <button class=\"btn btn-secondary\" onclick=\"alert('변경사항이 초기화되었습니다.')\">초기화</button>\n    <button class=\"btn btn-primary\" onclick=\"alert('✅ 개인정보가 저장되었습니다.')\"><span class=\"material-symbols-outlined\" style=\"font-size:14px\">save</span> 저장</button>\n  </div>\n</div>\n</div>\n\n<!-- 알림 수신 설정 -->\n<div id=\"my-noti\" style=\"display:none\">\n<div class=\"noti-setting\">\n  <h4 class=\"noti-section-title\"><span class=\"material-symbols-outlined\" style=\"font-size:18px;color:#565e74\">notifications_active</span> 업무 알림</h4>\n  <div class=\"noti-row\">\n    <div class=\"noti-left\"><div class=\"noti-title\">신규 의뢰 접수 알림</div><div class=\"noti-desc\">화주가 새로운 운송 의뢰를 등록했을 때 알림</div></div>\n    <label class=\"toggle-switch\"><input type=\"checkbox\" checked><span class=\"toggle-track\"></span></label>\n  </div>\n  <div class=\"noti-row\">\n    <div class=\"noti-left\"><div class=\"noti-title\">서류 보완 요청 알림</div><div class=\"noti-desc\">행정공무원 또는 창고관리자가 운송 관련 보완을 요청했을 때 알림</div></div>\n    <label class=\"toggle-switch\"><input type=\"checkbox\" checked><span class=\"toggle-track\"></span></label>\n  </div>\n  <div class=\"noti-row\">\n    <div class=\"noti-left\"><div class=\"noti-title\">신고 수리/반려 결과 알림</div><div class=\"noti-desc\">적하목록 제출 후 행정공무원의 승인·반려 결과 알림</div></div>\n    <label class=\"toggle-switch\"><input type=\"checkbox\" checked><span class=\"toggle-track\"></span></label>\n  </div>\n  <div class=\"noti-row\">\n    <div class=\"noti-left\"><div class=\"noti-title\">반입/반출 결과 알림</div><div class=\"noti-desc\">창고관리자의 보세구역 반입·반출 승인 및 완료 알림</div></div>\n    <label class=\"toggle-switch\"><input type=\"checkbox\" checked><span class=\"toggle-track\"></span></label>\n  </div>\n  <div class=\"noti-row\">\n    <div class=\"noti-left\"><div class=\"noti-title\">적하목록 제출/심사 결과 알림</div><div class=\"noti-desc\">행정공무원에게 제출한 적하목록 심사 진행상태 알림</div></div>\n    <label class=\"toggle-switch\"><input type=\"checkbox\" checked><span class=\"toggle-track\"></span></label>\n  </div>\n  <div class=\"noti-row\">\n    <div class=\"noti-left\"><div class=\"noti-title\">D/O 발급·전달 알림</div><div class=\"noti-desc\">D/O 발급 및 전달 처리 상태가 변경되었을 때 알림</div></div>\n    <label class=\"toggle-switch\"><input type=\"checkbox\" checked><span class=\"toggle-track\"></span></label>\n  </div>\n\n  <h4 class=\"noti-section-title\" style=\"margin-top:16px\"><span class=\"material-symbols-outlined\" style=\"font-size:18px;color:#565e74\">sms</span> 수신 채널</h4>\n  <div class=\"noti-row noti-row-wide\">\n    <div class=\"noti-left\"><div class=\"noti-title\">SMS 알림</div><div class=\"noti-desc\">등록된 휴대폰(010-1234-5678)으로 운송 업무 알림 수신</div></div>\n    <label class=\"toggle-switch\"><input type=\"checkbox\" checked><span class=\"toggle-track\"></span></label>\n  </div>\n\n  <div class=\"btn-row noti-row-wide\" style=\"margin-top:20px;justify-content:flex-end\">\n    <button class=\"btn btn-primary\" onclick=\"alert('✅ 알림 설정이 저장되었습니다.')\"><span class=\"material-symbols-outlined\" style=\"font-size:14px\">save</span> 알림 설정 저장</button>\n  </div>\n</div>\n</div>\n\n</div>\n</div>\n</div>";
+}
+function initBrokerCommunity(){
+  // 자료실 파일 검색 초기화
+  const fileSearch = document.getElementById('fileSearchInput');
+  if(fileSearch && !fileSearch.dataset.bound){
+    fileSearch.dataset.bound = '1';
+    fileSearch.addEventListener('input', function(){ filterFile(this.value); });
+  }
+}
+function openTransportResourceArchivePage(){
+  mountTransportResourceArchivePanel();
+}
+function cTab(prefix, target){
+  const root = document.querySelector('.broker-scope') || document;
+
+  root.querySelectorAll('[id^="' + prefix + '-"]').forEach(function(panel){
+    panel.style.display = panel.id === prefix + '-' + target ? 'block' : 'none';
+  });
+
+  const tabs = root.querySelectorAll('#tabs-' + prefix + ' .sub-tab');
+  tabs.forEach(function(tab){ tab.classList.remove('active'); });
+
+  const activeTab = Array.from(tabs).find(function(tab) {
+    return (tab.getAttribute('onclick') || '').indexOf("'" + target + "'") > -1;
+  });
+  if (activeTab) activeTab.classList.add('active');
+
+  if (prefix === 'cm') {
+    syncTransportCommunityTab(target);
+    if (target === 'notice') mountTransportNoticePanel();
+    if (target === 'download') mountTransportResourceArchivePanel();
+    if (target === 'cs') {
+      mountTransportFaqPanel();
+    }
+  }
+}
+
+function syncTransportCommunityTab(target) {
+  const itemMap = { notice: 'TACS-CM-001', download: 'TACS-CM-003', cs: 'TACS-CM-004' };
+  const item = itemMap[target] || itemMap.notice;
+  document.querySelectorAll('.menu-item').forEach(function(menu) {
+    menu.classList.toggle('active', menu.dataset.group === 'community');
+  });
+  document.querySelectorAll('.sub-item').forEach(function(sub) {
+    sub.classList.toggle('active-sub', sub.dataset.group === 'community' && sub.dataset.itemId === item);
+  });
+  document.querySelectorAll('.menu-group').forEach(function(wrap) {
+    const open = wrap.dataset.groupWrap === 'community';
+    const children = wrap.querySelector('.menu-children');
+    const arrow = wrap.querySelector('.menu-arrow');
+    if (children) children.classList.toggle('open', open);
+    if (arrow) arrow.classList.toggle('rotated', open);
+  });
+  window.TRANSPORT_INITIAL_VIEW = { group: 'community', item: item };
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState(null, '', (window.contextPath || '') + '/transport/community.do?page=' + encodeURIComponent(item));
+  }
+}
+function toggleFaq(el){
+  const answer = el.nextElementSibling;
+  if(!answer) return;
+  const opened = answer.style.display === 'block';
+  answer.style.display = opened ? 'none' : 'block';
+  const icon = el.querySelector('.material-icons');
+  if(icon) icon.textContent = opened ? 'expand_more' : 'expand_less';
+}
+
+function openFileDetail(title, type, desc){
+  const box = document.getElementById('fileDetail');
+  if(!box) return;
+  box.querySelector('[data-title]').textContent = title || '자료 상세';
+  box.querySelector('[data-type]').textContent = type || '-';
+  box.querySelector('[data-body]').textContent = desc || '업무 참고용 자료입니다.';
+  box.style.display = 'block';
+  box.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function closeFileDetail(){
+  const box = document.getElementById('fileDetail');
+  if(box) box.style.display = 'none';
+}
+function filterFile(keyword){
+  const q = (keyword || '').trim().toLowerCase();
+  document.querySelectorAll('.broker-scope .file-item').forEach(function(item){
+    item.style.display = item.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
+  });
+}
+function go(target){
+  if(target === 'dash' || target === 'dashboard'){
+    if(typeof setActiveGroup === 'function') setActiveGroup('dashboard');
+  }
+}
+var __transportCommunityBaseBuildDetailHtml = typeof buildDetailHtml === 'function' ? buildDetailHtml : null;
+buildDetailHtml = function(group, item){
+  if(item && ['TACS-CM-001','TACS-CM-003','TACS-CM-004'].includes(item.id)) return buildBrokerCommunityPanel();
+  if(item && item.id === 'TACS-MY-001') return buildBrokerMyPagePanel();
+  return __transportCommunityBaseBuildDetailHtml ? __transportCommunityBaseBuildDetailHtml(group, item) : '';
+};
+
+var __transportCommunityBaseOpenDetail = typeof openDetail === 'function' ? openDetail : null;
+openDetail = function(group, item){
+  const isCommunity = group === 'community' || ['TACS-CM-001','TACS-CM-003','TACS-CM-004'].includes(item);
+  const target = getTransportCommunityTargetByItem(item);
+  const body = document.getElementById('detail-body');
+
+  if (isCommunity && body && body.dataset.currentGroup === 'community' && (body.dataset.currentItem || '') === (item || '') && document.getElementById('pg-community')) {
+    cTab('cm', target);
+    return undefined;
+  }
+
+  if (isCommunity) clearTransportCommunitySavedState();
+  const result = __transportCommunityBaseOpenDetail ? __transportCommunityBaseOpenDetail(group, item) : undefined;
+  if(isCommunity) {
+    setTimeout(function(){
+      cTab('cm', target);
+      if (typeof initBrokerCommunity === 'function') initBrokerCommunity();
+    }, 0);
+  }
+  return result;
+};
+
+/* ===== 커뮤니티 공통 모듈 연동 보강 ===== */
+function filterFile(cat, btn){
+  openTransportResourceArchivePage();
+}
+
+function showFileDetail(idx){
+  openTransportResourceArchivePage();
+}
+
+function closeFileDetail(){ }
+
+var transportFileData = [];
+var brokerCommunityFiles = [];
+
+function wireBrokerFileItems(){ }
+function openFileDetail(idx){ openTransportResourceArchivePage(); }
+function searchFile(keyword){ openTransportResourceArchivePage(); }
+
+function initTransportCommunityCurrentTab(){
+  const current = window.TRANSPORT_INITIAL_VIEW || {};
+  if (current.group !== 'community') return;
+  const target = getTransportCommunityTargetByItem(current.item || 'TACS-CM-001');
+  if (document.getElementById('pg-community')) cTab('cm', target);
+}
+
+(function(){
+  const prevInitBrokerCommunity = typeof initBrokerCommunity === 'function' ? initBrokerCommunity : null;
+  initBrokerCommunity = function(){
+    if(prevInitBrokerCommunity) prevInitBrokerCommunity();
+    initTransportCommunityCurrentTab();
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    ensureTransportCommunityAssets().then(initTransportCommunityCurrentTab);
+  });
+
+  setTimeout(function(){
+    ensureTransportCommunityAssets().then(initTransportCommunityCurrentTab);
+  }, 0);
+})();
+
+(function bootTransportPage(){
+  window.TRANSPORT_PAGE_READY = window.TRANSPORT_PAGE_READY || {};
+  window.TRANSPORT_PAGE_READY.community = true;
+  if (window.TRANSPORT_DEFER_PAGE_BOOT) return;
+  clearTransportCommunitySavedState();
+  const initialBackBtn = document.getElementById('backBtn');
+  if (initialBackBtn && typeof showDashboard === 'function') initialBackBtn.onclick = showDashboard;
+  if (typeof autoBuildNav === 'function') autoBuildNav();
+  if (typeof openInitialTransportView === 'function') openInitialTransportView();
+})();

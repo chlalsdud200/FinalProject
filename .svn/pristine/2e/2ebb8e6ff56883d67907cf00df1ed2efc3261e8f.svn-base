@@ -1,0 +1,39 @@
+package kr.or.tacs.owner.transport.controller;
+
+import kr.or.tacs.dto.owner.OwnerFreightDTO;
+import kr.or.tacs.owner.transport.service.IFreightService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/owner/transport/freight")
+public class TransportFreightController {
+
+    @Autowired
+    private IFreightService freightService;
+
+    @GetMapping("/list.do")
+    public String retrieveFreightList(Model model) {
+
+        List<OwnerFreightDTO> freightDTO = freightService.retrieveFreightList();
+
+        model.addAttribute("freightList", freightDTO);
+
+        return "owner/transport/freightList";
+    }
+
+    @PostMapping("/update.do")
+    public String payFreight(OwnerFreightDTO freightDTO){
+        String tcsNo = freightDTO.getTcsNo();
+        freightService.setFreight(tcsNo);
+
+        return "redirect:/owner/transport/freight/list.do";
+    }
+}

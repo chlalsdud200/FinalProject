@@ -1,0 +1,242 @@
+package kr.or.tacs.transport.importp.mapper;
+
+import kr.or.tacs.vo.transport.TransportRequestVO;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+import java.util.Map;
+
+@Mapper
+// 수입운송 화면 전체에서 사용하는 MyBatis Mapper.
+public interface ImportTransportMapper {
+
+    List<TransportRequestVO> retriveImpTransportReqList(@Param("tmId") String tmId);
+
+    int updateImpTransportReqStatus(@Param("trcNo") String trcNo,
+                                    @Param("statusCd") String statusCd,
+                                    @Param("rejectType") String rejectType,
+                                    @Param("rejectMemo") String rejectMemo,
+                                    @Param("rejectReason") String rejectReason,
+                                    @Param("actorId") String actorId);
+
+    int ensureImpTransportFlowBase(@Param("trcNo") String trcNo);
+
+    int updateImpTransportReqDetail(@Param("trcNo") String trcNo,
+                                    @Param("buyerNm") String buyerNm,
+                                    @Param("buyerCountryCd") String buyerCountryCd,
+                                    @Param("transportMeanCd") String transportMeanCd,
+                                    @Param("transportTypeCd") String transportTypeCd,
+                                    @Param("incoTermsCd") String incoTermsCd,
+                                    @Param("deptPortCd") String deptPortCd,
+                                    @Param("arvlPortCd") String arvlPortCd,
+                                    @Param("itemCategory") String itemCategory,
+                                    @Param("requestCn") String requestCn);
+
+    List<Map<String, Object>> selectImportCountryList(@Param("keyword") String keyword);
+
+    // 포장명세서에서 추출한 원산지 국가명(예: THAILAND)을 COUNTRY 테이블의 국가코드(예: TH)로 변환한다.
+    String selectCountryCdByName(@Param("name") String name);
+
+    List<Map<String, Object>> selectImportPortList(@Param("keyword") String keyword);
+
+    int updateImpTransportReqMasterBl(@Param("trcNo") String trcNo,
+                                      @Param("mblNo") String mblNo);
+
+    int insertImportTransportReject(@Param("trcNo") String trcNo,
+                                    @Param("rejectReason") String rejectReason,
+                                    @Param("rejecterId") String rejecterId);
+
+    List<TransportRequestVO> retriveImpArrivalTrackingList(@Param("tmId") String tmId);
+
+    String selectImpArrivalNoticeTargetNo(@Param("reqNo") String reqNo);
+
+    int updateImpArrivalNoticeSent(@Param("reqNo") String reqNo,
+                                   @Param("arrivalEta") String arrivalEta);
+
+    String selectImpArrivalNoticeNo(@Param("reqNo") String reqNo);
+
+    int prepareImpWarehouseInAfterArrivalNotice(@Param("reqNo") String reqNo);
+
+    int updateImpArrivalTrackingStatus(@Param("reqNo") String reqNo,
+                                       @Param("currentLoc") String currentLoc,
+                                       @Param("arrivalStatusCd") String arrivalStatusCd);
+
+    List<TransportRequestVO> retriveImpUnloadingInList(@Param("tmId") String tmId);
+
+    TransportRequestVO selectImpUnloadingInDetail(@Param("wirNo") String wirNo);
+
+    List<TransportRequestVO> retriveImpUnloadingInGoodsList(@Param("ggNo") Integer ggNo);
+
+    List<TransportRequestVO> retriveImportWarehouseManagerList();
+
+    int insertImportSupplementRequest(@Param("refBizCd") String refBizCd,
+                                      @Param("refNo") String refNo,
+                                      @Param("senderId") String senderId,
+                                      @Param("senderTyCd") String senderTyCd,
+                                      @Param("receiverId") String receiverId,
+                                      @Param("receiverTyCd") String receiverTyCd,
+                                      @Param("suppTypeCd") String suppTypeCd,
+                                      @Param("suppReqCn") String suppReqCn);
+
+    int updateImpUnloadingInSupplementRequested(@Param("wirNo") String wirNo);
+
+    int updateImpReleaseSupplementRequested(@Param("releaseReqNo") String releaseReqNo);
+
+    int updateImpReleaseReqData(@Param("releaseReqNo") String releaseReqNo,
+                                @Param("trcNo") String trcNo,
+                                @Param("wmId") String wmId,
+                                @Param("wzNo") String wzNo,
+                                @Param("releaseReqDt") String releaseReqDt,
+                                @Param("releaseDt") String releaseDt,
+                                @Param("itemNm") String itemNm,
+                                @Param("remark") String remark);
+
+    int updateImpReleaseSupplementSubmitted(@Param("releaseReqNo") String releaseReqNo,
+                                            @Param("trcNo") String trcNo,
+                                            @Param("senderId") String senderId,
+                                            @Param("receiverId") String receiverId);
+
+    int updateImpUnloadingInSupplementData(@Param("wirNo") String wirNo,
+                                           @Param("wmId") String wmId,
+                                           @Param("wzNo") String wzNo,
+                                           @Param("inPlanDt") String inPlanDt,
+                                           @Param("cargoMgmtNo") String cargoMgmtNo,
+                                           @Param("invoiceNo") String invoiceNo,
+                                           @Param("incoTermsCd") String incoTermsCd,
+                                           @Param("remark") String remark);
+
+    int updateImpUnloadingInSupplementGoods(TransportRequestVO vo);
+
+    int updateImpUnloadingInSupplementGoodsName(TransportRequestVO vo);
+
+    Integer selectNextImpGoodsNo();
+
+    Integer selectExistingImpGoodsNo(TransportRequestVO vo);
+
+    Integer selectNextImpCustomsGoodsNo();
+
+    int insertImpGoodsMaster(TransportRequestVO vo);
+
+    int insertImpUnloadingInGoods(@Param("wirNo") String wirNo, @Param("goods") TransportRequestVO goods);
+
+    int deleteImpUnloadingInGoodsByWirNo(@Param("wirNo") String wirNo);
+
+    int deleteImpTransportReqDetailGoods(@Param("trcNo") String trcNo);
+
+    int insertImpTransportReqDetailGoods(@Param("trcNo") String trcNo, @Param("goods") TransportRequestVO goods);
+
+    String selectImpUnloadingInWirNoByTrcNo(@Param("trcNo") String trcNo);
+
+    int updateImpUnloadingInDelivered(@Param("wirNo") String wirNo,
+                                      @Param("trcNo") String trcNo,
+                                      @Param("wmId") String wmId,
+                                      @Param("wzNo") String wzNo,
+                                      @Param("inPlanDt") String inPlanDt,
+                                      @Param("cargoMgmtNo") String cargoMgmtNo,
+                                      @Param("invoiceNo") String invoiceNo,
+                                      @Param("incoTermsCd") String incoTermsCd,
+                                      @Param("remark") String remark);
+
+    int updateImpUnloadingInSupplementSubmitted(@Param("wirNo") String wirNo,
+                                                @Param("senderId") String senderId,
+                                                @Param("receiverId") String receiverId);
+
+    List<TransportRequestVO> retriveImpManifestList(@Param("tmId") String tmId);
+
+    List<TransportRequestVO> retriveImpManifestCompareList(@Param("tmId") String tmId);
+
+
+
+
+
+
+    List<TransportRequestVO> retriveImpDoList(@Param("tmId") String tmId);
+
+    Long selectLatestUnmappedImpCustomsCertFileNo(@Param("trcNo") String trcNo);
+
+    int countImpCustomsCertFileCandidate(@Param("fileNo") Long fileNo);
+
+    int insertImpCustomsCertFileMap(@Param("trcNo") String trcNo,
+                                    @Param("fileNo") Long fileNo);
+
+    int updateImpTransportCertYn(@Param("trcNo") String trcNo,
+                                 @Param("certYn") String certYn);
+
+    int ensureImpDoReadyForPaidSettlement(@Param("trcNo") String trcNo,
+                                          @Param("tmId") String tmId);
+
+    int updateImpDoSettlementPaid(@Param("trcNo") String trcNo,
+                                  @Param("freightAmt") Integer freightAmt,
+                                  @Param("warehouseAmt") Integer warehouseAmt,
+                                  @Param("totalBillAmt") Integer totalBillAmt,
+                                  @Param("settlementExpln") String settlementExpln);
+
+    int countImpDoSettlementPaid(@Param("trcNo") String trcNo);
+
+    // 운송번호로 운임정산건 번호(TCS_NO) 조회 - 알림 링크용
+    String selectTcsNoByTrcNo(@Param("trcNo") String trcNo);
+
+    // 운송번호로 반출요청번호(CRR_NO) 조회 - 창고 반출요청 알림용
+    String selectCrrNoByTrcNo(@Param("trcNo") String trcNo);
+
+    int updateImpDoUploadedFiles(@Param("trcNo") String trcNo,
+                                 @Param("doTfgNo") Long doTfgNo);
+
+    int updateImpDoFileDocTypes(@Param("doTfgNo") Long doTfgNo);
+
+    int deleteImpDoFileMap(@Param("trcNo") String trcNo,
+                           @Param("fileNo") Long fileNo);
+
+    int updateImpDoFileDeleted(@Param("fileNo") Long fileNo);
+
+    int updateImpDoIssued(@Param("trcNo") String trcNo,
+                          @Param("doNo") String doNo,
+                          @Param("receiveDt") String receiveDt,
+                          @Param("doTfgNo") Long doTfgNo);
+
+    int updateImpDoCertFile(@Param("trcNo") String trcNo,
+                            @Param("doTfgNo") Long doTfgNo);
+
+    String selectIssuedImpDoNo(@Param("trcNo") String trcNo);
+
+    Long selectImpDoTfgNo(@Param("trcNo") String trcNo);
+
+    TransportRequestVO selectImpDoPdfDetail(@Param("trcNo") String trcNo);
+
+
+    int countImpDoAnyPdfFile(@Param("trcNo") String trcNo);
+
+    int countImpDoPdfFile(@Param("trcNo") String trcNo);
+
+    int countImpDoCertFile(@Param("trcNo") String trcNo);
+
+    int updateImpDoDelivered(@Param("trcNo") String trcNo,
+                             @Param("deliveryDt") String deliveryDt,
+                             @Param("deliveryTargetNm") String deliveryTargetNm,
+                             @Param("deliveryMethodCd") String deliveryMethodCd);
+
+    List<TransportRequestVO> retriveImpReleaseReqList(@Param("tmId") String tmId);
+
+    TransportRequestVO selectImpReleaseReqDetail(@Param("trcNo") String trcNo);
+
+    List<TransportRequestVO> retriveImpReleaseReqGoodsList(@Param("ggNo") Integer ggNo);
+
+    int insertImpReleaseReq(@Param("trcNo") String trcNo,
+                            @Param("wmId") String wmId,
+                            @Param("wzNo") String wzNo,
+                            @Param("releaseReqDt") String releaseReqDt,
+                            @Param("releaseDt") String releaseDt,
+                            @Param("itemNm") String itemNm,
+                            @Param("remark") String remark);
+
+    int countImpReleaseReqByTrcNo(@Param("trcNo") String trcNo);
+
+    int countImpReleaseApprovedByTrcNo(@Param("trcNo") String trcNo);
+
+    List<TransportRequestVO> retriveImpInlandDispatchList(@Param("tmId") String tmId);
+
+    List<TransportRequestVO> retriveImpAvailableCarList(@Param("tmId") String tmId);
+
+    int updateImpInlandDispatch(TransportRequestVO vo);
+}

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.broker.mypage.mapper.IBrokerMypageMapper">
+
+	<select id="profileselect" parameterType="string" resultType="kr.or.tacs.vo.BrokerVO">
+		SELECT
+			broker_id,
+			broker_password,
+			broker_ty_cd,
+			broker_nm,
+			broker_office_nm,
+			broker_reg_no,
+			broker_bizrno,
+			broker_spclty_cd,
+			broker_email,
+			broker_telno,
+			broker_zip,
+			broker_adres,
+			broker_detail_adres,
+			broker_use_yn,
+			broker_regist_dt,
+			broker_updt_dt
+		FROM broker
+		WHERE broker_id = #{brokerId}
+	</select>
+
+</mapper>

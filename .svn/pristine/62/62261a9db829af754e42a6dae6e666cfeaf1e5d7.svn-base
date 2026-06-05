@@ -1,0 +1,2200 @@
+@charset "UTF-8";
+
+.tacs-mypage {
+  width: 100%;
+  color: #0f172a;
+}
+
+.tacs-mypage * {
+  box-sizing: border-box;
+}
+
+.tacs-mypage-breadcrumb {
+  margin-bottom: 16px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tacs-mypage-shell {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.tacs-mypage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 28px 32px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef4ff 100%);
+}
+
+.tacs-mypage-header h1 {
+  margin: 4px 0 8px;
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.tacs-mypage-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.tacs-mypage-kicker,
+.tacs-section-label {
+  margin: 0;
+  color: #2563eb;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  font-weight: 900;
+}
+
+.tacs-mypage-header-icon {
+  width: 58px;
+  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 32px;
+  flex: 0 0 auto;
+}
+
+.tacs-mypage-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 20px 0;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.tacs-mypage-tab {
+  appearance: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #64748b;
+  padding: 9px 15px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tacs-mypage-tab:hover {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.tacs-mypage-tab.is-active {
+  color: #0f172a;
+  border-bottom-color: #0f172a;
+}
+
+.tacs-mypage-panels {
+  padding: 15px 24px;
+}
+
+.tacs-mypage-panel {
+  display: none;
+}
+
+.tacs-mypage-panel.is-active {
+  display: block;
+}
+
+.tacs-password-card {
+  max-width: 680px;
+  margin: 0;
+  padding: 22px 0 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tacs-password-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  color: #475569;
+  font-size: 22px;
+  vertical-align: -3px;
+}
+
+.tacs-password-body {
+  padding: 0;
+}
+
+.tacs-password-body h2,
+.tacs-ready-card h2 {
+  margin: 8px 0 10px;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.tacs-password-desc,
+.tacs-ready-card p {
+  margin: 0 0 20px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.tacs-password-form {
+  max-width: 480px;
+}
+
+.tacs-field-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.tacs-field-input {
+  width: 100%;
+  height: 46px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 14px;
+  color: #0f172a;
+  background: #ffffff;
+  font-size: 14px;
+  outline: none;
+}
+
+.tacs-field-input:focus {
+  border-color: #0f172a;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.10);
+}
+
+.tacs-form-help {
+  min-height: 20px;
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.tacs-form-help.is-warning {
+  color: #b45309;
+  font-weight: 800;
+}
+
+.tacs-form-help.is-error {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.tacs-form-help.is-success {
+  color: #15803d;
+  font-weight: 800;
+}
+
+.tacs-password-form.is-verified .tacs-field-input {
+  border-color: #16a34a;
+}
+
+.tacs-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.tacs-button-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.tacs-btn {
+  min-width: 92px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tacs-btn-primary {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.tacs-btn-primary:hover {
+  background: #1e293b;
+}
+
+.tacs-btn-secondary {
+  background: #ffffff;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.tacs-btn-secondary:hover {
+  background: #f8fafc;
+}
+
+.tacs-ready-card {
+  max-width: 680px;
+  margin: 0 auto;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: #f8fafc;
+  padding: 48px 28px;
+  text-align: center;
+}
+
+.tacs-ready-card > .material-symbols-outlined {
+  width: 64px;
+  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-size: 34px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 760px) {
+  .tacs-mypage-header {
+    align-items: flex-start;
+    padding: 22px;
+  }
+
+  .tacs-mypage-header-icon {
+    display: none;
+  }
+
+  .tacs-mypage-panels {
+    padding: 22px;
+  }
+
+  .tacs-password-card {
+    padding-top: 8px;
+  }
+
+  .tacs-button-row {
+    flex-direction: column-reverse;
+  }
+
+  .tacs-btn {
+    width: 100%;
+  }
+}
+
+.tacs-profile-card {
+  max-width: 980px;
+  margin: 0 auto;
+  border: 1px solid #dbe4f0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+  padding: 30px;
+}
+
+.tacs-profile-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.tacs-profile-title-row h2 {
+  margin: 8px 0 8px;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.tacs-profile-title-row p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.tacs-profile-title-row > .material-symbols-outlined {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: #0f172a;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  flex: 0 0 auto;
+}
+
+.tacs-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 16px;
+}
+
+.tacs-profile-field {
+  display: block;
+}
+
+.tacs-profile-field > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.tacs-profile-field.is-wide {
+  grid-column: 1 / -1;
+}
+
+.tacs-profile-field.is-readonly .tacs-field-input,
+.tacs-profile-field .tacs-field-input[readonly] {
+  background: #f8fafc;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.tacs-profile-field.is-readonly-badge {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.tacs-profile-field.is-readonly-badge strong {
+  display: block;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.tacs-profile-notice {
+  margin-top: 22px;
+  padding: 14px 16px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .tacs-profile-card {
+    padding: 22px;
+  }
+
+  .tacs-profile-title-row > .material-symbols-outlined {
+    display: none;
+  }
+
+  .tacs-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tacs-profile-notice.is-warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+  font-weight: 800;
+}
+
+.tacs-profile-notice.is-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.tacs-profile-notice.is-success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+  font-weight: 800;
+}
+
+.tacs-password-change-card {
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.tacs-password-change-title {
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+}
+
+.tacs-password-phone-box {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.tacs-password-phone-box span {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.tacs-password-phone-box strong {
+  display: block;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.tacs-password-phone-box p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.tacs-password-sms-form,
+.tacs-password-change-form {
+  margin-top: 16px;
+}
+
+.tacs-inline-form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.tacs-password-change-form .tacs-profile-grid {
+  margin-top: 10px;
+}
+
+.tacs-password-change-form input:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .tacs-inline-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Generic actor profile edit form */
+.tacs-actor-profile-card {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tacs-actor-profile-card .tacs-profile-title-row {
+  display: none;
+}
+
+.tacs-actor-profile-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.tacs-actor-profile-sections {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.tacs-actor-form-section {
+  margin: 0 0 25px;
+  padding: 0 0 10px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tacs-actor-form-section:last-of-type {
+  margin-bottom: 10px;
+}
+
+.tacs-actor-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.tacs-actor-section-head-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  flex: 0 0 auto;
+}
+
+.tacs-actor-section-head-icon .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.tacs-actor-section-head-title {
+  color: #111827;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.tacs-actor-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px 24px;
+  align-items: end;
+}
+
+.tacs-actor-span-3 { grid-column: span 3 / span 3; }
+.tacs-actor-span-4 { grid-column: span 4 / span 4; }
+.tacs-actor-span-5 { grid-column: span 5 / span 5; }
+.tacs-actor-span-6 { grid-column: span 6 / span 6; }
+.tacs-actor-span-7 { grid-column: span 7 / span 7; }
+.tacs-actor-span-8 { grid-column: span 8 / span 8; }
+.tacs-actor-span-12 { grid-column: span 12 / span 12; }
+
+.tacs-actor-field {
+  min-width: 0;
+}
+
+.tacs-actor-field-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 4px;
+  color: #1f2937;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 900;
+}
+
+.tacs-actor-field-help {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.tacs-actor-password-feedback {
+  min-height: 12px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.tacs-actor-password-feedback.ok {
+  color: #15803d;
+}
+
+.tacs-actor-password-feedback.error {
+  color: #dc2626;
+}
+
+.tacs-actor-field-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+}
+
+.tacs-actor-icon-box {
+  width: 25px;
+  height: 25px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #34445b;
+  flex: 0 0 auto;
+}
+
+.tacs-actor-icon-box .material-symbols-outlined {
+  font-size: 19px;
+}
+
+.tacs-actor-input-box {
+  width: 100%;
+  height: 37px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 0 11px;
+  outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.tacs-actor-input-box::placeholder {
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.tacs-actor-input-box:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  outline: none !important;
+}
+
+.tacs-actor-input-box[readonly],
+.tacs-actor-field.is-readonly .tacs-actor-input-box {
+  background: #eef3f9;
+  color: #475569;
+  cursor: default;
+}
+
+.tacs-actor-input-box.readonly {
+  background: #eef3f9;
+  color: #475569;
+}
+
+.tacs-actor-field.is-readonly .tacs-actor-icon-box {
+  color: #64748b;
+}
+
+.tacs-actor-email-row {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr) 20px minmax(0, 1fr) 96px;
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+}
+
+.tacs-actor-email-row .tacs-actor-icon-box {
+  grid-column: 1;
+}
+
+.tacs-actor-email-at {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.tacs-actor-email-select {
+  padding-right: 7px;
+  cursor: pointer;
+}
+
+.tacs-actor-address-stack {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tacs-actor-address-stack .tacs-actor-field {
+  grid-column: 1 / -1;
+}
+
+.tacs-actor-zip-field .tacs-actor-side-btn {
+  flex: 0 0 58px;
+}
+
+.tacs-actor-address-map-field {
+  min-width: 0;
+  align-self: stretch;
+  grid-row: 1 / span 2;
+}
+
+.tacs-actor-address-map {
+  position: relative;
+  width: 100%;
+  min-height: 232px;
+  height: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e8edf4;
+}
+
+.tacs-actor-address-map [data-actor-address-map] {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.tacs-actor-address-map-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px;
+  text-align: center;
+  color: #64748b;
+  background: linear-gradient(135deg, #f8fafc, #e8edf4);
+}
+
+.tacs-actor-address-map-placeholder.hidden {
+  display: none;
+}
+
+.tacs-actor-address-map-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.tacs-actor-address-map-text {
+  max-width: 300px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.tacs-actor-form-section.is-broker-contact-section .tacs-actor-email-field {
+  grid-column: 1 / span 4;
+  grid-row: 1;
+}
+
+.tacs-actor-form-section.is-broker-contact-section .tacs-actor-address-stack {
+  grid-column: 1 / span 4;
+  grid-row: 2;
+}
+
+.tacs-actor-form-section.is-broker-contact-section .tacs-actor-address-map-field {
+  grid-column: 5 / span 4;
+  grid-row: 1 / span 2;
+}
+
+.tacs-actor-form-section.is-actor-sms-account-section .tacs-actor-account-phone-field {
+  grid-column: 1 / span 4;
+  grid-row: 2;
+}
+
+.tacs-actor-form-section.is-actor-sms-account-section .tacs-actor-password-auth {
+  grid-column: 5 / span 4;
+  grid-row: 2;
+  position: relative;
+  overflow: visible;
+}
+
+.tacs-actor-form-section.is-actor-sms-account-section .tacs-actor-password-auth-row {
+  grid-template-columns: max-content 10px 82px minmax(70px, 1fr) 54px;
+  column-gap: 0;
+  align-items: center;
+}
+
+.tacs-actor-form-section.is-actor-sms-account-section .tacs-actor-password-message {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  width: max-content;
+  min-width: max-content;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.tacs-actor-form-section.is-broker-contact-section .tacs-actor-inline-actions {
+  grid-column: 9 / span 4;
+  grid-row: 2;
+  align-self: end;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tacs-actor-form-section.is-broker-contact-section .tacs-actor-inline-actions .tacs-btn {
+  height: 37px;
+  min-width: 82px;
+  padding: 0 18px;
+}
+
+.tacs-actor-form-section.is-warehouse-contact-section .tacs-actor-email-field {
+  grid-column: 1 / span 4;
+  grid-row: 1;
+}
+
+.tacs-actor-form-section.is-warehouse-contact-section .tacs-actor-address-stack {
+  grid-column: 1 / span 4;
+  grid-row: 2;
+}
+
+.tacs-actor-form-section.is-warehouse-contact-section .tacs-actor-address-map-field {
+  grid-column: 5 / span 4;
+  grid-row: 1 / span 2;
+}
+
+.tacs-actor-form-section.is-field-officer-contact-section .tacs-actor-email-field {
+  grid-column: 1 / span 4;
+  grid-row: 1;
+}
+
+.tacs-actor-form-section.is-field-officer-contact-section .tacs-actor-address-stack {
+  grid-column: 1 / span 4;
+  grid-row: 2;
+}
+
+.tacs-actor-form-section.is-field-officer-contact-section .tacs-actor-address-map-field {
+  grid-column: 5 / span 4;
+  grid-row: 1 / span 2;
+}
+
+.tacs-actor-form-section.is-admin-officer-contact-section .tacs-actor-telno-field {
+  grid-column: 1 / span 4;
+  grid-row: 1;
+}
+
+.tacs-actor-form-section.is-admin-officer-contact-section .tacs-actor-email-field {
+  grid-column: 1 / span 4;
+  grid-row: 2;
+}
+
+.tacs-actor-form-section.is-admin-officer-contact-section .tacs-actor-address-stack {
+  grid-column: 1 / span 4;
+  grid-row: 3;
+}
+
+.tacs-actor-form-section.is-admin-officer-contact-section .tacs-actor-address-map-field {
+  grid-column: 5 / span 4;
+  grid-row: 1 / span 3;
+}
+
+.tacs-actor-form-section.is-officer-contact-section .tacs-actor-inline-actions {
+  grid-column: 9 / span 4;
+  grid-row: 2;
+  align-self: end;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tacs-actor-form-section.is-officer-contact-section .tacs-actor-inline-actions .tacs-btn {
+  height: 37px;
+  min-width: 82px;
+  padding: 0 18px;
+}
+
+.tacs-actor-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 37px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #ffffff;
+  padding: 0 34px 0 11px;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.tacs-actor-password-wrap:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  outline: none !important;
+}
+
+.tacs-actor-password-input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tacs-actor-password-input::placeholder {
+  color: #94a3b8;
+  font-weight: 800;
+}
+
+.tacs-actor-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+}
+
+.tacs-actor-password-toggle .material-symbols-outlined {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.tacs-actor-password-auth {
+  min-width: 0;
+  align-self: end;
+  position: relative;
+  overflow: visible;
+}
+
+.tacs-actor-password-auth-row {
+  display: grid;
+  grid-template-columns: max-content 10px 82px minmax(70px, 1fr) 54px;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+}
+
+.tacs-actor-password-auth-label {
+  grid-column: 1;
+  color: #1f2937;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.tacs-actor-password-auth-row [data-actor-password-sms-send] {
+  grid-column: 3;
+}
+
+.tacs-actor-password-auth-row [data-actor-password-sms-verify] {
+  grid-column: 5;
+}
+
+.tacs-actor-side-btn {
+  height: 37px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tacs-actor-side-btn.is-dark {
+  background: #071832;
+  color: #ffffff;
+}
+
+.tacs-actor-side-btn.is-light {
+  background: #dae2fd;
+  color: #1e4ed8;
+}
+
+.tacs-actor-side-btn.is-light:hover:not(:disabled) {
+  background: #c3d4fd;
+}
+
+.tacs-actor-side-btn:disabled {
+  background: #f1f5f9;
+  color: #cbd5e1;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.tacs-actor-sms-code {
+  grid-column: 4;
+  width: auto;
+  min-width: 70px;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.tacs-actor-password-message {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: block;
+  margin: 0;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.4;
+  white-space: nowrap;
+  width: max-content;
+}
+
+.tacs-actor-password-message:empty {
+  display: none;
+}
+
+.tacs-actor-password-message.is-warning {
+  color: #b45309;
+}
+
+.tacs-actor-password-message.is-error {
+  color: #dc2626;
+}
+
+.tacs-actor-password-message.is-success {
+  color: #15803d;
+}
+
+.tacs-actor-info-box {
+  min-width: 0;
+  min-height: 58px;
+  align-self: end;
+  padding: 9px 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.tacs-actor-info-box.is-muted {
+  border-color: #d7e0ea;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.tacs-actor-info-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.tacs-actor-info-title .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.tacs-actor-info-box p {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.tacs-actor-profile-message {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tacs-actor-profile-message:empty {
+  display: none;
+}
+
+.tacs-actor-button-row {
+  justify-content: flex-end;
+  margin-top: 0;
+}
+
+.tacs-actor-profile-form.is-officer-profile > .tacs-actor-button-row,
+.tacs-actor-profile-form.is-broker-profile > .tacs-actor-button-row {
+  display: none;
+}
+
+.tacs-profile-area > .tacs-password-change-card {
+  max-width: none;
+}
+
+@media (max-width: 760px) {
+  .tacs-actor-profile-card .tacs-profile-title-row {
+    margin-bottom: 18px;
+  }
+
+  .tacs-actor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tacs-actor-span-3,
+  .tacs-actor-span-4,
+  .tacs-actor-span-5,
+  .tacs-actor-span-6,
+  .tacs-actor-span-7,
+  .tacs-actor-span-8,
+  .tacs-actor-span-12 {
+    grid-column: 1 / -1;
+  }
+
+  .tacs-actor-info-box {
+    min-height: auto;
+  }
+
+  .tacs-actor-form-section.is-broker-contact-section .tacs-actor-email-field,
+  .tacs-actor-form-section.is-broker-contact-section .tacs-actor-address-stack,
+  .tacs-actor-form-section.is-broker-contact-section .tacs-actor-address-map-field,
+  .tacs-actor-form-section.is-actor-sms-account-section .tacs-actor-account-phone-field,
+  .tacs-actor-form-section.is-actor-sms-account-section .tacs-actor-password-auth,
+  .tacs-actor-form-section.is-warehouse-contact-section .tacs-actor-email-field,
+  .tacs-actor-form-section.is-warehouse-contact-section .tacs-actor-address-stack,
+  .tacs-actor-form-section.is-warehouse-contact-section .tacs-actor-address-map-field,
+  .tacs-actor-form-section.is-officer-contact-section .tacs-actor-telno-field,
+  .tacs-actor-form-section.is-officer-contact-section .tacs-actor-email-field,
+  .tacs-actor-form-section.is-officer-contact-section .tacs-actor-address-stack,
+  .tacs-actor-form-section.is-officer-contact-section .tacs-actor-address-map-field,
+  .tacs-actor-inline-actions {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .tacs-actor-email-row {
+    grid-template-columns: 25px minmax(0, 1fr) 18px minmax(0, 1fr);
+  }
+
+  .tacs-actor-email-select {
+    grid-column: 2 / -1;
+  }
+
+  .tacs-actor-password-auth-row {
+    grid-template-columns: max-content 10px 82px minmax(70px, 1fr) 50px;
+  }
+
+  .tacs-actor-password-auth-label {
+    grid-column: 1;
+  }
+
+  .tacs-actor-sms-code {
+    grid-column: 4;
+  }
+
+  .tacs-actor-button-row {
+    flex-direction: column-reverse;
+  }
+
+  .tacs-actor-button-row .tacs-btn {
+    width: 100%;
+  }
+
+  .tacs-actor-inline-actions {
+    flex-direction: column-reverse;
+  }
+
+  .tacs-actor-inline-actions .tacs-btn {
+    width: 100%;
+  }
+}
+
+/* OWNER mypage register.jsp-style edit form */
+.tacs-mypage [hidden] {
+  display: none !important;
+}
+
+.tacs-profile-area {
+  width: 100%;
+  display: none;
+}
+
+.tacs-owner-register-form {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.tacs-owner-register-form .compact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.tacs-owner-register-form .form-section {
+  padding: 0 0 10px;
+  margin: 0 0 25px;
+  border: 0 !important;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tacs-owner-register-form .form-section:last-of-type {
+  margin-bottom: 10px;
+}
+
+.tacs-owner-register-form .section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.tacs-owner-register-form .section-head-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  flex: 0 0 auto;
+}
+
+.tacs-owner-register-form .section-head-icon .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.tacs-owner-register-form .section-head-title {
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 900;
+  color: #111827;
+}
+
+.tacs-owner-register-form .section-title-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tacs-owner-register-form .owner-type-badge {
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #071832;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tacs-owner-register-form .grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 8px 20px;
+  align-items: end;
+}
+
+.tacs-owner-register-form .contact-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  row-gap: 14px;
+}
+
+.tacs-owner-register-form .account-grid,
+.tacs-owner-register-form .owner-basic-grid,
+.tacs-owner-register-form .contact-grid {
+  column-gap: 24px;
+}
+
+.tacs-owner-register-form .span-3 { grid-column: span 3 / span 3; }
+.tacs-owner-register-form .span-4 { grid-column: span 4 / span 4; }
+.tacs-owner-register-form .span-5 { grid-column: span 5 / span 5; }
+.tacs-owner-register-form .span-6 { grid-column: span 6 / span 6; }
+.tacs-owner-register-form .span-7 { grid-column: span 7 / span 7; }
+.tacs-owner-register-form .span-8 { grid-column: span 8 / span 8; }
+.tacs-owner-register-form .span-12 { grid-column: span 12 / span 12; }
+
+.tacs-owner-register-form .owner-basic-grid > .span-3 {
+  grid-column: span 4 / span 4;
+}
+
+.tacs-owner-register-form .contact-grid > .contact-phone-field,
+.tacs-owner-register-form .contact-grid > .owner-sms-auth-field,
+.tacs-owner-register-form .contact-grid > .email-field,
+.tacs-owner-register-form .contact-grid > .address-fields,
+.tacs-owner-register-form .contact-grid > .contact-map-field {
+  min-width: 0;
+}
+
+.tacs-owner-register-form .contact-grid .contact-phone-field {
+  grid-column: 1 / span 4;
+  grid-row: 1;
+}
+
+.tacs-owner-register-form .contact-grid .owner-sms-auth-field {
+  grid-column: 5 / span 4;
+  grid-row: 1;
+  align-self: end;
+  min-width: 0;
+}
+
+.tacs-owner-register-form .contact-grid .email-field {
+  grid-column: 1 / span 8;
+  grid-row: 2;
+}
+
+.tacs-owner-register-form .contact-grid .address-fields {
+  grid-column: 1 / span 4;
+  grid-row: 3;
+}
+
+.tacs-owner-register-form .contact-grid .contact-map-field {
+  grid-column: 5 / span 4;
+  grid-row: 3;
+}
+
+.tacs-owner-register-form .field-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 900;
+  color: #1f2937;
+}
+
+.tacs-owner-register-form .required {
+  color: #ef4444;
+  font-weight: 900;
+}
+
+.tacs-owner-register-form .field-optional {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.tacs-owner-register-form .password-rule-inline {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.tacs-owner-register-form .field-feedback {
+  min-height: 12px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.tacs-owner-register-form .field-feedback.ok {
+  color: #15803d;
+}
+
+.tacs-owner-register-form .field-feedback.error {
+  color: #dc2626;
+}
+
+.tacs-owner-register-form .field-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+}
+
+.tacs-owner-register-form .account-pw-field .field-row,
+.tacs-owner-register-form .account-pw-confirm-field .field-row,
+.tacs-owner-register-form [data-owner-ident-box] .field-row,
+.tacs-owner-register-form [data-owner-bizrno-box] .field-row,
+.tacs-owner-register-form [data-owner-corp-box] .field-row {
+  gap: 27px;
+}
+
+.tacs-owner-register-form .icon-box {
+  width: 25px;
+  height: 25px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #34445b;
+  flex: 0 0 auto;
+}
+
+.tacs-owner-register-form .icon-box .material-symbols-outlined {
+  font-size: 19px;
+}
+
+.tacs-owner-register-form .input-box {
+  width: 100%;
+  height: 37px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 11px;
+  outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.tacs-owner-register-form .input-box::placeholder {
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.tacs-owner-register-form .input-box:focus {
+  border-color: #0f2a4f;
+  box-shadow: 0 0 0 3px rgba(15, 42, 79, 0.08);
+}
+
+.tacs-owner-register-form .input-box[readonly] {
+  background: #eef3f9;
+  color: #475569;
+  cursor: default;
+}
+
+.tacs-owner-register-form .side-btn {
+  height: 37px;
+  min-width: 78px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tacs-owner-register-form .btn-dark {
+  background: #071832;
+  color: #ffffff;
+}
+
+.tacs-owner-register-form .btn-light {
+  background: #edf3fb;
+  color: #071832;
+}
+
+.tacs-owner-register-form .owner-type-display-field {
+  align-self: end;
+}
+
+.tacs-owner-register-form .password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 34px 0 11px;
+}
+
+.tacs-owner-register-form .password-input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tacs-owner-register-form .password-input::placeholder {
+  color: #94a3b8;
+  font-weight: 800;
+}
+
+.tacs-owner-register-form .password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+}
+
+.tacs-owner-register-form .password-toggle .material-symbols-outlined {
+  font-size: 17px;
+}
+
+.tacs-owner-register-form .owner-type-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 42px;
+}
+
+.tacs-owner-register-form .owner-type-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 18px;
+  border: 1px solid #d7e0ea;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.tacs-owner-register-form .owner-type-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tacs-owner-register-form .owner-type-option.is-active {
+  border-color: #071832;
+  background: #071832;
+  color: #ffffff;
+}
+
+.tacs-owner-register-form .email-row {
+  display: grid;
+  grid-template-columns:
+    25px
+    7px
+    minmax(0, calc((100% - 24px) / 2 - 32px))
+    24px
+    25px
+    27px
+    minmax(0, calc((100% - 24px) / 2 - 171px))
+    7px
+    112px;
+  gap: 0;
+  align-items: center;
+}
+
+.tacs-owner-register-form .email-row .icon-box {
+  grid-column: 1;
+}
+
+.tacs-owner-register-form .email-local {
+  grid-column: 3;
+}
+
+.tacs-owner-register-form .email-at {
+  grid-column: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.tacs-owner-register-form .email-domain {
+  grid-column: 7;
+}
+
+.tacs-owner-register-form .email-select {
+  grid-column: 9;
+  cursor: pointer;
+  padding-right: 8px;
+}
+
+.tacs-owner-register-form .address-fields {
+  display: grid;
+  gap: 12px;
+  align-self: stretch;
+}
+
+.tacs-owner-register-form .address-map {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  min-height: 210px;
+  height: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e8edf4;
+}
+
+.tacs-owner-register-form [data-owner-address-map] {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.tacs-owner-register-form .address-map-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px;
+  text-align: center;
+  color: #64748b;
+  background: linear-gradient(135deg, #f8fafc, #e8edf4);
+}
+
+.tacs-owner-register-form .address-map-placeholder.hidden {
+  display: none;
+}
+
+.tacs-owner-register-form .address-map-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.tacs-owner-register-form .address-map-text {
+  max-width: 300px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.tacs-owner-register-form .contact-grid-no-map {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.tacs-owner-register-form .address-field-wide .input-box {
+  width: 100%;
+}
+
+.tacs-owner-register-form .tacs-profile-notice {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tacs-owner-register-form .tacs-owner-profile-message:empty {
+  display: none;
+}
+
+.tacs-owner-register-form .submit-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+}
+
+.tacs-owner-register-form .owner-sms-auth {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 1 1 auto;
+  width: calc(100% - 52px);
+  margin: 0 0 0 52px;
+}
+
+.tacs-owner-register-form .owner-sms-label {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 7px);
+  transform: translateY(-50%);
+  color: #1f2937;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.tacs-owner-register-form .owner-sms-code {
+  width: auto;
+  min-width: 84px;
+  flex: 2 1 120px;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.tacs-owner-register-form .owner-sms-auth .side-btn {
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.tacs-owner-register-form .owner-sms-auth [data-owner-sms-send] {
+  flex: 0 0 82px;
+}
+
+.tacs-owner-register-form .owner-sms-auth [data-owner-sms-verify] {
+  flex: 1 1 60px;
+}
+
+.tacs-owner-register-form .owner-sms-auth .side-btn:disabled {
+  background: #e5eaf1;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.tacs-owner-register-form .owner-sms-message {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: block;
+  margin: 0;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  min-width: max-content;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.tacs-owner-register-form .owner-sms-message:empty {
+  display: none;
+}
+
+.tacs-owner-register-form .owner-sms-message.is-warning {
+  color: #b45309;
+}
+
+.tacs-owner-register-form .owner-sms-message.is-error {
+  color: #dc2626;
+}
+
+.tacs-owner-register-form .owner-sms-message.is-success {
+  color: #15803d;
+}
+
+.tacs-owner-register-form .submit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex: 0 0 auto;
+  margin-left: 32px;
+}
+
+.tacs-owner-register-form .submit-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.tacs-owner-register-form .submit-tooltip[data-disabled-reason]:not([data-disabled-reason=""]):hover::before {
+  content: "";
+  position: absolute;
+  right: 28px;
+  bottom: calc(100% + 4px);
+  border: 6px solid transparent;
+  border-top-color: #111827;
+  z-index: 30;
+}
+
+.tacs-owner-register-form .submit-tooltip[data-disabled-reason]:not([data-disabled-reason=""]):hover::after {
+  content: attr(data-disabled-reason);
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 15px);
+  min-width: 250px;
+  max-width: 320px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+  z-index: 31;
+}
+
+.tacs-owner-register-form .submit-tooltip .submit-btn:disabled {
+  pointer-events: none;
+}
+
+.tacs-owner-register-form .submit-btn {
+  min-width: 150px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 22px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.tacs-owner-register-form .submit-secondary {
+  background: #edf3fb;
+  color: #0f172a;
+}
+
+.tacs-owner-register-form .submit-primary {
+  background: #071832;
+  color: #ffffff;
+}
+
+.tacs-owner-register-form .submit-primary:disabled,
+.tacs-owner-register-form .submit-secondary:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.tacs-password-change-card {
+  margin-top: 28px;
+}
+
+@media (max-width: 1180px) {
+  .tacs-owner-register-form .owner-basic-grid > .span-3,
+  .tacs-owner-register-form .span-3,
+  .tacs-owner-register-form .span-4,
+  .tacs-owner-register-form .span-5,
+  .tacs-owner-register-form .span-6,
+  .tacs-owner-register-form .span-7,
+  .tacs-owner-register-form .span-8 {
+    grid-column: span 6 / span 6;
+  }
+
+  .tacs-owner-register-form .contact-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .tacs-owner-register-form .contact-grid .contact-phone-field {
+    grid-column: 1 / span 4;
+    grid-row: 1;
+  }
+
+  .tacs-owner-register-form .contact-grid .owner-sms-auth-field {
+    grid-column: 5 / span 4;
+    grid-row: 1;
+  }
+
+  .tacs-owner-register-form .contact-grid .email-field {
+    grid-column: 1 / span 8;
+    grid-row: 2;
+  }
+
+  .tacs-owner-register-form .contact-grid .address-fields {
+    grid-column: 1 / span 4;
+    grid-row: 3;
+  }
+
+  .tacs-owner-register-form .contact-grid .contact-map-field {
+    grid-column: 5 / span 4;
+    grid-row: 3;
+  }
+
+  .tacs-owner-register-form .email-row {
+    grid-template-columns:
+      25px
+      7px
+      minmax(0, calc((100% - 24px) / 2 - 32px))
+      24px
+      25px
+      27px
+      minmax(0, calc((100% - 24px) / 2 - 171px))
+      7px
+      112px;
+    gap: 0;
+  }
+
+  .tacs-owner-register-form .email-row .icon-box {
+    grid-column: 1;
+  }
+
+  .tacs-owner-register-form .email-local {
+    grid-column: 3;
+  }
+
+  .tacs-owner-register-form .email-at {
+    grid-column: 5;
+  }
+
+  .tacs-owner-register-form .email-domain {
+    grid-column: 7;
+  }
+
+  .tacs-owner-register-form .email-select {
+    grid-column: 9;
+  }
+}
+
+@media (max-width: 760px) {
+  .tacs-mypage-panels {
+    padding: 22px 16px;
+  }
+
+  .tacs-owner-register-form .grid-12 {
+    grid-template-columns: 1fr;
+  }
+
+  .tacs-owner-register-form .owner-basic-grid > .span-3,
+  .tacs-owner-register-form .contact-grid > .contact-phone-field,
+  .tacs-owner-register-form .contact-grid > .address-fields,
+  .tacs-owner-register-form .contact-grid > .contact-map-field,
+  .tacs-owner-register-form .contact-grid > .email-field,
+  .tacs-owner-register-form .contact-grid > .owner-sms-auth-field,
+  .tacs-owner-register-form .span-3,
+  .tacs-owner-register-form .span-4,
+  .tacs-owner-register-form .span-5,
+  .tacs-owner-register-form .span-6,
+  .tacs-owner-register-form .span-7,
+  .tacs-owner-register-form .span-8,
+  .tacs-owner-register-form .span-12 {
+    grid-column: 1 / -1;
+  }
+
+  .tacs-owner-register-form .contact-grid .contact-phone-field,
+  .tacs-owner-register-form .contact-grid .owner-sms-auth-field,
+  .tacs-owner-register-form .contact-grid .email-field,
+  .tacs-owner-register-form .contact-grid .address-fields,
+  .tacs-owner-register-form .contact-grid .contact-map-field {
+    grid-row: auto;
+  }
+
+  .tacs-owner-register-form .email-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .tacs-owner-register-form .email-row .icon-box,
+  .tacs-owner-register-form .email-local {
+    grid-column: auto;
+  }
+
+  .tacs-owner-register-form .email-at {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    height: 16px;
+    padding-left: 38px;
+  }
+
+  .tacs-owner-register-form .email-domain,
+  .tacs-owner-register-form .email-select {
+    grid-column: 2;
+  }
+
+  .tacs-owner-register-form .submit-row {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .tacs-owner-register-form .owner-sms-auth,
+  .tacs-owner-register-form .submit-actions {
+    width: 100%;
+  }
+
+  .tacs-owner-register-form .owner-sms-auth {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+
+  .tacs-owner-register-form .submit-actions {
+    margin-left: 0;
+  }
+
+  .tacs-owner-register-form .owner-sms-label {
+    position: static;
+    transform: none;
+    flex: 0 0 100%;
+  }
+
+  .tacs-owner-register-form .submit-btn {
+    width: 100%;
+  }
+
+  .tacs-owner-register-form .address-map {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* ===== 알림 수신 설정 (on/off 토글) ===== */
+.tacs-alarm-pref {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.tacs-alarm-pref-head h2 {
+  margin: 4px 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+}
+.tacs-alarm-pref-desc {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0;
+}
+.tacs-alarm-pref-bulk {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.tacs-alarm-bulk-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.tacs-alarm-bulk-btn:hover {
+  background: #2563eb;
+  color: #fff;
+}
+.tacs-alarm-bulk-btn.is-off {
+  border-color: #cbd5e1;
+  color: #6b7280;
+}
+.tacs-alarm-bulk-btn.is-off:hover {
+  background: #6b7280;
+  color: #fff;
+}
+.tacs-alarm-bulk-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.tacs-alarm-pref-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.tacs-alarm-pref-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f3f5;
+}
+.tacs-alarm-pref-item:last-child {
+  border-bottom: none;
+}
+.tacs-alarm-pref-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding-right: 16px;
+}
+.tacs-alarm-pref-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+}
+.tacs-alarm-pref-desc-sm {
+  font-size: 12px;
+  color: #9097a1;
+  line-height: 1.4;
+}
+.tacs-alarm-pref-empty {
+  padding: 24px 20px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* 좌우로 움직이는 스위치 */
+.tacs-switch {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+.tacs-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.tacs-switch-track {
+  position: relative;
+  display: inline-block;
+  width: 62px;
+  height: 26px;
+  background: #cbd5e1;
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+/* 트랙 안의 ON / OFF 글자 (스위치 상태에 따라 좌우로 바뀜) */
+.tacs-switch-track::before {
+  content: "OFF";
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #fff;
+  line-height: 1;
+}
+.tacs-switch input:checked + .tacs-switch-track::before {
+  content: "ON";
+  right: auto;
+  left: 9px;
+}
+.tacs-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+  z-index: 1;
+}
+.tacs-switch input:checked + .tacs-switch-track {
+  background: #2563eb;
+}
+.tacs-switch input:checked + .tacs-switch-track .tacs-switch-thumb {
+  transform: translateX(36px);
+}
+.tacs-switch input:disabled + .tacs-switch-track {
+  opacity: 0.5;
+}
+.tacs-switch input:focus-visible + .tacs-switch-track {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}

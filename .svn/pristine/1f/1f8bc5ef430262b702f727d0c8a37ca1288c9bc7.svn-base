@@ -1,0 +1,243 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <%@ include file="/WEB-INF/views/broker/common/meta.jsp" %>
+    <link rel="stylesheet" href="${ctx}/resources/css/broker/common.css">
+    <link rel="stylesheet" href="${ctx}/resources/css/broker/pages/dash.css">
+    <title>대시보드 | TACS</title>
+</head>
+<body>
+<div class="app" id="app">
+    <%@ include file="/WEB-INF/views/broker/common/sidebar.jsp" %>
+    <div class="main-wrap">
+        <%@ include file="/WEB-INF/views/broker/common/header.jsp" %>
+        <div class="content">
+<%-- 대시보드 페이지 --%>
+<div class="page active" id="pg-dash">
+
+  <div class="banner">
+    <div class="banner-left">
+      <h2>오늘의 업무 현황</h2>
+      <div class="meta">
+        ${todayText} · 담당 화주 ${summary.assignedOwnerCnt}개사
+      </div>
+    </div>
+    <div class="banner-right">
+      <div class="banner-stat">
+        <div class="label">오늘 접수</div>
+        <div class="val">${summary.todayReceivedCnt} <span class="unit">건</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+    <a class="stat-card" href="${ctx}/broker/clients.do" style="text-decoration:none;color:inherit">
+      <div class="s-label">화주 신규 요청</div>
+      <div class="s-row"><span class="s-num">${summary.newRequestCnt}</span></div>
+    </a>
+
+    <a class="stat-card c2" href="${ctx}/broker/clients.do" style="text-decoration:none;color:inherit">
+      <div class="s-label">서류 보완 대기</div>
+      <div class="s-row"><span class="s-num">${summary.suppPendingCnt}</span></div>
+    </a>
+
+    <a class="stat-card c4" href="${ctx}/broker/status/search.do" style="text-decoration:none;color:inherit">
+      <div class="s-label">금일 처리 완료</div>
+      <div class="s-row"><span class="s-num">${summary.todayDoneCnt}</span></div>
+    </a>
+  </div>
+
+  <div class="grid-2col">
+    <div class="card-section">
+      <div class="card-header">
+        <h3>화주 신규 요청</h3>
+        <button type="button" onclick="location.href='${ctx}/broker/clients.do'">전체 보기 →</button>
+      </div>
+
+      <c:choose>
+        <c:when test="${empty newRequestList}">
+          <div class="empty-box" style="padding:32px;text-align:center;color:#8a99aa;">
+            신규 요청 데이터가 없습니다.
+          </div>
+        </c:when>
+        <c:otherwise>
+          <c:forEach var="req" items="${newRequestList}">
+            <div class="req-item ${req.newYn eq 'NEW' ? 'new-item' : ''}">
+              <div class="req-left">
+                <div class="req-title">
+                  ${req.ownerNm} — ${req.requestTypeNm}
+                  <c:if test="${req.newYn eq 'NEW'}">
+                    <span class="badge badge-new">NEW</span>
+                  </c:if>
+                </div>
+                <div class="req-sub">
+                  B/L: ${empty req.blAwbNo ? '-' : req.blAwbNo}
+                  · 상태: ${req.statusCd}
+                  · ${req.requestDt}
+                </div>
+              </div>
+              <div class="req-right">
+                <button type="button"
+                        class="mini mini-view"
+                        onclick="location.href='${ctx}/broker/clients.do?keyword=${req.irNo}'">
+                  상세
+                </button>
+              </div>
+            </div>
+          </c:forEach>
+        </c:otherwise>
+      </c:choose>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:20px">
+
+      <div class="side-card">
+        <h3>서류 보완 현황</h3>
+
+        <c:choose>
+          <c:when test="${empty supplementList}">
+            <div class="empty-box" style="padding:24px;text-align:center;color:#8a99aa;">
+              보완 대기 건이 없습니다.
+            </div>
+          </c:when>
+          <c:otherwise>
+            <c:forEach var="sup" items="${supplementList}">
+              <div class="client-row" onclick="location.href='${ctx}/broker/clients.do?keyword=${sup.refNo}'">
+                <div class="client-info">
+                  <div class="client-avatar">
+                    <c:choose>
+                      <c:when test="${not empty sup.ownerNm}">
+                        ${sup.ownerNm.substring(0, 1)}
+                      </c:when>
+                      <c:otherwise>보</c:otherwise>
+                    </c:choose>
+                  </div>
+                  <div>
+                    <div class="client-name">${sup.ownerNm}</div>
+                    <div class="client-detail">
+                      ${sup.requestCn}
+                      ·
+                      <b style="${sup.dDay lt 0 ? 'color:#9f403d' : sup.dDay eq 0 ? 'color:#d97706' : sup.dDay le 2 ? 'color:#d97706' : 'color:#1d6b4f'}">
+						  <c:choose>
+						    <c:when test="${sup.dDay lt 0}">
+						      기한초과 ${0 - sup.dDay}일
+						    </c:when>
+						    <c:when test="${sup.dDay eq 0}">
+						      D-Day
+						    </c:when>
+						    <c:otherwise>
+						      D-${sup.dDay}
+						    </c:otherwise>
+						  </c:choose>
+						</b>
+                    </div>
+                  </div>
+                </div>
+                <button type="button"
+                        class="mini mini-sup"
+                        onclick="event.stopPropagation();location.href='${ctx}/broker/clients.do?keyword=${sup.refNo}'">
+                  확인
+                </button>
+              </div>
+            </c:forEach>
+          </c:otherwise>
+        </c:choose>
+      </div>
+
+      <div class="side-card" style="background:#fff;border:2px solid #d0e5fa">
+        <h3>담당 화주 TOP 5</h3>
+
+        <c:choose>
+          <c:when test="${empty topOwnerList}">
+            <div class="empty-box" style="padding:24px;text-align:center;color:#8a99aa;">
+              금월 담당 화주 데이터가 없습니다.
+            </div>
+          </c:when>
+          <c:otherwise>
+            <c:forEach var="owner" items="${topOwnerList}">
+              <div class="client-row" onclick="location.href='${ctx}/broker/clients.do?keyword=${owner.ownerNm}'">
+                <div class="client-info">
+                  <div class="client-avatar">
+                    <c:choose>
+                      <c:when test="${not empty owner.ownerNm}">
+                        ${owner.ownerNm.substring(0, 1)}
+                      </c:when>
+                      <c:otherwise>화</c:otherwise>
+                    </c:choose>
+                  </div>
+                  <div>
+                    <div class="client-name">${owner.ownerNm}</div>
+                    <div class="client-detail">진행중 ${owner.inProgressCnt}건</div>
+                  </div>
+                </div>
+                <div class="client-count">금월 ${owner.monthCnt}건</div>
+              </div>
+            </c:forEach>
+          </c:otherwise>
+        </c:choose>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-grid">
+    <div class="data-block">
+      <h3>금월 실적 요약</h3>
+      <div class="data-grid">
+        <div class="d-item">
+          <div class="d-label">수입신고 처리</div>
+          <div class="d-val">${monthSummary.importDclrCnt}<span class="d-unit">건</span></div>
+        </div>
+        <div class="d-item">
+          <div class="d-label">수출신고 처리</div>
+          <div class="d-val">${monthSummary.exportDclrCnt}<span class="d-unit">건</span></div>
+        </div>
+        <div class="d-item">
+          <div class="d-label">세금 처리액</div>
+          <div class="d-val primary">${monthSummary.taxTotalAmt}<span class="d-unit">원</span></div>
+        </div>
+        <div class="d-item">
+          <div class="d-label">반려/보완 건수</div>
+          <div class="d-val error">${monthSummary.suppCnt}<span class="d-unit">건</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="deadline-block">
+      <h3>다가오는 기한</h3>
+
+      <c:choose>
+        <c:when test="${empty deadlineList}">
+          <div class="empty-box" style="padding:24px;text-align:center;color:#8a99aa;">
+            다가오는 기한이 없습니다.
+          </div>
+        </c:when>
+        <c:otherwise>
+          <c:forEach var="dl" items="${deadlineList}">
+            <div class="dl-item">
+              <div class="dl-left">
+                ${dl.ownerNm} — ${dl.deadlineTypeNm}
+                <span>${dl.refNo}</span>
+              </div>
+              <div class="dl-right ${dl.dDay le 2 ? 'dday' : 'safe'}">
+                D-${dl.dDay}
+              </div>
+            </div>
+          </c:forEach>
+        </c:otherwise>
+      </c:choose>
+    </div>
+  </div>
+</div>
+        </div>
+        <%@ include file="/WEB-INF/views/broker/common/footer.jsp" %>
+    </div>
+</div>
+<%@ include file="/WEB-INF/views/broker/common/modals.jsp" %>
+<script>window.contextPath = '${ctx}';</script>
+<script src="${ctx}/resources/js/broker/common.js"></script>
+<script src="${ctx}/resources/js/broker/pages/dash.js"></script>
+</body>
+</html>

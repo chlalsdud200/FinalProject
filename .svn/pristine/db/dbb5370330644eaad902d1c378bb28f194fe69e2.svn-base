@@ -1,0 +1,13 @@
+-- Admin support/content notice refinements.
+-- Apply before deploying the updated notice mapper because the code now reads these columns.
+
+ALTER TABLE NOTICE ADD (
+    NOTICE_PIN_YN CHAR(1) DEFAULT 'N' NOT NULL,
+    NOTICE_USE_YN CHAR(1) DEFAULT 'Y' NOT NULL
+);
+
+COMMENT ON COLUMN NOTICE.NOTICE_PIN_YN IS '공지사항 상단고정 여부. Y/N';
+COMMENT ON COLUMN NOTICE.NOTICE_USE_YN IS '공지사항 사용여부. Y/N';
+
+CREATE INDEX IDX_NOTICE_ADMIN_FILTER
+    ON NOTICE (NOTICE_USE_YN, NOTICE_PIN_YN, NOTICE_TYPE, NOTICE_ADDDATE DESC);

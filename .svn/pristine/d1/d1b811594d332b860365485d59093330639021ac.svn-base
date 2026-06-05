@@ -1,0 +1,293 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<input type="hidden" id="importBrokerId" name="irBrokerId">
+
+<div class="form-group">
+    <div class="form-group-title">
+        ① 담당 관세사 선택 <span style="color:#9f403d;font-weight:700">*</span>
+    </div>
+
+    <div class="broker-selector-row">
+        <label>담당 관세사 <span style="color:#9f403d">*</span></label>
+
+        <div class="broker-display" id="importBrokerDisplay">
+            선택된 관세사가 없습니다. 오른쪽 버튼을 클릭하여 선택하세요.
+        </div>
+
+        <button type="button"
+                class="btn btn-primary"
+                onclick="openBrokerModal('import')">
+            관세사 목록 보기
+        </button>
+    </div>
+</div>
+
+<div class="form-doc-divider"></div>
+
+<div class="form-group">
+    <div class="form-group-title">② 수입자 기본 정보</div>
+
+    <div class="form-grid-2">
+        <div class="fi">
+            <label>통관고유부호 <span class="req">*</span></label>
+            <input type="text"
+                   name="irCstmIdfNo"
+                   id="irCstmIdfNo"
+                   value="${ownerVO.owrCstmIdfNo}"
+                   placeholder="통관고유부호 입력">
+        </div>
+        <c:choose>
+            <%-- 개인회원 --%>
+            <c:when test="${ownerVO.owrTyCd eq 'INDV'}">
+                <div class="fi">
+                    <label>주민등록번호</label>
+
+                    <!-- 화면 표시용 -->
+                    <input type="text"
+                           value="${ownerVO.maskedOwrIdentNo}"
+                           readonly>
+
+                    <!-- 실제 submit용 -->
+                    <input type="hidden"
+                           name="irCorpRegNo"
+                           id="irCorpRegNo"
+                           value="${ownerVO.owrIdentNo}">
+                </div>
+            </c:when>
+
+            <%-- 개인사업자 --%>
+            <c:when test="${ownerVO.owrTyCd eq 'OPERATOR'}">
+                <div class="fi">
+                    <label>사업자등록번호</label>
+                    <input type="text"
+                           name="irCorpRegNo"
+                           id="irBizrno"
+                           value="${ownerVO.owrBizrno}"
+                           readonly>
+                </div>
+            </c:when>
+
+            <%-- 법인 --%>
+            <c:when test="${ownerVO.owrTyCd eq 'CORP'}">
+                <div class="fi">
+                    <label>법인등록번호</label>
+                    <input type="text"
+                           name="irCorpRegNo"
+                           id="irCorpRegNo"
+                           value="${ownerVO.owrCorpRegNo}"
+                           readonly>
+                </div>
+            </c:when>
+
+            <c:otherwise>
+                <div class="fi">
+                    <label>에러!</label>
+                    <input type="text"
+                           name="irCorpRegNo"
+                           id="irCorpRegNo"
+                           value="조회된 데이터가 없습니다. 사이트 관리자에게 문의해 주세요"
+                           readonly>
+                </div>
+            </c:otherwise>
+        </c:choose>
+    </div>
+</div>
+
+<div class="form-doc-divider"></div>
+
+<div class="form-group">
+    <div class="form-group-title">③ 도착 · 운송 문서 정보</div>
+
+    <div class="form-grid-3">
+
+        <div class="fi">
+            <label>도착항 <span class="req">*</span></label>
+
+            <div class="port-picker-row">
+                <input type="text"
+                       id="irArrvPortNm"
+                       class="port-picker-input"
+                       placeholder="도착항을 검색하세요"
+                       readonly
+                       onclick="openPortModal('arrival')">
+
+                <input type="hidden"
+                       name="irArrvPortCd"
+                       id="irArrvPortCd">
+
+                <button type="button"
+                        class="port-search-btn"
+                        onclick="openPortModal('arrival')">
+                    검색
+                </button>
+            </div>
+        </div>
+
+        <!--
+        <div class="fi">
+            <label>도착항 <span class="req">*</span></label>
+            <input type="text"
+                   name="irArrvPortCd"
+                   id="irArrvPortCd"
+                   placeholder="예: KRPTK">
+        </div>
+        -->
+        <div class="fi">
+            <label>도착예정일 <span class="req">*</span></label>
+            <input type="date"
+                   name="irArrvSchdYmd"
+                   id="irArrvSchdYmd">
+        </div>
+
+        <div class="fi">
+            <label>B/L 또는 AWB 번호 <span class="req">*</span></label>
+            <input type="text"
+                   name="irBlAwbNo"
+                   id="irBlAwbNo"
+                   placeholder="B/L 또는 AWB 번호 입력">
+        </div>
+    </div>
+</div>
+
+<div class="form-doc-divider"></div>
+
+<div class="form-group">
+    <div class="form-group-title">④ 신고 기준 금액 정보</div>
+
+    <div class="form-grid-2">
+        <div class="fi">
+            <label>신고통화 <span class="req">*</span></label>
+            <select name="irDclrCurrCd" id="irDclrCurrCd">
+                <option value="">-- 선택 --</option>
+                <option value="USD">USD</option>
+                <option value="KRW">KRW</option>
+                <option value="EUR">EUR</option>
+                <option value="JPY">JPY</option>
+                <option value="CNY">CNY</option>
+            </select>
+        </div>
+
+        <div class="fi">
+            <label>송장금액 <span class="req">*</span></label>
+            <input type="number"
+                   name="irInvcAmt"
+                   id="irInvcAmt"
+                   placeholder="송장금액 입력"
+                   step="0.01">
+        </div>
+    </div>
+</div>
+
+<div class="form-doc-divider"></div>
+
+<div class="form-group">
+    <div class="form-group-title">⑤ 납부 관련 선택</div>
+
+    <div class="form-grid-3">
+        <div class="fi">
+            <label>납부방식</label>
+            <select name="irPayMthdCd" id="irPayMthdCd">
+                <option value="">-- 선택 --</option>
+                <option value="APIPAY">간편결제</option>
+                <option value="ACCOUNT">계좌이체</option>
+                <option value="CARD">카드납부</option>
+                <option value="VIRTUAL">가상계좌</option>
+            </select>
+        </div>
+
+        <div class="fi">
+            <label>납부유형</label>
+            <select name="irPayTypeCd" id="irPayTypeCd">
+                <option value="">-- 선택 --</option>
+                <option value="FULL">일시납부</option>
+                <option value="INSTL">분할납부</option>
+                <option value="DEFER">납부유예</option>
+            </select>
+        </div>
+
+        <div class="fi" id="instlPayCntBox" style="display:none;">
+            <label>분할납부횟수 <span class="req">*</span></label>
+            <input type="number"
+                   name="irInstlPayCnt"
+                   id="irInstlPayCnt"
+                   min="1"
+                   disabled
+                   placeholder="분할납부횟수 입력">
+        </div>
+    </div>
+</div>
+
+<div class="form-doc-divider"></div>
+
+<div class="form-group">
+    <div class="form-group-title">⑥ 품목 내용</div>
+
+    <div class="form-grid-2">
+        <div class="fi full">
+            <label>품목정보</label>
+            <textarea name="irCn"
+                      id="irCn"
+                      placeholder="통관 시 참고할 품목정보를 간단하게 입력하세요"></textarea>
+        </div>
+    </div>
+</div>
+
+<div class="form-group">
+    <div class="form-group-title">⑦ 의뢰 내용</div>
+
+    <div class="form-grid-2">
+        <div class="fi full">
+            <label>특이사항 / 비고</label>
+            <textarea name="irComment"
+                      id="irComment"
+                      placeholder="통관 시 참고할 특이사항을 입력하세요"></textarea>
+        </div>
+    </div>
+</div>
+
+<!-- 도착항 검색 모달 -->
+<div id="portModal" class="port-modal">
+    <div class="port-modal-box">
+        <div class="port-modal-header">
+            <h3>도착항 검색</h3>
+            <button type="button" class="port-modal-close" onclick="closePortModal()">×</button>
+        </div>
+
+        <div class="port-modal-body">
+            <div class="port-search-area">
+                <input type="text"
+                       id="portSearchInput"
+                       placeholder="항구명 또는 항구코드 검색"
+                       onkeyup="filterPortList()">
+            </div>
+
+            <table class="port-table">
+                <thead>
+                <tr>
+                    <th>항구코드</th>
+                    <th>국가코드</th>
+                    <th>항구명</th>
+                    <th>선택</th>
+                </tr>
+                </thead>
+                <tbody>
+                <c:forEach var="port" items="${portVO}">
+                    <tr class="port-row"
+                        data-search="${port.portCd} ${port.portCountryCd} ${port.portNm}">
+                        <td>${port.portCd}</td>
+                        <td>${port.portCountryCd}</td>
+                        <td>${port.portNm}</td>
+                        <td>
+                            <button type="button"
+                                    class="port-select-btn"
+                                    onclick="selectPort('${port.portCd}', '${port.portNm}')">
+                                선택
+                            </button>
+                        </td>
+                    </tr>
+                </c:forEach>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

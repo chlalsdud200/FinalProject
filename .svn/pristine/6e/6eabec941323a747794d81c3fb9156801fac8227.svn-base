@@ -1,0 +1,27 @@
+package kr.or.tacs.cmmenums;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+@Getter
+@AllArgsConstructor
+public enum TacsTrSt {
+
+    // 운송 상태 관련
+    TRC_WAIT("TRC_WAIT", "접수대기"),
+    TRC_REJECT("TRC_REJECT", "접수반려"),
+    TRC_DONE("TRC_DONE" ,"접수완료"),
+
+    // D/O 상태 관련
+    TRC_DO_READY("TRC_DO_READY", "D/O발급대기"),
+    TRC_DO_ISSUED("TRC_DO_ISSUED", "D/O발급완료"),
+    TRC_DO_REQ("TRC_DO_REQ", "D/O전달완료"),
+
+    // 운임비 관련
+    TRC_STL_REQ("TRC_STL_REQ", "운임비 결제 요청"),
+    TRC_STL_PAID("TRC_STL_PAID", "운임비 결제완료");
+
+    // 적하목록 상태 관련
+    private final String code;
+    private final String label;
+}

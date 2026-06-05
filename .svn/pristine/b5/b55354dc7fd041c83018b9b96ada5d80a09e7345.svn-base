@@ -1,0 +1,2417 @@
+
+function buildImportManifestListOnlyPanel() {
+    return buildImportManifestWorkflowPanel({listOnly: true});
+}
+
+
+
+function buildImportManifestWorkflowPanel(options) {
+    options = options || {};
+    var detailMode = options.detailMode === true;
+    var listOnly = options.listOnly === true;
+    var headerTitle = listOnly ? '적하목록 조회' : (detailMode ? '해당 의뢰 적하목록/도착통지서' : '대조 대상');
+    var headerDesc = listOnly ? '' : (detailMode
+        ? '현재 선택한 운송의뢰의 적하목록 DB값과 포장명세서 PDF만 표시합니다.'
+        : '적하목록 DB값과 화주가 제출한 포장명세서 PDF를 대조합니다.');
+    var headerButtons = (detailMode || listOnly)
+        ? ''
+        : '<div class="flex gap-2"><button type="button" id="importManifestReloadBtn" class="px-4 py-2 bg-slate-700 text-white text-xs font-bold">조회</button><button type="button" id="importManifestResetBtn" class="px-4 py-2 bg-slate-600 text-white text-xs font-bold">초기화</button></div>';
+    var searchArea;
+    if (detailMode) {
+        searchArea = '<div class="hidden" aria-hidden="true">'
+            + '<input id="importManifestSearchManifestNo" type="hidden">'
+            + '<input id="importManifestSearchMblNo" type="hidden">'
+            + '<input id="importManifestSearchHblNo" type="hidden">'
+            + '<input id="importManifestSearchBlNo" type="hidden">'
+            + '<input id="importManifestSearchOwnerNm" type="hidden">'
+            + '<input id="importManifestSearchNoticeStatus" type="hidden">'
+            + '</div>';
+    } else if (listOnly) {
+        searchArea = '    <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1fr_1fr_90px] gap-3 items-end">'
+            + '      <div><label class="field-label">의뢰번호</label><input id="importManifestSearchManifestNo" class="field-input" type="text" placeholder="의뢰번호 검색"></div>'
+            + '      <div><label class="field-label">화주명</label><input id="importManifestSearchOwnerNm" class="field-input" type="text" placeholder="화주명 검색"></div>'
+            + '      <div><label class="field-label">Master B/L</label><input id="importManifestSearchMblNo" class="field-input" type="text" placeholder="Master B/L 검색"></div>'
+            + '      <div><label class="field-label">House B/L</label><input id="importManifestSearchHblNo" class="field-input" type="text" placeholder="House B/L 검색"></div>'
+            + '      <input id="importManifestSearchBlNo" type="hidden">'
+            + '      <div><label class="field-label">도착통지서 상태</label><select id="importManifestSearchNoticeStatus" class="field-select"><option value="">전체</option><option value="미발급">미발급</option><option value="발급완료">발급완료</option></select></div>'
+            + '      <button type="button" id="importManifestSearchBtn" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold w-[88px]">조회</button>'
+            + '    </div>';
+    } else {
+        searchArea = '    <div class="list-search-grid">'
+            + '        <div><label class="field-label">의뢰번호</label><input id="importManifestSearchManifestNo" class="field-input" type="text" placeholder="의뢰번호 검색"></div>'
+            + '        <div><label class="field-label">Master B/L</label><input id="importManifestSearchMblNo" class="field-input" type="text" placeholder="Master B/L 검색"></div>'
+            + '        <div><label class="field-label">House B/L</label><input id="importManifestSearchHblNo" class="field-input" type="text" placeholder="House B/L 검색"></div>'
+            + '        <div><label class="field-label">B/L</label><input id="importManifestSearchBlNo" class="field-input" type="text" placeholder="B/L 통합 검색"></div>'
+            + '        <div><label class="field-label">화주명</label><input id="importManifestSearchOwnerNm" class="field-input" type="text" placeholder="화주명 검색"></div>'
+            + '        <div><label class="field-label">도착통지 상태</label><select id="importManifestSearchNoticeStatus" class="field-select"><option value="">전체</option><option value="미발급">미발급</option><option value="발급완료">발급완료</option></select></div>'
+            + '        <button type="button" id="importManifestSearchBtn" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold">조회</button>'
+            + '      </div>';
+    }
+    return '' +
+        '<section ' + (listOnly ? 'id="importManifestListOnlyPanel" ' : (detailMode ? 'id="importManifestDetailModePanel" data-detail-mode="true" ' : '')) + 'class="section-card import-left-list-card">' +
+        '  <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">' +
+        '    <div><h4 class="text-sm font-bold text-slate-900">' + headerTitle + '</h4>' + (headerDesc ? '<p class="mt-1 text-xs text-slate-500">' + headerDesc + '</p>' : '') + '</div>' +
+        headerButtons +
+        '  </div>' +
+        '  <div class="p-6 space-y-6">' +
+        searchArea +
+        '    <div class="overflow-x-auto">' +
+        '      <table class="w-full tbl">' +
+        '        <thead><tr><th>의뢰번호</th><th>화주</th><th>Master B/L</th><th>House B/L</th><th>도착통지서 상태</th></tr></thead>' +
+        '        <tbody id="importManifestListBody" class="text-[11px] text-slate-700"><tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">조회 중입니다.</td></tr></tbody>' +
+        '      </table>' +
+        '    </div>' +
+        '  </div>' +
+        (listOnly ? '' :
+            '  <div id="importManifestDetailArea" class="hidden grid grid-cols-1 xl:grid-cols-3 gap-5">' +
+            '    <div class="xl:col-span-1 bg-white border border-slate-200 min-h-[420px] flex flex-col">' +
+            '      <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between gap-3">' +
+            '        <div><h3 class="text-base font-extrabold text-slate-900">포장명세서 PDF</h3><p id="manifestPackingPreviewTitle" class="mt-1 text-xs text-slate-500">DB에 연결된 포장명세서 파일입니다.</p></div>' +
+            '      </div>' +
+            '      <div id="manifestPackingPreviewBody" class="flex-1 bg-slate-50 text-slate-700 p-5 space-y-3 text-sm">목록에서 대상을 선택하면 첨부파일이 표시됩니다.</div>' +
+            '    </div>' +
+            '    <div class="xl:col-span-2 space-y-5">' +
+            '      <div class="bg-white border border-slate-200 overflow-hidden">' +
+            '        <div class="px-5 py-4 border-b border-slate-200"><h3 class="text-base font-extrabold text-slate-900">적하목록 테이블 대조값</h3><div class="mt-1 text-xs text-slate-500">송장번호, 출발지/목적지, B/L, 품명, 수량, 중량 중심으로 확인합니다.</div></div>' +
+            '        <div class="overflow-x-auto"><table class="w-full min-w-[720px] text-sm text-left"><thead class="bg-slate-50 text-slate-600"><tr><th class="px-5 py-3 w-40">항목</th><th class="px-5 py-3">적하목록 DB 값</th><th class="px-5 py-3">포장명세서 PDF 비교</th></tr></thead><tbody id="manifestCargoItemBody"><tr><td colspan="3" class="px-5 py-8 text-center text-slate-500">목록에서 대상을 선택하세요.</td></tr></tbody></table></div>' +
+            '      </div>' +
+            '      <input id="manifestNo" type="hidden"><input id="manifestGgNo" type="hidden"><input id="manifestCargoMgmtNo" type="hidden"><input id="manifestInvoiceNo" type="hidden"><input id="manifestMasterBl" type="hidden"><input id="manifestHouseBl" type="hidden">' +
+            '      <input id="manifestPackingListUrl" type="hidden"><input id="manifestPackingListFileNo" type="hidden"><input id="manifestPackingListFile" type="hidden"><input id="manifestRemark" type="hidden">' +
+            '      <div id="manifestSupplementArea" class="hidden border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">보완요청 내역이 있는 적하목록입니다.</div>' +
+            '    </div>' +
+            '  </div>') +
+        '</section>';
+}
+
+function bindImportManifestWorkflowActions(groupKey, itemId) {
+    // 상세 탭의 도착통지서 발송(TACS-FW-020)과 좌측 적하목록 조회(TACS-FW-023)에서
+    // 같은 적하목록/도착통지 바인딩을 사용한다.
+    // 기존에는 TACS-FW-023만 허용해서 수입운송의뢰상세 내부 탭에서
+    // 초기 조회/버튼 이벤트가 붙지 않았다.
+    if (groupKey !== 'import' || (itemId !== 'TACS-FW-020' && itemId !== 'TACS-FW-023')) return;
+    bindImportManifestReceiveSearch();
+    bindImportManifestArrivalNoticeActions();
+    loadImportManifestList();
+}
+
+function setImportManifestSearchCriteria(criteria) {
+    criteria = criteria || {};
+    var mbl = document.getElementById('importManifestSearchMblNo');
+    var hbl = document.getElementById('importManifestSearchHblNo');
+    var bl = document.getElementById('importManifestSearchBlNo');
+    var owner = document.getElementById('importManifestSearchOwnerNm');
+    var manifest = document.getElementById('importManifestSearchManifestNo');
+    if (manifest) manifest.value = criteria.manifestNo || criteria.requestNo || criteria.trcNo || '';
+    if (mbl) mbl.value = criteria.mblNo || criteria.blNo || '';
+    if (hbl) hbl.value = criteria.hblNo || '';
+    if (bl) bl.value = criteria.blNo || criteria.mblNo || criteria.hblNo || '';
+    if (owner) owner.value = criteria.ownerNm || criteria.shipperName || '';
+}
+
+function applyPendingImportManifestSearch() {
+    var criteria = window.__TACS_IMPORT_MANIFEST_PENDING_SEARCH;
+    if (!criteria) return false;
+    setImportManifestSearchCriteria(criteria);
+    if (typeof searchImportManifestList === 'function') searchImportManifestList();
+    window.__TACS_IMPORT_MANIFEST_PENDING_SEARCH = null;
+    return true;
+}
+
+function openImportManifestCompareFromRequest(criteria) {
+    window.__TACS_IMPORT_MANIFEST_PENDING_SEARCH = criteria || {};
+    if (typeof openDetail === 'function') {
+        openDetail('import', 'TACS-FW-023');
+    }
+    [0, 120, 450, 900].forEach(function (delay) {
+        setTimeout(function () {
+            setImportManifestSearchCriteria(window.__TACS_IMPORT_MANIFEST_PENDING_SEARCH || criteria || {});
+            if (typeof searchImportManifestList === 'function') searchImportManifestList();
+        }, delay);
+    });
+}
+
+function bindImportManifestReceiveSearch() {
+    var searchBtn = document.getElementById('importManifestSearchBtn');
+    var ids = [
+        'importManifestSearchManifestNo', 'importManifestSearchMblNo', 'importManifestSearchHblNo',
+        'importManifestSearchOwnerNm', 'importManifestSearchBlNo', 'importManifestSearchNoticeStatus'
+    ];
+    if (searchBtn && !searchBtn.dataset.bound) {
+        searchBtn.dataset.bound = 'true';
+        searchBtn.addEventListener('click', searchImportManifestList);
+    }
+    var resetBtn = document.getElementById('importManifestResetBtn');
+    if (resetBtn && !resetBtn.dataset.bound) {
+        resetBtn.dataset.bound = 'true';
+        resetBtn.addEventListener('click', resetImportManifestSearch);
+    }
+    var reloadBtn = document.getElementById('importManifestReloadBtn');
+    if (reloadBtn && !reloadBtn.dataset.bound) {
+        reloadBtn.dataset.bound = 'true';
+        reloadBtn.addEventListener('click', loadImportManifestList);
+    }
+    ids.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el || el.dataset.bound) return;
+        el.dataset.bound = 'true';
+        el.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') searchImportManifestList();
+        });
+        if (el.tagName === 'SELECT') el.addEventListener('change', searchImportManifestList);
+    });
+}
+
+(function () {
+    const modal = document.getElementById('importDocRejectModal');
+    if (!modal) return;
+    const titleEl = modal.querySelector('div[style*="font-weight:800"]');
+    const fields = {
+        requestNo: document.getElementById('importRejectRequestNo'),
+        owner: document.getElementById('importRejectOwner'),
+        docName: document.getElementById('importRejectDocName'),
+        receivedAt: document.getElementById('importRejectReceivedAt'),
+        reason: document.getElementById('importRejectReason')
+    };
+    let activeRow = null;
+    let activeGroupKey = '';
+    let activeDocKey = '';
+
+    function applyRejectedState() {
+        if (activeDocKey && typeof shippingDocStatusOverrides !== 'undefined') {
+            shippingDocStatusOverrides[activeDocKey] = {
+                status: '반려',
+                reason: fields.reason.value.trim(),
+                sentTo: fields.owner.value || '화주'
+            };
+        }
+
+        if (activeRow) {
+            const statusCell = activeRow.querySelector('.receive-status-cell');
+            const actionCell = activeRow.lastElementChild;
+            const chip = typeof buildStatusChip === 'function'
+                ? buildStatusChip('반려')
+                : '<span style="display:inline-flex; align-items:center; justify-content:center; min-width:58px; height:30px; padding:0 12px; background:#fff1f2; color:#be123c; border:1px solid #fecdd3; font-size:12px; font-weight:700;">반려</span>';
+            if (statusCell) statusCell.innerHTML = chip;
+            if (actionCell) actionCell.innerHTML = chip;
+        }
+    }
+
+    window.openShippingDocRejectModal = function (btn, groupKey) {
+        activeRow = btn.closest('tr');
+        activeGroupKey = groupKey || ((btn.dataset.requestNo || '').startsWith('IMP') ? 'import' : 'export');
+        activeDocKey = typeof getShippingDocKey === 'function'
+            ? getShippingDocKey(activeGroupKey, btn.dataset.requestNo, btn.dataset.docName)
+            : `${activeGroupKey}:${btn.dataset.requestNo || ''}:${btn.dataset.docName || ''}`;
+
+        if (typeof selectedShippingDoc !== 'undefined') {
+            selectedShippingDoc = {
+                groupKey: activeGroupKey,
+                requestNo: btn.dataset.requestNo || '',
+                owner: btn.dataset.owner || '',
+                docName: btn.dataset.docName || '',
+                receivedAt: btn.dataset.receivedAt || '',
+                sender: btn.dataset.sender || '',
+                receiveStatus: btn.dataset.receiveStatus || '',
+                key: activeDocKey
+            };
+        }
+
+        if (titleEl) titleEl.textContent = activeGroupKey === 'import' ? '수입 선적서류 반려' : '수출 선적서류 반려';
+        fields.requestNo.value = btn.dataset.requestNo || '';
+        fields.owner.value = btn.dataset.owner || '';
+        fields.docName.value = btn.dataset.docName || '';
+        fields.receivedAt.value = btn.dataset.receivedAt || '';
+        fields.reason.value = '';
+        modal.style.display = 'flex';
+    };
+
+    function closeModal() {
+        modal.style.display = 'none';
+        activeRow = null;
+        activeGroupKey = '';
+        activeDocKey = '';
+    }
+
+    document.addEventListener('click', function (e) {
+        const rejectBtn = e.target.closest('.receive-doc-reject-btn');
+        if (rejectBtn && !e.defaultPrevented) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.openShippingDocRejectModal(rejectBtn);
+            return;
+        }
+
+        if (e.target.id === 'importRejectCancelBtn') {
+            e.preventDefault();
+            closeModal();
+            return;
+        }
+
+        if (e.target.id === 'importRejectSubmitBtn') {
+            e.preventDefault();
+            if (!fields.reason.value.trim()) {
+                alert('반려 사유를 입력해주세요.');
+                return;
+            }
+            applyRejectedState();
+            const owner = fields.owner.value || '화주';
+            closeModal();
+            alert(`${owner}에게 선적서류 반려 및 보완 요청이 발송되었습니다.`);
+            return;
+        }
+
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+})();
+
+/* Final sidebar rule: parent title opens first page, arrow only toggles accordion. */
+(function () {
+    const GROUP_FIRST_ITEMS = {
+        export: 'TACS-FW-001',
+        import: 'TACS-FW-015'
+    };
+
+    function openGroupFirstPage(groupKey, event) {
+        if (window.TRANSPORT_ASYNC_NAV_ACTIVE) return;
+        const currentGroup = (window.TRANSPORT_INITIAL_VIEW || {}).group || 'dashboard';
+        const link = event && event.target && event.target.closest ? event.target.closest('.menu-group .menu-item[data-group]') : null;
+        const href = link && link.getAttribute ? link.getAttribute('href') : '';
+        if (groupKey !== currentGroup && href && href !== '#') return;
+
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+        }
+
+        const itemId = GROUP_FIRST_ITEMS[groupKey];
+        if (!itemId) return;
+
+        if (typeof toggleMenuGroup === 'function') toggleMenuGroup(groupKey, true);
+        if (typeof openDetail === 'function') openDetail(groupKey, itemId);
+    }
+
+    function toggleGroupOnly(groupKey, event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+        }
+
+        if (typeof toggleMenuGroup === 'function') toggleMenuGroup(groupKey);
+    }
+
+    document.addEventListener('click', function (event) {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+
+        const toggle = target.closest('.menu-toggle[data-group]');
+        if (toggle) {
+            toggleGroupOnly(toggle.dataset.group, event);
+            return;
+        }
+
+        const parentTitle = target.closest('.menu-group .menu-item[data-group]');
+        const parentRow = target.closest('.menu-row[data-group-row]');
+        const groupKey = parentTitle ? parentTitle.dataset.group : (parentRow ? parentRow.dataset.groupRow : '');
+        if (groupKey && GROUP_FIRST_ITEMS[groupKey]) {
+            openGroupFirstPage(groupKey, event);
+        }
+    }, true);
+})();
+(function () {
+    const IMPORT_GROUP = 'import';
+    const IMPORT_REQUEST_ID = 'TACS-FW-015';
+
+    function normalizeImportStatus(status) {
+        const v = String(status || '').trim();
+        if (!v || v === 'REQ' || v === 'WAIT' || v === 'TRC_ARR_PENDING') return '접수대기';
+        if (v === 'TRC_WAIT') return '접수대기';
+        if (v === 'ACC' || v === 'ACCEPTED' || v === 'TRC_DONE') return '접수완료';
+        if (v === 'TRC_END' || v === 'COMPLETE_WAIT' || v === '완료대기') return '완료대기';
+        if (v === 'TRC_COMPLETE' || v === 'FINAL_COMPLETE' || v === '최종완료') return '최종완료';
+        if (v === 'IN_DONE') return '입고완료';
+        if (v === 'REL_DONE' || v === 'DONE' || v === 'RELEASED') return '반출완료';
+        if (v === 'REJ' || v === 'REJECTED' || v === 'TRC_REJECT') return '접수반려';
+        return v;
+    }
+
+    function normalizeImportDisplayStatus(row, receiptStatus) {
+        row = row || {};
+        receiptStatus = normalizeImportStatus(receiptStatus);
+
+        if (receiptStatus === '접수반려') return '접수반려';
+
+        const rawDisplayStatus = String(row.requestDisplayStatusNm || '').trim();
+        const displayStatus = normalizeImportStatus(rawDisplayStatus);
+        const releaseStatus = normalizeImportInOutStatus(row.releaseStatusCd || row.releaseStatusNm || row.crrStatusCd || row.CRR_STATUS_CD || '', 'release');
+        const inboundStatus = normalizeImportInOutStatus(row.warehouseInStatusCd || row.warehouseInStatusNm || row.wirStatusCd || row.wirStatusNm || row.WIR_STATUS_CD || '', 'inbound');
+        const supplementStatus = normalizeImportInOutStatus(row.supplementStatusCd || row.supplementStatusNm || rawDisplayStatus || '', inboundStatus ? 'inbound' : '');
+
+        if (releaseStatus && releaseStatus.indexOf('보완요청') >= 0) return releaseStatus;
+        if (inboundStatus && inboundStatus.indexOf('보완요청') >= 0) return inboundStatus;
+        if (receiptStatus === '접수완료' && supplementStatus && supplementStatus.indexOf('보완요청') >= 0) return supplementStatus;
+        if (inboundStatus && (
+            rawDisplayStatus === 'TRC_NTC_SENT'
+            || rawDisplayStatus === 'SENT'
+            || rawDisplayStatus === '발급완료'
+            || rawDisplayStatus === '발송완료'
+            || rawDisplayStatus === '통지완료'
+            || rawDisplayStatus === 'WAIT'
+            || rawDisplayStatus === '입고대기'
+            || rawDisplayStatus === '입고요청완료'
+            || rawDisplayStatus === 'IN_DONE'
+            || rawDisplayStatus === '입고완료'
+        )) return inboundStatus;
+        if (displayStatus && displayStatus !== rawDisplayStatus) return displayStatus;
+        if (rawDisplayStatus === 'TRC_WAIT') return '접수대기';
+        if (rawDisplayStatus === 'TRC_DONE') return '접수완료';
+        if (rawDisplayStatus === 'TRC_NTC_SENT' || rawDisplayStatus === 'SENT' || rawDisplayStatus === '발급완료') return '발급완료';
+        if (rawDisplayStatus === 'TRC_REJECT') return '접수반려';
+
+        const arrivalNoticeStatus = normalizeImportArrivalNoticeIssueStatus(
+            row.noticeStatusNm || row.noticeStatus || row.arrivalNoticeStatusNm || row.arrivalNoticeStatus || row.sendStatusNm || row.ianSendSttsCd || row.IAN_SEND_STTS_CD
+        );
+        if (receiptStatus === '접수완료' && arrivalNoticeStatus === '발급완료' && !releaseStatus && !inboundStatus) {
+            return '발급완료';
+        }
+
+        /*
+         * 운송의뢰 목록 대표 배지는 운송의뢰 접수 상태를 보여야 한다.
+         * requestDisplayStatusNm = 입고요청으로 내려와도 아직 운송담당자가
+         * 입고요청 버튼을 누른 1단계가 아니므로 대표 상태를 덮어쓰지 않는다.
+         */
+        if (rawDisplayStatus === '입고요청' || rawDisplayStatus === '입고요청상태' || rawDisplayStatus === '-') {
+            return receiptStatus || '접수완료';
+        }
+
+        return rawDisplayStatus || receiptStatus || '접수대기';
+    }
+
+    function normalizeImportDoStatus(status) {
+        const raw = String(status || '').trim();
+        const v = raw.toUpperCase();
+        if (!raw || v === 'READY' || v === 'TRC_DO_READY') return 'D/O발급대기';
+        if (v === 'ISSUED' || v === 'TRC_DO_ISSUED') return 'D/O발급완료';
+        if (v === 'DELIVERED' || v === 'TRC_DO_REQ') return 'D/O전달완료';
+        if (raw === '발급대기') return 'D/O발급대기';
+        if (raw === '발급완료') return 'D/O발급완료';
+        if (raw === '전달완료') return 'D/O전달완료';
+        return raw;
+    }
+
+    function normalizeImportSettlementStatus(status) {
+        const raw = String(status || '').trim();
+        const v = raw.toUpperCase();
+        if (!raw) return '미정산';
+        if (v === 'TRC_STL_PAID' || v === 'TCS_STL_PAID' || v === 'PAID' || raw === '정산완료') return '정산완료';
+        if (v === 'TRC_STL_REQ' || v === 'TCS_STL_REQ' || v === 'REQ' || v === 'UNPAID' || raw === '정산요청') return '정산요청';
+        if (raw === '미정산') return '미정산';
+        return raw;
+    }
+
+    function normalizeImportDispatchStatus(status) {
+        const raw = String(status || '').trim();
+        const v = raw.toUpperCase();
+        if (!raw) return '';
+        if (v === 'DISPATCH_DONE' || v === 'TRC_DISPATCH_DONE' || raw === '배차완료' || raw === '최종완료') return '최종완료';
+        if (v === 'DISPATCH_WAIT' || v === 'TRC_DISPATCH_WAIT' || v === 'COMPLETE_WAIT' || v === 'DONE_WAIT' || raw === '완료대기') return '완료대기';
+        if (raw === '배차대기') return '배차대기';
+        return raw;
+    }
+
+
+    function normalizeImportReceiptStatus(status) {
+        const v = String(status || '').trim();
+        if (!v || v === 'REQ' || v === 'WAIT' || v === 'TRC_WAIT') return '접수대기';
+        if (v === 'ACC' || v === 'ACCEPTED' || v === 'TRC_DONE') return '접수완료';
+        if (v === 'TRC_END' || v === 'COMPLETE_WAIT') return '완료대기';
+        if (v === 'TRC_COMPLETE' || v === 'FINAL_COMPLETE') return '최종완료';
+        if (v === 'REJ' || v === 'REJECTED' || v === 'TRC_REJECT') return '접수반려';
+        if (v === '접수대기' || v === '접수완료' || v === '접수반려' || v === '완료대기' || v === '최종완료') return v;
+        return '';
+    }
+
+    function normalizeImportInOutStatus(status, scope) {
+        const raw = String(status || '').trim();
+        const v = raw.toUpperCase();
+        const area = String(scope || '').toLowerCase();
+        if (!raw) return '';
+        if (area === 'inbound' || area === 'in') {
+            if (raw === '입고요청' || raw === '입고요청상태') return '';
+            if (raw === '입고요청완료' || raw === '입고대기' || v === 'WAIT' || v === 'SENT' || v === 'IN_REQ' || v === 'IN_WAIT') return '입고대기';
+        }
+        if (area === 'release' || area === 'out') {
+            if (raw === '반출요청전' || raw === '반출대기' || v === 'REL_WAIT') return '';
+            if (raw === '반출요청') return '반출대기';
+        }
+        if (raw === '입고대기' || v === 'WAIT') return '입고대기';
+        if (raw === '입고요청완료' || v === 'SENT') return '입고대기';
+        if (raw === '입고완료' || v === 'IN_DONE') return '입고완료';
+        if (raw === '입고 보완요청' || v === 'REQ_FIX') return '입고 보완요청';
+        if (raw === '입고 보완제출완료' || v === 'REQ_SENT') return '입고 보완제출완료';
+        if (raw === '반출대기' || v === 'REL_WAIT') return '반출대기';
+        if (raw === '반출완료' || v === 'REL_DONE' || v === 'DONE' || v === 'RELEASED') return '반출완료';
+        if (raw === '반출 보완요청' || v === 'REL_FIX' || v === 'REL_REJECT') return '반출 보완요청';
+        if (raw === '반출 보완제출완료' || v === 'REL_SENT') return '반출 보완제출완료';
+        if (raw === '보완요청') {
+            if (area === 'release' || area === 'out') return '반출 보완요청';
+            if (area === 'inbound' || area === 'in') return '입고 보완요청';
+            return '보완요청';
+        }
+        if (v === 'REQ' || v === 'REJECT') return area === 'release' || area === 'out' ? '반출 보완요청' : '입고 보완요청';
+        return '';
+    }
+
+    function firstImportInOutStatus(row, fallbackDisplayStatus) {
+        row = row || {};
+        const groups = [
+            {scope: 'release', values: [row.releaseStatusCd, row.releaseStatusNm, row.crrStatusCd, row.CRR_STATUS_CD]},
+            {
+                scope: 'inbound',
+                values: [row.warehouseInStatusCd, row.warehouseInStatusNm, row.wirStatusCd, row.wirStatusNm, row.WIR_STATUS_CD]
+            },
+            {
+                scope: '',
+                values: [row.requestDisplayStatusCd, row.requestDisplayStatusNm, fallbackDisplayStatus, row.supplementStatusCd, row.supplementStatusNm, row.statusNm, row.statusCd]
+            }
+        ];
+        for (let g = 0; g < groups.length; g += 1) {
+            const group = groups[g];
+            for (let i = 0; i < group.values.length; i += 1) {
+                const normalized = normalizeImportInOutStatus(group.values[i], group.scope);
+                if (normalized) return normalized;
+            }
+        }
+        return '';
+    }
+
+    function normalizeImportArrivalNoticeIssueStatus(status) {
+        const raw = String(status || '').trim();
+        const v = raw.toUpperCase();
+        if (v === 'TRC_NTC_SENT' || v === 'SENT' || raw === '발송완료' || raw === '통지완료' || raw === '발급완료') return '발급완료';
+        return '미발급';
+    }
+
+    function normalizeServerImportRequest(row) {
+        const mbl = row.mblNo || row.blNo || row.icmMblNo || row.ICM_MBL_NO || row.biMblNo || row.BI_MBL_NO || row.irBlAwbNo || row.IR_BL_AWB_NO || '';
+        const hbl = row.hblNo || row.icmHblNo || row.ICM_HBL_NO || row.biHblNo || row.BI_HBL_NO || '';
+        const mblFileName = row.mblFile || row.requestFile || '';
+        const receiptStatus = normalizeImportStatus(row.statusNm || row.statusCd || '접수대기');
+        const displayStatus = normalizeImportDisplayStatus(row, receiptStatus);
+        return {
+            requestNo: row.trcNo || row.requestNo || row.TRC_NO || row.trc_no || '',
+            shipperName: row.ownerNm || '',
+            mblHbl: mbl || '',
+            mblNo: mbl,
+            hblNo: hbl,
+            blNo: row.blNo || mbl,
+            masterBl: mbl,
+            houseBl: hbl,
+            eta: row.eta || '',
+            carrierName: row.carrierNm || '',
+            destinationPort: row.arvlPortCd || row.arvlPortNm || '',
+            receiptStatus: receiptStatus,
+            displayStatus: displayStatus,
+            supplementStatus: row.supplementStatusNm || row.supplementStatusCd || '',
+            supplementNo: row.supplementNo || '',
+            suppReqCn: row.suppReqCn || '',
+            inboundStatus: normalizeImportInOutStatus(row.warehouseInStatusNm || row.warehouseInStatusCd || row.wirStatusNm || row.wirStatusCd || '', 'inbound'),
+            releaseStatus: normalizeImportInOutStatus(row.releaseStatusNm || row.releaseStatusCd || row.crrStatusCd || row.CRR_STATUS_CD || '', 'release'),
+            settlementStatus: normalizeImportSettlementStatus(row.settlementStatusNm || row.settlementStatusCd || row.tcsStlStatusNm || row.tcsStlStatusCd || row.blSettlementStatusCd || ''),
+            doStatus: normalizeImportDoStatus(row.doStatusNm || row.doStatusCd || row.diStatusNm || row.diStatusCd || row.DI_STATUS_NM || row.DI_STATUS_CD || ''),
+            dispatchStatus: normalizeImportDispatchStatus(row.dispatchStatusNm || row.dispatchStatusCd || ''),
+            receiptDate: row.requestDt || '',
+            shipperContact: row.ownerPicNm || row.owrPicNm || row.OWR_PIC_NM || '',
+            shipperPhone: row.ownerTelno || row.owrTelno || row.ownerTelNo || row.owrTelNo || row.OWR_TELNO || '',
+            shipperEmail: row.ownerEmail || row.owrEmail || row.OWR_EMAIL || '',
+            consignorName: row.buyerNm || '',
+            consignorCountry: row.buyerCountryCd || '',
+            originPort: row.deptPortCd || row.deptPortNm || '',
+            transportMode: row.transportMeanNm || row.transportMeanCd || '',
+            transportType: row.transportTypeCd || '',
+            transshipYn: '',
+            requestNote: row.requestCn || '',
+            blType: mbl ? 'Master B/L' : '',
+            bondedWarehouse: '',
+            importDeclNo: '',
+            containerSpec: '',
+            itemCategory: row.itemCategory || '',
+            goodsName: row.goodsName || row.itemNm || '',
+            itemNm: row.itemNm || row.goodsName || '',
+            qty: row.qty || row.goodsQty || '',
+            weight: row.weight || row.goodsWeight || row.netWeight || '',
+            mblFile: mblFileName,
+            hblFile: row.hblFile || '',
+            invoiceNo: row.invoiceNo || row.wirInvoiceNo || '',
+            invoiceFile: row.invoiceFile || '',
+            invoiceFileNo: row.invoiceFileNo || row.invFileNo || '',
+            invoiceUrl: row.invoiceUrl || row.invoiceFileUrl || '',
+            packingListFile: row.packingListFile || '',
+            packingListFileNo: row.packingListFileNo || row.pkgFileNo || '',
+            packingListUrl: row.packingListUrl || row.packingListFileUrl || '',
+            inOutStatus: firstImportInOutStatus(row, displayStatus),
+            arrivalNoticeIssueStatus: normalizeImportArrivalNoticeIssueStatus(row.noticeStatusNm || row.noticeStatus || row.arrivalNoticeStatusNm || row.arrivalNoticeStatus || row.sendStatusNm || row.ianSendSttsCd || row.IAN_SEND_STTS_CD),
+            rejectReason: row.rejectReason || row.rejectMemo || ''
+        };
+    }
+
+    const serverImportRequests = Array.isArray(window.TRANSPORT_IMPORT_REQUESTS)
+        ? window.TRANSPORT_IMPORT_REQUESTS.filter(function (row) {
+            return row && (row.trcNo || row.requestNo || row.TRC_NO || row.trc_no);
+        }).map(normalizeServerImportRequest)
+        : [];
+
+    const importRequestFilters = {
+        requestNo: '',
+        shipperName: '',
+        blNo: '',
+        receiptStatus: '전체',
+        inOutStatus: '전체',
+        arrivalStatus: '전체'
+    };
+
+    function loadImportTransportRequestList() {
+        return fetch((window.contextPath || '') + '/transport/import/request/list.do', {
+            method: 'GET',
+            headers: {'Accept': 'application/json'},
+            cache: 'no-store'
+        })
+            .then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(function (list) {
+                if (Array.isArray(list)) {
+                    window.TRANSPORT_IMPORT_REQUESTS = list;
+                } else if (list && Array.isArray(list.rows)) {
+                    window.TRANSPORT_IMPORT_REQUESTS = list.rows;
+                } else if (list && Array.isArray(list.list)) {
+                    window.TRANSPORT_IMPORT_REQUESTS = list.list;
+                } else if (list && Array.isArray(list.data)) {
+                    window.TRANSPORT_IMPORT_REQUESTS = list.data;
+                } else {
+                    window.TRANSPORT_IMPORT_REQUESTS = [];
+                }
+                return window.TRANSPORT_IMPORT_REQUESTS;
+            });
+    }
+
+    function refreshImportTransportRequestList() {
+        return loadImportTransportRequestList()
+            .catch(function (err) {
+                console.error(err);
+                alert('수입 운송의뢰 목록 조회 중 오류가 발생했습니다.');
+            })
+            .then(function () {
+                renderImportRequestPage();
+            });
+    }
+
+
+    function getImportRequests() {
+        const serverRows = Array.isArray(window.TRANSPORT_IMPORT_REQUESTS)
+            ? window.TRANSPORT_IMPORT_REQUESTS.filter(function (row) {
+                return row && (row.trcNo || row.requestNo || row.TRC_NO || row.trc_no);
+            }).map(normalizeServerImportRequest)
+            : [];
+        return serverRows;
+    }
+
+    function getFilteredImportRequests() {
+        const requestNo = (importRequestFilters.requestNo || '').toLowerCase();
+        const shipperName = (importRequestFilters.shipperName || '').toLowerCase();
+        const blNo = (importRequestFilters.blNo || '').toLowerCase();
+        const receiptStatusFilter = importRequestFilters.receiptStatus || '전체';
+        const inOutStatusFilter = importRequestFilters.inOutStatus || '전체';
+        const arrivalStatusFilter = importRequestFilters.arrivalStatus || '전체';
+
+        return getImportRequests().filter(function (req) {
+            const receiptStatus = normalizeImportReceiptStatus(req.receiptStatus);
+            const displayStatus = getStatus(req);
+            const inOutStatus = req.inOutStatus || '';
+            const inboundStatus = req.inboundStatus || '';
+            const releaseStatus = req.releaseStatus || '';
+            const arrivalStatus = req.arrivalNoticeIssueStatus || '미발급';
+            const mblHbl = req.mblHbl || '';
+            return (!requestNo || String(req.requestNo || '').toLowerCase().includes(requestNo))
+                && (!shipperName || String(req.shipperName || '').toLowerCase().includes(shipperName))
+                && (!blNo || String(mblHbl).toLowerCase().includes(blNo))
+                && (receiptStatusFilter === '전체' || receiptStatus === receiptStatusFilter || displayStatus === receiptStatusFilter)
+                && (inOutStatusFilter === '전체' || inOutStatus === inOutStatusFilter || inboundStatus === inOutStatusFilter || releaseStatus === inOutStatusFilter)
+                && (arrivalStatusFilter === '전체' || arrivalStatus === arrivalStatusFilter);
+        });
+    }
+
+    function html(v) {
+        return String(v == null ? '' : v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function getStatus(req) {
+        var status = '';
+        try {
+            status = (importRequestStatusOverrides && importRequestStatusOverrides[req.requestNo]) || req.displayStatus || req.receiptStatus;
+        } catch (e) {
+            status = req.displayStatus || req.receiptStatus;
+        }
+        return normalizeImportStatus(status);
+    }
+
+    function getReason(req) {
+        try {
+            return (importRequestRejectReasons && importRequestRejectReasons[req.requestNo]) || req.rejectReason || '';
+        } catch (e) {
+            return req.rejectReason || '';
+        }
+    }
+
+    function statusBadge(status) {
+        const text = String(status || '-').trim() || '-';
+        const compact = text.replace(/\s+/g, '');
+        const tone = compact.indexOf('반려') >= 0
+            ? 'danger'
+            : compact.indexOf('보완') >= 0
+                ? 'warn'
+                : compact.indexOf('완료') >= 0 || compact.indexOf('전달완료') >= 0 || compact === '최종완료'
+                    ? 'done'
+                    : compact.indexOf('대기') >= 0 || compact.indexOf('미발급') >= 0 || compact.indexOf('미정산') >= 0 || compact.indexOf('요청') >= 0
+                        ? 'wait'
+                        : 'neutral';
+        return '<span class="import-request-status-badge import-tone-' + tone + '" title="' + html(text) + '">' + html(text) + '</span>';
+    }
+
+
+
+
+
+
+
+
+
+    function rowAction(req, status) {
+        const receiptStatus = req.receiptStatus || status;
+        const common = [
+            'data-request-no="' + html(req.requestNo) + '"', 'data-receipt-date="' + html(req.receiptDate) + '"', 'data-shipper-name="' + html(req.shipperName) + '"', 'data-shipper-contact="' + html(req.shipperContact) + '"', 'data-shipper-phone="' + html(req.shipperPhone) + '"', 'data-shipper-email="' + html(req.shipperEmail) + '"',
+            'data-consignor-name="' + html(req.consignorName) + '"', 'data-consignor-country="' + html(req.consignorCountry) + '"',
+            'data-carrier-name="' + html(req.carrierName) + '"', 'data-origin-port="' + html(req.originPort) + '"', 'data-destination-port="' + html(req.destinationPort) + '"', 'data-transport-mode="' + html(req.transportMode) + '"', 'data-transport-type="' + html(req.transportType) + '"', 'data-transship-yn="' + html(req.transshipYn) + '"', 'data-request-note="' + html(req.requestNote) + '"',
+            'data-bl-type="' + html(req.blType) + '"', 'data-bonded-warehouse="' + html(req.bondedWarehouse) + '"', 'data-import-decl-no="' + html(req.importDeclNo) + '"', 'data-container-spec="' + html(req.containerSpec) + '"', 'data-item-category="' + html(req.itemCategory) + '"',
+            'data-goods-name="' + html(req.goodsName || req.itemNm || '') + '"', 'data-qty="' + html(req.qty || '') + '"', 'data-weight="' + html(req.weight || '') + '"',
+            'data-mbl-no="' + html(req.mblNo || req.blNo || req.masterBl || req.mblHbl) + '"', 'data-hbl-no="' + html(req.hblNo || req.houseBl) + '"', 'data-bl-no="' + html(req.blNo || req.mblNo || req.masterBl || req.mblHbl) + '"', 'data-eta="' + html(req.eta || '') + '"',
+            'data-mbl-file="' + html(req.mblFile || req.hblFile) + '" data-hbl-file="' + html(req.mblFile || req.hblFile) + '"', 'data-invoice-no="' + html(req.invoiceNo) + '"', 'data-invoice-file="' + html(req.invoiceFile) + '"', 'data-invoice-file-no="' + html(req.invoiceFileNo || req.invFileNo || '') + '"', 'data-invoice-url="' + html(req.invoiceUrl || req.invoiceFileUrl || '') + '"', 'data-packing-list-file="' + html(req.packingListFile) + '"', 'data-packing-list-file-no="' + html(req.packingListFileNo || req.pkgFileNo || '') + '"', 'data-packing-list-url="' + html(req.packingListUrl || req.packingListFileUrl || '') + '"', 'data-receipt-status="' + html(receiptStatus) + '"', 'data-display-status="' + html(status) + '"', 'data-reject-reason="' + html(getReason(req)) + '"'
+        ].join(' ');
+        if (status === '접수반려') {
+            return '<div class="import-action-wrap"><button class="import-list-action-btn import-request-reject-reason-btn bg-red-700 text-white text-xs font-bold" data-request-no="' + html(req.requestNo) + '" data-shipper-name="' + html(req.shipperName) + '" data-reject-reason="' + html(getReason(req)) + '">반려사유</button></div>';
+        }
+        const detailBtn = '<button class="import-list-action-btn import-request-detail-btn bg-slate-800 text-white text-xs font-bold" ' + common + '>상세</button>';
+        if (receiptStatus === '접수완료' || String(status || '').indexOf('보완요청') >= 0) {
+            return '<div class="import-action-wrap">' + detailBtn + '</div>';
+        }
+        return '<div class="import-action-wrap">' + detailBtn + '</div>';
+    }
+
+    function renderImportRows() {
+        const rows = getFilteredImportRequests();
+        if (!rows.length) {
+            return '<tr><td colspan="8" class="text-center py-8 text-slate-500">조회 조건에 맞는 수입 운송의뢰가 없습니다.</td></tr>';
+        }
+        return rows.map(function (req) {
+            const status = getStatus(req);
+            const requestNo = html(req.requestNo);
+            const mblHbl = html(req.mblHbl || '-');
+            return '<tr>'
+                + '<td class="font-bold whitespace-nowrap import-request-no-cell" title="' + requestNo + '">' + requestNo + '</td>'
+                + '<td class="import-request-owner-cell" title="' + html(req.shipperName || '-') + '">' + html(req.shipperName) + '</td>'
+                + '<td class="import-request-buyer-cell" title="' + html(req.consignorName || '-') + '">' + html(req.consignorName) + '</td>'
+                + '<td class="import-request-bl-cell" title="' + mblHbl + '">' + mblHbl + '</td>'
+                + '<td class="import-request-port-cell" title="' + html(req.destinationPort || '-') + '">' + html(req.destinationPort) + '</td>'
+                + '<td class="import-request-status-cell">' + statusBadge(status) + '</td>'
+                + '<td class="import-request-date-cell" title="' + html(req.receiptDate || '-') + '">' + html(req.receiptDate) + '</td>'
+                + '<td class="import-request-action-cell">' + rowAction(req, status) + '</td>'
+                + '</tr>';
+        }).join('');
+    }
+
+    function rerenderImportRequestRows() {
+        const tbody = document.querySelector('.js-import-request-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = renderImportRows();
+        if (typeof bindImportRequestListActions === 'function') {
+            bindImportRequestListActions(IMPORT_GROUP, IMPORT_REQUEST_ID);
+        }
+        if (typeof normalizeDetailActionButtons === 'function') normalizeDetailActionButtons();
+    }
+
+    function bindImportRequestFilters() {
+        const requestNoInput = document.querySelector('.js-import-filter-request-no');
+        const shipperInput = document.querySelector('.js-import-filter-shipper');
+        const blInput = document.querySelector('.js-import-filter-bl');
+        const receiptStatusSelect = document.querySelector('.js-import-filter-receipt-status');
+        const inOutStatusSelect = document.querySelector('.js-import-filter-inout-status');
+        const arrivalStatusSelect = document.querySelector('.js-import-filter-arrival-status');
+        const searchBtn = document.querySelector('.js-import-request-refresh');
+
+        if (requestNoInput) requestNoInput.value = importRequestFilters.requestNo || '';
+        if (shipperInput) shipperInput.value = importRequestFilters.shipperName || '';
+        if (blInput) blInput.value = importRequestFilters.blNo || '';
+        if (receiptStatusSelect) receiptStatusSelect.value = importRequestFilters.receiptStatus || '전체';
+        if (inOutStatusSelect) inOutStatusSelect.value = importRequestFilters.inOutStatus || '전체';
+        if (arrivalStatusSelect) arrivalStatusSelect.value = importRequestFilters.arrivalStatus || '전체';
+
+        const applyFilters = function () {
+            importRequestFilters.requestNo = requestNoInput ? requestNoInput.value.trim() : '';
+            importRequestFilters.shipperName = shipperInput ? shipperInput.value.trim() : '';
+            importRequestFilters.blNo = blInput ? blInput.value.trim() : '';
+            importRequestFilters.receiptStatus = receiptStatusSelect ? receiptStatusSelect.value : '전체';
+            importRequestFilters.inOutStatus = inOutStatusSelect ? inOutStatusSelect.value : '전체';
+            importRequestFilters.arrivalStatus = arrivalStatusSelect ? arrivalStatusSelect.value : '전체';
+            rerenderImportRequestRows();
+        };
+
+        [requestNoInput, shipperInput, blInput].forEach(function (input) {
+            if (!input) return;
+            input.addEventListener('input', applyFilters);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') applyFilters();
+            });
+        });
+        [receiptStatusSelect, inOutStatusSelect, arrivalStatusSelect].forEach(function (select) {
+            if (select) select.addEventListener('change', applyFilters);
+        });
+        if (searchBtn) searchBtn.addEventListener('click', function () {
+            loadImportTransportRequestList()
+                .then(applyFilters)
+                .catch(function (err) {
+                    console.error(err);
+                    alert('수입 운송의뢰 목록 조회 중 오류가 발생했습니다.');
+                });
+        });
+    }
+
+    function renderImportRequestPage(evt) {
+        if (evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+            if (typeof evt.stopImmediatePropagation === 'function') evt.stopImmediatePropagation();
+        }
+        const dashboard = document.getElementById('dashboard-view');
+        const detail = document.getElementById('detail-view');
+        const body = document.getElementById('detail-body');
+        const title = document.getElementById('page-title');
+        const crumb = document.getElementById('breadcrumb');
+        const back = document.getElementById('backBtn');
+        if (typeof toggleMenuGroup === 'function') toggleMenuGroup(IMPORT_GROUP, true);
+        if (typeof setActiveNav === 'function') setActiveNav(IMPORT_GROUP, IMPORT_REQUEST_ID);
+        if (dashboard) dashboard.classList.add('hidden');
+        if (detail) detail.classList.remove('hidden');
+        if (title) title.textContent = '운송의뢰';
+        if (crumb) crumb.innerHTML = '수입운송 &gt; <span class="font-semibold text-slate-900">운송의뢰</span>';
+        if (back) {
+            back.innerHTML = '<span class="material-symbols-outlined text-lg">arrow_back</span><span>대시보드로</span>';
+            back.onclick = typeof showDashboard === 'function' ? showDashboard : null;
+        }
+        if (body) {
+            window.detailBody = body;
+            body.innerHTML = '<div class="space-y-6">'
+                + '<div class="section-card import-left-list-card"><div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between"><div><h4 class="text-sm font-bold text-slate-900">운송의뢰</h4></div></div>'
+                + '<div class="p-6 space-y-6"><div class="list-search-grid"><div><label class="field-label">의뢰번호</label><input class="field-input js-import-filter-request-no" type="text" placeholder="IMP 의뢰번호 검색" /></div><div><label class="field-label">Master B/L</label><input class="field-input js-import-filter-bl" type="text" placeholder="Master B/L 번호 검색" /></div><div><label class="field-label">접수상태</label><select class="field-select js-import-filter-receipt-status"><option value="전체">전체</option><option value="접수대기">접수대기</option><option value="접수완료">접수완료</option><option value="완료대기">완료대기</option><option value="최종완료">최종완료</option><option value="접수반려">접수반려</option></select></div><div><label class="field-label">입고/반출상태</label><select class="field-select js-import-filter-inout-status"><option value="전체">전체</option><option value="입고대기">입고대기</option><option value="입고완료">입고완료</option><option value="입고 보완요청">입고 보완요청</option><option value="입고 보완제출완료">입고 보완제출완료</option><option value="반출대기">반출대기</option><option value="반출완료">반출완료</option><option value="반출 보완요청">반출 보완요청</option><option value="반출 보완제출완료">반출 보완제출완료</option></select></div><div><label class="field-label">도착통지서</label><select class="field-select js-import-filter-arrival-status"><option value="전체">전체</option><option value="미발급">미발급</option><option value="발급완료">발급완료</option></select></div><button type="button" class="js-import-request-refresh">조회</button></div>'
+                + '<div class="overflow-x-auto import-request-table-wrap"><table class="w-full tbl import-request-table"><colgroup><col style="width:17%"><col style="width:11%"><col style="width:12%"><col style="width:18%"><col style="width:9%"><col style="width:11%"><col style="width:14%"><col style="width:8%"></colgroup><thead><tr><th>의뢰번호</th><th>화주명</th><th>바이어명</th><th>Master B/L</th><th>도착항</th><th>진행상태</th><th>등록일시</th><th>처리</th></tr></thead><tbody class="js-import-request-tbody text-sm text-slate-700">' + renderImportRows() + '</tbody></table></div></div></div></div>';
+        }
+        if (typeof bindImportRequestListActions === 'function') bindImportRequestListActions(IMPORT_GROUP, IMPORT_REQUEST_ID);
+        bindImportRequestFilters();
+        if (typeof normalizeDetailActionButtons === 'function') normalizeDetailActionButtons();
+
+        /* JSP 최초 데이터가 비어 있거나 key명이 달라도 목록 API를 한 번 더 읽어서 화면을 채운다. */
+        const hasRows = Array.isArray(window.TRANSPORT_IMPORT_REQUESTS)
+            && window.TRANSPORT_IMPORT_REQUESTS.some(function (row) {
+                return row && (row.trcNo || row.requestNo || row.TRC_NO || row.trc_no);
+            });
+        if (!hasRows && !window.__IMPORT_REQUEST_LIST_LOADING) {
+            window.__IMPORT_REQUEST_LIST_LOADING = true;
+            loadImportTransportRequestList()
+                .then(function () {
+                    rerenderImportRequestRows();
+                })
+                .catch(function (err) {
+                    console.error('[수입 운송의뢰 목록 자동조회 실패]', err);
+                })
+                .then(function () {
+                    window.__IMPORT_REQUEST_LIST_LOADING = false;
+                });
+        }
+    }
+
+    window.renderCurrentImportRequestList = renderImportRequestPage;
+
+    function removeDeprecatedArrivalTrackingMenu() {
+        const selectors = [
+            '[data-item="TACS-FW-020"]',
+            '[data-page="TACS-FW-020"]',
+            '[href*="TACS-FW-020"]'
+        ];
+        document.querySelectorAll(selectors.join(',')).forEach(function (el) {
+            const row = el.closest('li, .nav-item, .submenu-item, a, button, div') || el;
+            row.remove();
+        });
+        Array.from(document.querySelectorAll('a, button, li, div, span')).forEach(function (el) {
+            const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+            if (text === '운송예정 및 입항추적' || text === '도착예정 및 입항추적') {
+                const row = el.closest('li, a, button, .nav-item, .submenu-item, div') || el;
+                row.remove();
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', removeDeprecatedArrivalTrackingMenu);
+    } else {
+        removeDeprecatedArrivalTrackingMenu();
+    }
+    setTimeout(removeDeprecatedArrivalTrackingMenu, 0);
+    setTimeout(removeDeprecatedArrivalTrackingMenu, 150);
+    setTimeout(removeDeprecatedArrivalTrackingMenu, 500);
+
+    if (!window.TRANSPORT_DEFER_PAGE_BOOT) {
+        const previousOpenDetail = window.openDetail;
+        window.openDetail = function (groupKey, itemId) {
+            if (groupKey === IMPORT_GROUP && itemId === IMPORT_REQUEST_ID) return renderImportRequestPage();
+            if (typeof previousOpenDetail === 'function') return previousOpenDetail.apply(this, arguments);
+        };
+        try {
+            openDetail = window.openDetail;
+        } catch (e) {
+        }
+    }
+})();
+
+(function bootTransportPage() {
+    window.TRANSPORT_PAGE_READY = window.TRANSPORT_PAGE_READY || {};
+    window.TRANSPORT_PAGE_READY.import = true;
+    if (window.TRANSPORT_DEFER_PAGE_BOOT) return;
+    const initialBackBtn = document.getElementById('backBtn');
+    if (initialBackBtn && typeof showDashboard === 'function') initialBackBtn.onclick = showDashboard;
+    if (typeof autoBuildNav === 'function') autoBuildNav();
+    if (typeof openInitialTransportView === 'function') openInitialTransportView();
+})();
+
+
+function buildImportInboundListOnlyFallbackPanel() {
+    return ''
+        + '<section id="importInboundListOnlyPanel" class="section-card">'
+        + '  <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">'
+        + '    <h4 class="text-sm font-bold text-slate-900">보세구역 입고관리</h4>'
+        + '  </div>'
+        + '  <div class="p-6 space-y-4">'
+        + '    <div class="overflow-x-auto">'
+        + '      <table class="w-full tbl min-w-[900px] text-xs">'
+        + '        <thead><tr><th>입고신청번호</th><th>의뢰번호</th><th>화주명</th><th>창고명</th><th>보세구역</th><th>입고예정일</th><th>입고상태</th><th>처리</th></tr></thead>'
+        + '        <tbody><tr><td colspan="8" class="px-4 py-6 text-center text-slate-500">조회된 보세구역 입고관리 대상이 없습니다.</td></tr></tbody>'
+        + '      </table>'
+        + '    </div>'
+        + '  </div>'
+        + '</section>';
+}
+
+
+/* 도착예정 및 입항추적 독립 리스트는 폐기. 적하목록 조회의 도착통지서 모달만 사용. */
+
+/* 수입운송 좌측 메뉴 라우터 */
+(function () {
+    const IMPORT_GROUP = 'import';
+    const PANELS = {
+        'TACS-FW-023': {
+            title: '적하목록 조회',
+            build: function () {
+                return buildImportManifestListOnlyPanel();
+            },
+            bind: function () {
+                if (typeof bindImportManifestWorkflowActions === 'function') bindImportManifestWorkflowActions(IMPORT_GROUP, 'TACS-FW-023');
+            }
+        },
+        'TACS-FW-025': {
+            title: '보세구역 입고관리',
+            build: function () {
+                if (typeof buildUnloadingCoordinationPanel === 'function') return buildUnloadingCoordinationPanel();
+                if (typeof buildImportInboundManageListPanel === 'function') return buildImportInboundManageListPanel();
+                if (typeof buildUnloadingCoordinationListPanel === 'function') return buildUnloadingCoordinationListPanel();
+                return buildImportInboundListOnlyFallbackPanel();
+            },
+            bind: function () {
+                if (typeof bindImportInboundManageActions === 'function') bindImportInboundManageActions();
+            }
+        },
+        'TACS-FW-030': {
+            title: 'D/O 관리',
+            build: function () {
+                return buildDOIssueReissuePanel();
+            },
+            bind: function () {
+                if (typeof bindDOIssueReissueActions === 'function') bindDOIssueReissueActions(IMPORT_GROUP, 'TACS-FW-030');
+            }
+        },
+        'TACS-FW-033': {
+            title: '보세구역 반출관리',
+            build: function () {
+                return buildInlandDispatchListPanel();
+            },
+            bind: function () {
+                if (typeof bindImportReleaseRequestActions === 'function') bindImportReleaseRequestActions(IMPORT_GROUP, 'TACS-FW-033');
+            }
+        },
+        'TACS-FW-035': {
+            title: '내륙운송 배차처리',
+            build: function () {
+                return buildImportInlandTransportPanel();
+            },
+            bind: function () {
+                if (typeof bindImportInlandTransportActions === 'function') bindImportInlandTransportActions(IMPORT_GROUP, 'TACS-FW-035');
+            }
+        }
+    };
+
+    function render(itemId, event) {
+        const panel = PANELS[itemId];
+        if (!panel) return false;
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+        }
+
+        const dashboard = document.getElementById('dashboard-view');
+        const detail = document.getElementById('detail-view');
+        const body = document.getElementById('detail-body');
+        const title = document.getElementById('page-title');
+        const crumb = document.getElementById('breadcrumb');
+        const back = document.getElementById('backBtn');
+
+        window.TRANSPORT_INITIAL_VIEW = {group: IMPORT_GROUP, item: itemId};
+        try {
+            currentGroupKey = IMPORT_GROUP;
+            currentItemId = itemId;
+        } catch (e) {
+        }
+        if (typeof setSavedLastItemId === 'function') setSavedLastItemId(IMPORT_GROUP, itemId);
+        if (typeof setActiveNav === 'function') setActiveNav(IMPORT_GROUP, itemId);
+        if (typeof toggleMenuGroup === 'function') toggleMenuGroup(IMPORT_GROUP, true);
+        if (itemId === 'TACS-FW-025') {
+            window.__TACS_IMPORT_INBOUND_VIEW_MODE = 'list';
+            window.__TACS_IMPORT_INBOUND_SELECTED_ROW = null;
+        }
+        if (itemId === 'TACS-FW-033') {
+            window.__TACS_IMPORT_RELEASE_VIEW_MODE = 'list';
+            window.__TACS_IMPORT_RELEASE_SELECTED = null;
+        }
+        if (dashboard) dashboard.classList.add('hidden');
+        if (detail) detail.classList.remove('hidden');
+        if (title) title.textContent = panel.title;
+        if (crumb) crumb.innerHTML = '수입운송 &gt; <span class="font-semibold text-slate-900">' + panel.title + '</span>';
+        if (body) {
+            window.detailBody = body;
+            body.innerHTML = '<div class="space-y-6">' + panel.build() + '</div>';
+            body.dataset.currentGroup = IMPORT_GROUP;
+            body.dataset.currentItem = itemId;
+            window.detailBody = body;
+        }
+        if (back) {
+            back.innerHTML = '<span class="material-symbols-outlined text-lg">arrow_back</span><span>대시보드로</span>';
+            back.onclick = function () {
+                if (itemId === 'TACS-FW-025' && window.__TACS_IMPORT_INBOUND_VIEW_MODE === 'form') {
+                    if (typeof window.showImportInboundManageListView === 'function') {
+                        window.showImportInboundManageListView();
+                    }
+                    return false;
+                }
+                if (itemId === 'TACS-FW-033' && window.__TACS_IMPORT_RELEASE_VIEW_MODE === 'form') {
+                    if (typeof window.showImportReleaseRequestListView === 'function') {
+                        window.showImportReleaseRequestListView();
+                    }
+                    return false;
+                }
+                if (typeof showDashboard === 'function') return showDashboard();
+                return false;
+            };
+        }
+        try {
+            panel.bind();
+        } catch (e) {
+            console.error('import panel bind failed', itemId, e);
+        }
+        if (typeof normalizeDetailActionButtons === 'function') normalizeDetailActionButtons();
+        return true;
+    }
+
+    if (!window.TRANSPORT_DEFER_PAGE_BOOT) {
+        const prevOpenDetail = window.openDetail;
+        window.openDetail = function (groupKey, itemId) {
+            if (groupKey === IMPORT_GROUP && itemId === 'TACS-FW-020') return render('TACS-FW-023');
+            if (groupKey === IMPORT_GROUP && PANELS[itemId]) return render(itemId);
+            if (typeof prevOpenDetail === 'function') return prevOpenDetail.apply(this, arguments);
+        };
+        try {
+            openDetail = window.openDetail;
+        } catch (e) {
+        }
+    }
+
+    function bootInitialImportPanel() {
+        if (window.TRANSPORT_DEFER_PAGE_BOOT || window.__TACS_IMPORT_SPLIT_BOOTED || window.__TACS_IMPORT_UNIFIED_ROUTER) return;
+        const initial = window.TRANSPORT_INITIAL_VIEW || {};
+        if (initial.group === IMPORT_GROUP && initial.item === 'TACS-FW-020') initial.item = 'TACS-FW-023';
+        if (initial.group !== IMPORT_GROUP || !PANELS[initial.item]) return;
+
+        render(initial.item);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootInitialImportPanel);
+    } else {
+        bootInitialImportPanel();
+    }
+    setTimeout(bootInitialImportPanel, 0);
+    setTimeout(bootInitialImportPanel, 120);
+    setTimeout(bootInitialImportPanel, 350);
+})();
+
+function fetchJsonWithFallback(urls, options) {
+    var list = Array.isArray(urls) ? urls.slice() : [urls];
+
+    function tryOne() {
+        var url = list.shift();
+        return fetch(url, options).then(function (res) {
+            if (!res.ok && list.length) return tryOne();
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            var contentType = res.headers.get('content-type') || '';
+            if (contentType.indexOf('application/json') === -1) {
+                return res.text().then(function (text) {
+                    if (list.length) return tryOne();
+                    var looksLikeLogin = text.indexOf('<form') >= 0 && text.indexOf('/login') >= 0;
+                    throw new Error(looksLikeLogin ? 'LOGIN_REQUIRED' : 'NOT_JSON');
+                });
+            }
+            return res.json();
+        }).catch(function (err) {
+            if (list.length) return tryOne();
+            throw err;
+        });
+    }
+
+    return tryOne();
+}
+
+function normalizeImportManifestListResponse(data) {
+    if (Array.isArray(data)) return data;
+    if (!data || typeof data !== 'object') return [];
+    if (Array.isArray(data.list)) return data.list;
+    if (Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data.rows)) return data.rows;
+    if (Array.isArray(data.result)) return data.result;
+    if (data.result && Array.isArray(data.result.list)) return data.result.list;
+    return [];
+}
+
+
+function normalizeImportManifestRequestKey(value) {
+    return String(value || '').trim().toUpperCase();
+}
+
+function getImportManifestCurrentDetailRequestNo() {
+    var detailPanel = document.getElementById('importManifestDetailModePanel');
+    if (!detailPanel) return '';
+
+    var pending = window.__TACS_IMPORT_MANIFEST_PENDING_SEARCH || {};
+    var fromPending = pending.trcNo || pending.requestNo || pending.manifestNo || '';
+    if (fromPending) return String(fromPending).trim();
+
+    var manifestInput = document.getElementById('importManifestSearchManifestNo');
+    if (manifestInput && manifestInput.value) return String(manifestInput.value).trim();
+
+    try {
+        var params = new URLSearchParams(window.location.search || '');
+        var fromUrl = params.get('trcNo') || params.get('requestNo') || params.get('reqNo') || params.get('no') || '';
+        if (fromUrl) return String(fromUrl).trim();
+    } catch (ignore) {
+    }
+
+    var current = window.CURRENT_IMPORT_REQUEST || window.SELECTED_IMPORT_REQUEST || window.__TACS_CURRENT_IMPORT_REQUEST || null;
+    if (current) {
+        return String(current.trcNo || current.TRC_NO || current.requestNo || current.reqNo || '').trim();
+    }
+    return '';
+}
+
+function importManifestRowMatchesRequestNo(row, requestNo) {
+    var target = normalizeImportManifestRequestKey(requestNo);
+    if (!target) return true;
+    var keys = [
+        'trcNo', 'TRC_NO', 'transportRequestNo', 'requestNo', 'reqNo', 'irNo', 'ianIrNo', 'wirNo',
+        'arrivalNoticeReqNo', 'arrivalNoticeNo', 'ianNo', 'IAN_NO', 'noticeNo', 'arrvNtcNo', 'ntcNo'
+    ];
+    for (var i = 0; i < keys.length; i += 1) {
+        var value = normalizeImportManifestRequestKey(row && row[keys[i]]);
+        if (!value) continue;
+        if (value === target) return true;
+        if (target.indexOf('TRC-') === 0 && value === target.replace(/^TRC-/, 'IAN-')) return true;
+        if (target.indexOf('IAN-') === 0 && value === target.replace(/^IAN-/, 'TRC-')) return true;
+    }
+    return false;
+}
+
+function filterImportManifestListForDetail(list) {
+    if (!Array.isArray(list)) return [];
+    var requestNo = getImportManifestCurrentDetailRequestNo();
+    if (!requestNo) return list;
+    return list.filter(function (row) {
+        return importManifestRowMatchesRequestNo(row, requestNo);
+    });
+}
+
+function loadImportManifestList() {
+    var tbody = document.getElementById('importManifestListBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-slate-500 py-6">조회 중입니다...</td></tr>';
+
+    var basePath = window.contextPath || '';
+    fetchJsonWithFallback([
+        basePath + '/transport/import/manifest/compare-list.do?_=' + Date.now(),
+        basePath + '/transport/import/manifest/compare-list?_=' + Date.now(),
+        basePath + '/transport/import/manifest/list.do?_=' + Date.now(),
+        basePath + '/transport/import/manifest/list?_=' + Date.now()
+    ], {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        cache: 'no-store',
+        credentials: 'same-origin'
+    })
+        .then(function (data) {
+            window.IMPORT_MANIFEST_LIST = normalizeImportManifestListResponse(data);
+            if (document.getElementById('importManifestDetailModePanel')) {
+                var detailReqNo = getImportManifestCurrentDetailRequestNo();
+                if (detailReqNo) setImportManifestSearchCriteria({
+                    trcNo: detailReqNo,
+                    requestNo: detailReqNo,
+                    manifestNo: detailReqNo
+                });
+            }
+            if (!applyPendingImportManifestSearch()) {
+                renderImportManifestList(window.IMPORT_MANIFEST_LIST);
+            }
+        })
+        .catch(function (err) {
+            console.error('수입 적하목록 조회 실패:', err);
+            if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-red-500 py-6">적하목록 수신 현황을 불러오지 못했습니다.</td></tr>';
+            alert(err && err.message === 'LOGIN_REQUIRED'
+                ? '로그인 세션이 만료되었습니다. 다시 로그인 후 조회해주세요.'
+                : '적하목록 수신 현황을 불러오지 못했습니다.');
+        });
+}
+
+function getImportManifestSearchText(item, keys) {
+    var values = [];
+    for (var i = 0; i < keys.length; i++) {
+        var value = item && item[keys[i]];
+        if (value !== null && value !== undefined && value !== '') values.push(String(value).toLowerCase());
+    }
+    return values.join(' ');
+}
+
+function searchImportManifestList() {
+    var list = window.IMPORT_MANIFEST_LIST || [];
+    var manifestNo = (document.getElementById('importManifestSearchManifestNo')?.value || '').trim().toLowerCase();
+    var mblNo = (document.getElementById('importManifestSearchMblNo')?.value || '').trim().toLowerCase();
+    var hblNo = (document.getElementById('importManifestSearchHblNo')?.value || '').trim().toLowerCase();
+    var blNo = (document.getElementById('importManifestSearchBlNo')?.value || '').trim().toLowerCase();
+    var ownerNm = (document.getElementById('importManifestSearchOwnerNm')?.value || '').trim().toLowerCase();
+    var noticeStatus = (document.getElementById('importManifestSearchNoticeStatus')?.value || '').trim();
+    var filtered = list.filter(function (item) {
+        if (manifestNo && getImportManifestSearchText(item, ['trcNo', 'wirNo', 'manifestNo', 'icmNo', 'ICM_NO', 'mfstNo', 'MFST_NO']).indexOf(manifestNo) < 0) return false;
+        if (mblNo && getImportManifestSearchText(item, ['mblNo', 'blNo', 'masterBl']).indexOf(mblNo) < 0) return false;
+        if (hblNo && getImportManifestSearchText(item, ['hblNo', 'houseBl']).indexOf(hblNo) < 0) return false;
+        if (blNo && getImportManifestSearchText(item, ['mblNo', 'blNo', 'masterBl', 'hblNo', 'houseBl']).indexOf(blNo) < 0) return false;
+        if (ownerNm && getImportManifestSearchText(item, ['ownerNm', 'owrNm']).indexOf(ownerNm) < 0) return false;
+        if (noticeStatus && getImportManifestArrivalNoticeIssueStatus(item) !== noticeStatus) return false;
+        return true;
+    });
+    renderImportManifestList(filtered);
+}
+
+function resetImportManifestSearch() {
+    ['importManifestSearchManifestNo', 'importManifestSearchMblNo', 'importManifestSearchHblNo', 'importManifestSearchOwnerNm', 'importManifestSearchBlNo', 'importManifestSearchNoticeStatus'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    if (document.getElementById('importManifestDetailModePanel')) {
+        var detailReqNo = getImportManifestCurrentDetailRequestNo();
+        if (detailReqNo) setImportManifestSearchCriteria({
+            trcNo: detailReqNo,
+            requestNo: detailReqNo,
+            manifestNo: detailReqNo
+        });
+    }
+    renderImportManifestList(window.IMPORT_MANIFEST_LIST || []);
+}
+
+function getImportManifestReceiveStatusNm(statusCd, statusNm) {
+    var text = String(statusNm || '').trim();
+    if (statusCd === 'SUBMITTED' || text === '제출완료' || text === '작성완료') return '수신완료';
+    if (statusCd === 'REJECT' || text === '반려') return '보완요청';
+    if (statusCd === 'DRAFT' || text === '작성대기' || !text) return '수신대기';
+    return text.replace(/작성/g, '수신');
+}
+
+function pickImportManifestArrivalValue(item, keys, fallback) {
+    item = item || {};
+    for (var i = 0; i < keys.length; i += 1) {
+        var value = item[keys[i]];
+        if (value !== null && value !== undefined && String(value).trim() !== '') return value;
+    }
+    return fallback == null ? '' : fallback;
+}
+
+function getImportManifestArrivalNoticeStatus(item) {
+    var raw = pickImportManifestArrivalValue(item, [
+        'noticeStatusNm', 'noticeStatus', 'arrivalNoticeStatus', 'arrivalNoticeStatusNm',
+        'sendStatusNm', 'ianSendSttsNm', 'ianSendSttsCd', 'IAN_SEND_STTS_CD', 'IAN_SEND_STTS_NM'
+    ], '');
+    var upper = String(raw || '').toUpperCase();
+    if (upper === 'TRC_NTC_SENT' || upper === 'SENT' || raw === '발송완료' || raw === '통지완료' || raw === '발급완료') return '통지완료';
+    if (!raw) return '발송대기';
+    return raw;
+}
+
+function isImportManifestArrivalNoticeSent(item) {
+    return getImportManifestArrivalNoticeStatus(item) === '통지완료';
+}
+
+function getImportManifestArrivalNoticeIssueStatus(item) {
+    return isImportManifestArrivalNoticeSent(item) ? '발급완료' : '미발급';
+}
+
+function buildImportManifestArrivalNoticeIssueStatusBadge(item) {
+    var status = getImportManifestArrivalNoticeIssueStatus(item);
+    var cls = status === '발급완료' ? 'is-issued' : 'is-pending';
+    return ''
+        + '<span role="button" tabindex="0" class="import-manifest-arrival-btn import-manifest-arrival-status-btn ' + cls + '" '
+        + 'data-request-no="' + escapeAttr(pickImportManifestArrivalValue(item, ['arrivalNoticeReqNo', 'arrivalNoticeNo', 'ianNo', 'IAN_NO', 'noticeNo', 'arrvNtcNo', 'ntcNo', 'trcNo', 'transportRequestNo', 'irNo', 'ianIrNo', 'wirNo', 'reqNo'], '')) + '" '
+        + 'data-transport-request-no="' + escapeAttr(pickImportManifestArrivalValue(item, ['trcNo', 'transportRequestNo', 'irNo', 'ianIrNo', 'wirNo', 'reqNo'], '')) + '" '
+        + 'data-owner-nm="' + escapeAttr(pickImportManifestArrivalValue(item, ['ownerNm', 'owrNm', 'shipperName', 'IAN_RCV_ACTR_NM'], '-')) + '" '
+        + 'data-mbl-no="' + escapeAttr(pickImportManifestArrivalValue(item, ['mblNo', 'blNo', 'masterBl'], '-')) + '" '
+        + 'data-hbl-no="' + escapeAttr(pickImportManifestArrivalValue(item, ['hblNo', 'houseBl'], '-')) + '" '
+        + 'data-goods-name="' + escapeAttr(pickImportManifestArrivalValue(item, ['goodsName', 'itemNm', 'goodsNm', 'GOODS_NAME', 'TRC_ITEM_NM', 'itemName', 'cargoName', 'frghtNm'], '-')) + '" '
+        + 'data-location="' + escapeAttr(pickImportManifestArrivalValue(item, ['currentLoc', 'currentLocation', 'currLoc', 'ianCurrLoc', 'IAN_CURR_LOC', 'arvlPortCd', 'arvlPortNm', 'dischargePort'], '-')) + '" '
+        + 'data-arrival-status="' + escapeAttr(pickImportManifestArrivalValue(item, ['arrivalStatusNm', 'arrivalStatus', 'arrvStatusNm', 'ianArrvStatusNm', 'ianArrvStatusCd', 'arrivalStatusCd', 'IAN_ARRV_STATUS_CD'], '-')) + '" '
+        + 'data-notice-status="' + escapeAttr(getImportManifestArrivalNoticeStatus(item)) + '" '
+        + 'data-issue-status="' + escapeAttr(status) + '" '
+        + 'data-eta="' + escapeAttr(pickImportManifestArrivalValue(item, ['eta', 'arrivalScheduledDate', 'arrvDt', 'arrvSchdYmd', 'ianArrvDt', 'ianArrvSchdYmd', 'IAN_ARRV_DT', 'IAN_ARRV_SCHD_YMD', 'arvlDttm'], '-')) + '">' + status + '</span>';
+}
+
+
+function isImportManifestListOnlyMode() {
+    return !!document.getElementById('importManifestListOnlyPanel');
+}
+
+function manifestAccordionField(label, value) {
+    var text = value === null || value === undefined || String(value).trim() === '' ? '' : String(value);
+    return ''
+        + '<div>'
+        + '<label class="block mb-2 text-[11px] font-black text-slate-800">' + safeText(label) + '</label>'
+        + '<div class="min-h-[38px] border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-slate-800">' + safeText(text) + '</div>'
+        + '</div>';
+}
+
+function manifestAccordionSection(title, body) {
+    return ''
+        + '<div class="space-y-3">'
+        + '<h4 class="border-l-4 border-slate-600 pl-2 text-xs font-black text-slate-900">' + safeText(title) + '</h4>'
+        + body
+        + '</div>';
+}
+
+function buildImportManifestAccordion(item) {
+    item = item || {};
+    return ''
+        + '<div class="bg-white px-5 py-5 text-left space-y-6">'
+        + manifestAccordionSection('1. 적하목록 기본정보',
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-4">'
+            + manifestAccordionField('적하의뢰번호', item.trcNo || item.wirNo)
+            + manifestAccordionField('적하목록번호', item.manifestNo || item.icmNo || '제출 후 자동생성')
+            + manifestAccordionField('화물그룹번호', item.ggNo || item.manifestTfgNo)
+            + manifestAccordionField('송장번호', item.invoiceNo || item.wirInvoiceNo)
+            + manifestAccordionField('화물관리번호', item.cargoMgmtNo)
+            + '</div>'
+        )
+        + manifestAccordionSection('2. B/L 및 운송정보',
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">'
+            + manifestAccordionField('Master B/L', item.mblNo || item.blNo || item.masterBl)
+            + manifestAccordionField('HOUSE B/L', item.hblNo || item.houseBl)
+            + manifestAccordionField('운송수단/선사', item.carrierNm || item.transportMeanCd || item.shipNm)
+            + manifestAccordionField('출발항', item.deptPortNm || item.deptPortCd || item.loadingPort)
+            + manifestAccordionField('도착항', item.arvlPortNm || item.arvlPortCd || item.dischargePort)
+            + '</div>'
+        )
+        + manifestAccordionSection('3. 화주/거래자 정보',
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-4">'
+            + manifestAccordionField('화주ID', item.ownerId || item.owrId)
+            + manifestAccordionField('화주명', item.ownerNm || item.owrNm)
+            + manifestAccordionField('화주 연락처', item.ownerTelno || item.owrTelno)
+            + manifestAccordionField('화주 이메일', item.ownerEmail || item.owrEmail)
+            + manifestAccordionField('거래자명', item.buyerNm || item.traderNm || item.trdrNm)
+            + manifestAccordionField('거래자 국가', item.buyerCountryCd || item.traderCountryCd || item.trdrCountryCd)
+            + '</div>'
+        )
+        + '</div>';
+}
+
+function toggleImportManifestAccordion(index) {
+    var detailRow = document.getElementById('importManifestAccordionRow' + index);
+    if (!detailRow) return false;
+    var willOpen = detailRow.classList.contains('hidden');
+    document.querySelectorAll('.import-manifest-accordion-row').forEach(function (row) {
+        row.classList.add('hidden');
+    });
+    document.querySelectorAll('.import-manifest-row').forEach(function (row) {
+        row.classList.remove('bg-slate-100');
+    });
+    if (willOpen) {
+        detailRow.classList.remove('hidden');
+        var mainRow = document.querySelector('.import-manifest-row[data-index="' + index + '"]');
+        if (mainRow) mainRow.classList.add('bg-slate-100');
+    }
+    return false;
+}
+
+if (typeof window !== 'undefined') {
+    window.toggleImportManifestAccordion = toggleImportManifestAccordion;
+}
+
+function renderImportManifestList(list) {
+    var tbody = document.getElementById('importManifestListBody');
+    var listOnlyMode = isImportManifestListOnlyMode();
+    var colspan = 5;
+    list = filterImportManifestListForDetail(list || []);
+    if (!tbody) {
+        console.warn('importManifestListBody 영역이 없습니다.');
+        return;
+    }
+
+    if (!list || list.length === 0) {
+        window.IMPORT_MANIFEST_VISIBLE_LIST = [];
+        tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="text-center text-slate-500 py-6">조회된 적하목록 대상이 없습니다.</td></tr>';
+        clearImportManifestForm();
+        return;
+    }
+
+    window.IMPORT_MANIFEST_VISIBLE_LIST = list || [];
+    if (listOnlyMode) {
+        tbody.innerHTML = list.map(function (item, index) {
+            return ''
+                + '<tr class="import-manifest-row cursor-pointer hover:bg-slate-50" data-index="' + index + '" onclick="toggleImportManifestAccordion(' + index + ')">'
+                + '<td class="px-3 py-3 font-bold break-words">' + safeText(item.trcNo || item.wirNo || '-') + '</td>'
+                + '<td class="px-3 py-3 break-words">' + safeText(item.ownerNm || '-') + '</td>'
+                + '<td class="px-3 py-3 break-words">' + safeText(item.mblNo || item.blNo || '-') + '</td>'
+                + '<td class="px-3 py-3 break-words">' + safeText(item.hblNo || '-') + '</td>'
+                + '<td class="px-3 py-3 text-center">' + buildImportManifestArrivalNoticeIssueStatusBadge(item) + '</td>'
+                + '</tr>'
+                + '<tr id="importManifestAccordionRow' + index + '" class="import-manifest-accordion-row hidden"><td colspan="5" class="p-0 border-b border-slate-200">' + buildImportManifestAccordion(item) + '</td></tr>';
+        }).join('');
+        return;
+    }
+
+    tbody.innerHTML = list.map(function (item, index) {
+        return '' +
+            '<tr class="import-manifest-row cursor-pointer hover:bg-slate-50" data-index="' + index + '" onclick="selectImportManifestRow(' + index + ')">' +
+            '<td class="px-3 py-3 font-bold break-words">' + safeText(item.trcNo || item.wirNo || '-') + '</td>' +
+            '<td class="px-3 py-3 break-words">' + safeText(item.ownerNm || '-') + '</td>' +
+            '<td class="px-3 py-3 break-words">' + safeText(item.mblNo || item.blNo || '-') + '</td>' +
+            '<td class="px-3 py-3 break-words">' + safeText(item.hblNo || '-') + '</td>' +
+            '<td class="px-3 py-3 text-center">' + buildImportManifestArrivalNoticeIssueStatusBadge(item) + '</td>' +
+            '</tr>';
+    }).join('');
+
+    selectImportManifestItem(list[0]);
+}
+
+function ensureImportManifestArrivalNoticeStyle() {
+    if (document.getElementById('tacs-import-manifest-arrival-modal-style')) return;
+    var style = document.createElement('style');
+    style.id = 'tacs-import-manifest-arrival-modal-style';
+    style.textContent = [
+        '#importManifestArrivalNoticeModal *{box-sizing:border-box;letter-spacing:0;}',
+        '#importManifestArrivalNoticeModal .import-ui-grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:20px;}',
+        '#importManifestArrivalNoticeModal .import-ui-section{border:1px solid #cbd5e1;background:#fff;padding:14px 16px;}',
+        '#importManifestArrivalNoticeModal .import-ui-section h5{margin:0 0 12px;padding-left:9px;border-left:4px solid #334155;font-size:12px;font-weight:900;color:#0f172a;}',
+        '#importManifestArrivalNoticeModal .import-ui-field{margin-bottom:10px;}',
+        '#importManifestArrivalNoticeModal .import-ui-field label{display:block;margin:0 0 6px;font-size:11px;font-weight:900;color:#475569;}',
+        '#importManifestArrivalNoticeModal .import-ui-field input{width:100%;min-height:40px;border:1px solid #cbd5e1;background:#e5e7eb;padding:0 10px;font-size:12px;font-weight:700;color:#334155;outline:0;}',
+        '@media(max-width:1200px){#importManifestArrivalNoticeModal .import-ui-grid3{grid-template-columns:1fr;}}'
+    ].join('');
+    document.head.appendChild(style);
+}
+
+function importManifestArrivalField(label, value) {
+    return ''
+        + '<div class="import-ui-field">'
+        + '<label>' + safeText(label) + '</label>'
+        + '<input type="text" readonly value="' + escapeAttr(value || '-') + '">'
+        + '</div>';
+}
+
+function ensureImportManifestArrivalNoticeModal() {
+    ensureImportManifestArrivalNoticeStyle();
+    var modal = document.getElementById('importManifestArrivalNoticeModal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'importManifestArrivalNoticeModal';
+    modal.className = 'hidden fixed inset-0 z-[10000] items-center justify-center bg-slate-900/50 p-4';
+    modal.innerHTML = ''
+        + '<div class="w-full max-w-5xl bg-white shadow-2xl">'
+        + '  <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">'
+        + '    <h3 class="text-base font-black text-slate-900">도착통지서</h3>'
+        + '    <button type="button" data-manifest-arrival-close class="text-xl leading-none text-slate-500 hover:text-slate-900">x</button>'
+        + '  </div>'
+        + '  <input type="hidden" id="manifestArrivalModalDbReqNo">'
+        + '  <div id="manifestArrivalModalGrid"></div>'
+        + '  <div class="flex justify-end gap-2 border-t border-slate-200 px-6 py-4">'
+        + '    <button type="button" data-manifest-arrival-close class="px-4 py-2 border border-slate-300 bg-white text-xs font-bold text-slate-700">취소</button>'
+        + '    <button type="button" id="manifestArrivalNoticeSendBtn" class="px-4 py-2 bg-primary text-white text-xs font-bold hover:bg-primary-dim">도착통지서 발급/발송</button>'
+        + '  </div>'
+        + '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function (event) {
+        if (event.target === modal || event.target.closest('[data-manifest-arrival-close]')) {
+            closeImportManifestArrivalNoticeModal();
+            return;
+        }
+        if (event.target && event.target.id === 'manifestArrivalNoticeSendBtn') {
+            sendImportManifestArrivalNotice(event.target);
+        }
+    });
+    return modal;
+}
+
+function openImportManifestArrivalNoticeModal(btn) {
+    var modal = ensureImportManifestArrivalNoticeModal();
+    modal.dataset.requestNo = btn.dataset.requestNo || '';
+    modal.dataset.transportRequestNo = btn.dataset.transportRequestNo || '';
+    modal.dataset.ownerNm = btn.dataset.ownerNm || '';
+    var dbReqNo = document.getElementById('manifestArrivalModalDbReqNo');
+    if (dbReqNo) dbReqNo.value = btn.dataset.transportRequestNo || btn.dataset.requestNo || '';
+
+    var grid = document.getElementById('manifestArrivalModalGrid');
+    if (grid) {
+        grid.innerHTML = ''
+            + '<div class="import-ui-grid3">'
+            + '<div class="import-ui-section"><h5>1. 도착통지 정보</h5>'
+            + importManifestArrivalField('도착통지서 번호', btn.dataset.requestNo)
+            + importManifestArrivalField('의뢰번호', btn.dataset.transportRequestNo || btn.dataset.requestNo)
+            + importManifestArrivalField('화주명', btn.dataset.ownerNm)
+            + importManifestArrivalField('발급상태', btn.dataset.issueStatus || btn.dataset.noticeStatus || '미발급')
+            + '</div>'
+            + '<div class="import-ui-section"><h5>2. B/L 및 화물 정보</h5>'
+            + importManifestArrivalField('Master B/L', btn.dataset.mblNo)
+            + importManifestArrivalField('HOUSE B/L', btn.dataset.hblNo)
+            + importManifestArrivalField('품명', btn.dataset.goodsName)
+            + '</div>'
+            + '<div class="import-ui-section"><h5>3. 도착/입항 정보</h5>'
+            + importManifestArrivalField('현재 위치', btn.dataset.location)
+            + importManifestArrivalField('도착상태', btn.dataset.arrivalStatus)
+            + importManifestArrivalField('도착예정일', btn.dataset.eta)
+            + '</div>'
+            + '</div>';
+    }
+
+    var sendBtn = document.getElementById('manifestArrivalNoticeSendBtn');
+    var issueStatus = btn.dataset.issueStatus || btn.dataset.noticeStatus || '미발급';
+    if (sendBtn) {
+        sendBtn.style.display = issueStatus === '발급완료' ? 'none' : '';
+        sendBtn.textContent = '도착통지서 발급/발송';
+        sendBtn.disabled = false;
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeImportManifestArrivalNoticeModal() {
+    var modal = document.getElementById('importManifestArrivalNoticeModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function sendImportManifestArrivalNotice(button) {
+    var modal = document.getElementById('importManifestArrivalNoticeModal');
+    var reqNo = (document.getElementById('manifestArrivalModalDbReqNo') || {}).value || (modal && (modal.dataset.transportRequestNo || modal.dataset.requestNo)) || '';
+    reqNo = String(reqNo || '').trim();
+    if (!reqNo) {
+        alert('도착통지 발송 대상 의뢰번호가 없습니다.');
+        return;
+    }
+
+    var originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = '발송중';
+
+    var trcNo = (modal && modal.dataset.transportRequestNo) ? String(modal.dataset.transportRequestNo).trim() : '';
+    var query = 'reqNo=' + encodeURIComponent(reqNo);
+    if (trcNo && trcNo !== reqNo) query += '&trcNo=' + encodeURIComponent(trcNo);
+
+    var basePath = window.contextPath || document.body?.dataset?.contextPath || '';
+    fetch(basePath + '/transport/import/arrival-notice/send-get.do?' + query, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        cache: 'no-store',
+        credentials: 'same-origin'
+    })
+        .then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json().catch(function () {
+                return {};
+            });
+        })
+        .then(function (data) {
+            if (data && data.success === false) throw new Error(data.message || '도착통지 발송 대상이 없습니다.');
+
+            var savedTrcNo = String(
+                (data && (data.trcNo || data.transportRequestNo || data.reqNo))
+                || trcNo || reqNo || ''
+            ).trim();
+            var savedNoticeNo = String(
+                (data && (data.noticeNo || data.arrivalNoticeNo || data.arrivalNoticeReqNo || data.ianNo))
+                || (modal ? modal.dataset.requestNo : '') || reqNo || ''
+            ).trim();
+
+            markImportManifestArrivalNoticeSent(savedTrcNo || reqNo, savedNoticeNo);
+
+            var sentDetail = {
+                trcNo: savedTrcNo || reqNo,
+                transportRequestNo: savedTrcNo || reqNo,
+                reqNo: savedTrcNo || reqNo,
+                noticeNo: savedNoticeNo,
+                arrivalNoticeNo: savedNoticeNo,
+                arrivalNoticeReqNo: savedNoticeNo,
+                ianNo: savedNoticeNo
+            };
+            if (typeof window.refreshImportArrivalNoticeSentState === 'function') {
+                window.refreshImportArrivalNoticeSentState(sentDetail);
+            }
+            if (typeof window.patchImportArrivalNoticeSentDom === 'function') {
+                window.patchImportArrivalNoticeSentDom(savedTrcNo || reqNo, savedNoticeNo);
+            }
+            window.dispatchEvent(new CustomEvent('tacs:import-arrival-notice-sent', {detail: sentDetail}));
+
+            closeImportManifestArrivalNoticeModal();
+            alert('도착통지서가 화주에게 발송되었습니다.');
+        })
+        .catch(function (err) {
+            console.error('[적하목록 도착통지서 발송 실패]', err);
+            alert(err.message || '도착통지서 발송 중 오류가 발생했습니다.');
+        })
+        .finally(function () {
+            button.disabled = false;
+            button.textContent = originalText;
+        });
+}
+
+function markImportManifestArrivalNoticeSent(reqNo, noticeNo) {
+    reqNo = String(reqNo || '').trim();
+    noticeNo = String(noticeNo || '').trim();
+
+    function pushKeys(list, value) {
+        value = String(value || '').trim();
+        if (!value) return;
+        list.push(value);
+        list.push(value.toUpperCase());
+        // 도착통지서 번호(IAN-...)와 운송의뢰번호(TRC-...)가 섞여 들어와도 같은 행으로 잡는다.
+        if (value.indexOf('IAN-') === 0) list.push(value.replace(/^IAN-/, 'TRC-'));
+        if (value.indexOf('TRC-') === 0) list.push(value.replace(/^TRC-/, 'IAN-'));
+    }
+
+    function buildKeys() {
+        var keys = [];
+        pushKeys(keys, reqNo);
+        pushKeys(keys, noticeNo);
+        return keys.filter(function (value, index, arr) {
+            return value && arr.indexOf(value) === index;
+        });
+    }
+
+    function rowKeys(row) {
+        var keys = [];
+        [
+            'trcNo', 'TRC_NO', 'transportRequestNo', 'requestNo', 'irNo', 'ianIrNo', 'wirNo', 'reqNo',
+            'arrivalNoticeReqNo', 'arrivalNoticeNo', 'ianNo', 'IAN_NO', 'noticeNo', 'arrvNtcNo', 'ntcNo'
+        ].forEach(function (key) {
+            pushKeys(keys, row && row[key]);
+        });
+        return keys;
+    }
+
+    var matchKeys = buildKeys();
+
+    function isMatchedRow(row) {
+        var keys = rowKeys(row);
+        return matchKeys.length === 0 || matchKeys.some(function (key) {
+            return keys.indexOf(key) >= 0;
+        });
+    }
+
+    function markRowSent(row) {
+        if (!row) return;
+        row.noticeStatus = '통지완료';
+        row.noticeStatusNm = '통지완료';
+        row.arrivalNoticeStatus = '통지완료';
+        row.arrivalNoticeStatusNm = '통지완료';
+        row.sendStatusNm = '발송완료';
+        row.ianSendSttsNm = '발송완료';
+        row.ianSendSttsCd = 'TRC_NTC_SENT';
+        row.IAN_SEND_STTS_CD = 'TRC_NTC_SENT';
+        row.IAN_SEND_STTS_NM = '발송완료';
+        row.sendStatusCd = 'TRC_NTC_SENT';
+        row.sendSttsCd = 'TRC_NTC_SENT';
+        if (noticeNo) {
+            row.arrivalNoticeReqNo = noticeNo;
+            row.arrivalNoticeNo = noticeNo;
+            row.noticeNo = noticeNo;
+            row.ianNo = noticeNo;
+            row.IAN_NO = noticeNo;
+        }
+        if (reqNo) {
+            row.trcNo = row.trcNo || reqNo;
+            row.transportRequestNo = row.transportRequestNo || reqNo;
+            row.requestNo = row.requestNo || reqNo;
+        }
+    }
+
+    document.querySelectorAll('.import-manifest-arrival-btn').forEach(function (btn) {
+        var btnKeys = [];
+        [btn.dataset.transportRequestNo, btn.dataset.requestNo, btn.dataset.noticeNo].forEach(function (value) {
+            pushKeys(btnKeys, value);
+        });
+        var matched = matchKeys.length === 0 || matchKeys.some(function (key) {
+            return btnKeys.indexOf(key) >= 0;
+        });
+        if (!matched) return;
+
+        btn.dataset.noticeStatus = '통지완료';
+        btn.dataset.issueStatus = '발급완료';
+        if (noticeNo) btn.dataset.requestNo = noticeNo;
+
+        var statusEl = btn;
+        if (btn.tagName === 'BUTTON') {
+            statusEl = document.createElement('span');
+            statusEl.setAttribute('role', 'button');
+            statusEl.setAttribute('tabindex', '0');
+            Array.prototype.slice.call(btn.attributes).forEach(function (attr) {
+                if (attr.name !== 'type' && attr.name !== 'class') statusEl.setAttribute(attr.name, attr.value);
+            });
+            btn.replaceWith(statusEl);
+        }
+        statusEl.className = 'import-manifest-arrival-btn import-manifest-arrival-status-btn is-issued';
+        statusEl.textContent = '발급완료';
+    });
+
+    window.TRANSPORT_IMPORT_ARRIVAL_TRACKING = window.TRANSPORT_IMPORT_ARRIVAL_TRACKING || [];
+    var hasArrivalRow = false;
+    [window.IMPORT_MANIFEST_LIST, window.IMPORT_MANIFEST_VISIBLE_LIST, window.TRANSPORT_IMPORT_ARRIVAL_TRACKING].forEach(function (rows) {
+        if (!Array.isArray(rows)) return;
+        rows.forEach(function (row) {
+            if (isMatchedRow(row)) {
+                if (rows === window.TRANSPORT_IMPORT_ARRIVAL_TRACKING) hasArrivalRow = true;
+                markRowSent(row);
+            }
+        });
+    });
+    if (!hasArrivalRow) {
+        var arrivalRow = {
+            trcNo: reqNo,
+            TRC_NO: reqNo,
+            transportRequestNo: reqNo,
+            requestNo: reqNo,
+            reqNo: noticeNo || reqNo,
+            arrivalNoticeReqNo: noticeNo || reqNo,
+            arrivalNoticeNo: noticeNo || reqNo,
+            noticeNo: noticeNo || reqNo,
+            ianNo: noticeNo || reqNo,
+            IAN_NO: noticeNo || reqNo
+        };
+        markRowSent(arrivalRow);
+        window.TRANSPORT_IMPORT_ARRIVAL_TRACKING.push(arrivalRow);
+    }
+    window.__TACS_IMPORT_ARRIVAL_LOADED = true;
+
+    // 현재 보이는 적하목록/상세 탭을 즉시 다시 그려서 새로고침 없이 '발급완료'로 보이게 한다.
+    var selectedBeforeRender = window.SELECTED_IMPORT_MANIFEST;
+    if (typeof renderImportManifestList === 'function' && document.getElementById('importManifestListBody')) {
+        renderImportManifestList(window.IMPORT_MANIFEST_VISIBLE_LIST || window.IMPORT_MANIFEST_LIST || []);
+    }
+    if (typeof selectImportManifestItem === 'function') {
+        if (selectedBeforeRender && isMatchedRow(selectedBeforeRender)) {
+            selectImportManifestItem(selectedBeforeRender);
+        } else if (window.SELECTED_IMPORT_MANIFEST && isMatchedRow(window.SELECTED_IMPORT_MANIFEST)) {
+            selectImportManifestItem(window.SELECTED_IMPORT_MANIFEST);
+        }
+    }
+}
+
+function bindImportManifestArrivalNoticeActions() {
+    if (window.__TACS_IMPORT_MANIFEST_ARRIVAL_NOTICE_BOUND) return;
+    window.__TACS_IMPORT_MANIFEST_ARRIVAL_NOTICE_BOUND = true;
+    document.addEventListener('click', function (event) {
+        var target = event.target instanceof Element ? event.target : null;
+        var btn = target ? target.closest('.import-manifest-arrival-btn') : null;
+        if (!btn) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+        openImportManifestArrivalNoticeModal(btn);
+    }, true);
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        var target = event.target instanceof Element ? event.target : null;
+        var btn = target ? target.closest('.import-manifest-arrival-status-btn') : null;
+        if (!btn) return;
+        event.preventDefault();
+        openImportManifestArrivalNoticeModal(btn);
+    }, true);
+}
+
+function selectImportManifestRow(index) {
+    var list = window.IMPORT_MANIFEST_VISIBLE_LIST || window.IMPORT_MANIFEST_LIST || [];
+    var item = list[index];
+    if (!item) return;
+    selectImportManifestItem(item);
+}
+
+function selectImportManifestItem(item) {
+    window.SELECTED_IMPORT_MANIFEST = item || null;
+    if (!item) return;
+    var detailArea = document.getElementById('importManifestDetailArea');
+    if (detailArea) detailArea.classList.remove('hidden');
+
+    setImportManifestValue('manifestNo', item.manifestNo || item.icmNo || item.ICM_NO || item.mfstNo || item.MFST_NO || '');
+    setImportManifestValue('manifestGgNo', item.ggNo);
+    setImportManifestValue('manifestCargoMgmtNo', item.cargoMgmtNo || item.wirCargoMgmtNo || item.WIR_CARGO_MGMT_NO || '');
+    setImportManifestValue('manifestInvoiceNo', item.invoiceNo || item.wirInvoiceNo);
+    setImportManifestValue('manifestSubmitDt', item.manifestSubmitDt || '');
+    setImportManifestValue('manifestStatusNm', getImportManifestReceiveStatusNm(item.manifestStatusCd || item.statusCd, item.manifestStatusNm || item.statusNm));
+
+    setImportManifestValue('manifestMasterBl', item.mblNo || item.blNo || item.masterBl || '');
+    setImportManifestValue('manifestHouseBl', item.hblNo || item.houseBl || '');
+    setImportManifestValue('manifestCarrierNm', item.carrierNm || item.transportMeanNm || item.shipNm || '');
+    setImportManifestValue('manifestEta', item.eta || item.arrivalScheduledDate || item.arvlDttm || '');
+    setImportManifestValue('manifestDeptPort', item.deptPortCd || item.deptPortNm || item.loadingPort || '');
+    setImportManifestValue('manifestArvlPort', item.arvlPortCd || item.arvlPortNm || item.dischargePort || '');
+
+    setImportManifestValue('manifestOwnerId', item.ownerId || item.owrId);
+    setImportManifestValue('manifestOwnerNm', item.ownerNm || item.owrNm);
+    setImportManifestValue('manifestOwnerTelno', item.ownerTelno || item.owrTelno);
+    setImportManifestValue('manifestOwnerEmail', item.ownerEmail || item.owrEmail);
+    setImportManifestValue('manifestTraderNm', item.buyerNm || item.traderNm || item.trdrNm || item.sellerNm);
+    setImportManifestValue('manifestTraderCountry', item.buyerCountryCd || item.traderCountryCd || item.trdrCountryCd || item.sellerCountryCd);
+
+    setImportManifestValue('manifestWarehouseZone', item.warehouseZoneNm || item.bondedZoneNo || item.wzNo || item.wirWzNo || item.bondedZoneId || '');
+    setImportManifestValue('manifestWarehouseManager', item.warehouseManagerNm || item.bondedManagerId || item.wmId || item.wirWmId || item.warehouseManagerId || '');
+    setImportManifestValue('manifestInPlanDt', item.inPlanDt || item.wirInPlanDt || item.inDt);
+    setImportManifestValue('manifestWarehouseStatus', item.warehouseStatusNm || item.whReplyStatusNm || item.wirStatusNm || item.wirStatusCd || '입고완료');
+
+    setImportManifestValue('manifestPackingListFile', item.packingListFile || item.packingListFileName || item.pkgFileNm || '');
+    setImportManifestValue('manifestReceivedFileName', formatManifestAttachmentNames(item));
+    setImportManifestValue('manifestPackingListUrl', buildManifestPackingPreviewUrl(item));
+    setImportManifestValue('manifestPackingListFileNo', item.packingListFileNo || item.pkgFileNo || '');
+    setImportManifestValue('manifestPackingListPath', item.packingListPath || item.pkgFilePath || '');
+    setImportManifestValue('manifestPackingListStoredName', item.packingListStoredName || item.pkgStoredName || '');
+    bindManifestPackingPreviewButtons(item);
+    loadManifestPackingText(item);
+    setImportManifestValue('manifestSupplementNo', item.supplementNo || '');
+    setImportManifestValue('manifestSupplementRefNo', item.supplementRefNo || item.trcNo || '');
+    setImportManifestValue('manifestSupplementSenderId', item.supplementSenderId || '');
+    setImportManifestValue('manifestSupplementReceiverId', item.supplementReceiverId || '');
+    setImportManifestValue('manifestSupplementTypeCd', formatManifestSupplementType(item.supplementTypeCd));
+    setImportManifestValue('manifestSupplementReason', item.rejectReason || item.supplementReason || '');
+    setImportManifestValue('manifestRemark', item.manifestRemark || '');
+    toggleImportManifestSupplementArea(item);
+    renderImportManifestCargoItems(item);
+    loadImportManifestCargoItems(item);
+
+    var submitBtn = document.getElementById('importManifestSubmitBtn');
+    if (submitBtn) submitBtn.remove();
+}
+
+
+function toggleImportManifestSupplementArea(item) {
+    var area = document.getElementById('manifestSupplementArea');
+    if (!area) return;
+
+    var statusCd = String((item && (item.manifestStatusCd || item.statusCd)) || '').toUpperCase();
+    var statusNm = String((item && (item.manifestStatusNm || item.statusNm)) || '');
+    var hasSupplement = statusCd === 'SUPPLEMENT' || statusNm.indexOf('보완요청') >= 0;
+    area.classList.toggle('hidden', !hasSupplement);
+}
+
+function loadImportManifestCargoItems(item) {
+    if (!item || !item.ggNo) return;
+
+    var tbody = document.getElementById('manifestCargoItemBody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="3" class="px-5 py-8 text-center text-slate-500">적하목록/패킹리스트 대조값을 조회 중입니다...</td></tr>';
+    }
+
+    var basePath = window.contextPath || '';
+    var cacheKey = '&_=' + Date.now();
+    fetchJsonWithFallback([
+        basePath + '/transport/import/manifest/goods.do?ggNo=' + encodeURIComponent(item.ggNo) + cacheKey,
+        basePath + '/transport/import/manifest/goods?ggNo=' + encodeURIComponent(item.ggNo) + cacheKey,
+        basePath + '/transport/import/unloading-in/goods.do?ggNo=' + encodeURIComponent(item.ggNo) + cacheKey
+    ], {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        cache: 'no-store'
+    })
+        .then(function (data) {
+            var rows = Array.isArray(data) ? data : [];
+            if (rows.length) {
+                item.cargoItems = rows;
+                if (window.SELECTED_IMPORT_MANIFEST && String(window.SELECTED_IMPORT_MANIFEST.ggNo) === String(item.ggNo)) {
+                    window.SELECTED_IMPORT_MANIFEST.cargoItems = item.cargoItems;
+                }
+            }
+            renderImportManifestCargoItems(item);
+        })
+        .catch(function (err) {
+            console.error('수입 적하목록 화물정보 조회 실패:', err);
+            renderImportManifestCargoItems(item);
+        });
+}
+
+function normalizeWeightForDisplay(value) {
+    if (value === null || value === undefined || value === '') return '';
+    var text = String(value).trim();
+    if (!text) return '';
+    return /kg/i.test(text) ? text : text + ' KG';
+}
+
+function normalizeManifestCargoItem(cargo) {
+    cargo = cargo || {};
+    return {
+        cgNo: cargo.cgNo || cargo.cg_no || cargo.CG_NO || cargo.goodsNo || cargo.GOODS_NO || '',
+        goodsNo: cargo.goodsNo || cargo.GOODS_NO || '',
+        goodsName: cargo.goodsName || cargo.GOODS_NAME || cargo.itemNm || cargo.ITEM_NM || cargo.frghtIemNm || '',
+        qty: cargo.qty || cargo.totalQty || cargo.cgQty || cargo.CG_QTY || cargo.goodsQty || '',
+        price: cargo.price || cargo.cgPrice || cargo.CG_PRICE || cargo.goodsPrice || '',
+        totalPrice: cargo.totalPrice || cargo.cgTotalPrice || cargo.CG_TOTAL_PRICE || cargo.goodsTotalPrice || '',
+        weight: cargo.weight || cargo.totalWeight || cargo.cgWeight || cargo.CG_WEIGHT || cargo.goodsWeight || '',
+        netWeight: cargo.netWeight || cargo.NET_WEIGHT || cargo.totalWeight || cargo.TOTAL_WEIGHT || cargo.cgWeight || cargo.CG_WEIGHT || cargo.goodsWeight || cargo.weight || '',
+        grossWeight: cargo.grossWeight || cargo.GROSS_WEIGHT || cargo.totalWeight || cargo.TOTAL_WEIGHT || cargo.cgWeight || cargo.CG_WEIGHT || cargo.weight || '',
+        origin: cargo.origin || cargo.cgOrigin || cargo.CG_ORIGIN || cargo.originCountryCd || '',
+        packingGoodsName: cargo.packingGoodsName || cargo.pkgGoodsName || cargo.PL_GOODS_NAME || '',
+        packingQty: cargo.packingQty || cargo.pkgQty || cargo.PL_QTY || '',
+        packingWeight: cargo.packingWeight || cargo.pkgWeight || cargo.PL_WEIGHT || '',
+        packingOrigin: cargo.packingOrigin || cargo.pkgOrigin || cargo.PL_ORIGIN || ''
+    };
+}
+
+
+function renderImportManifestCargoItems(item) {
+    var tbody = document.getElementById('manifestCargoItemBody');
+    if (!tbody) return;
+
+    item = item || {};
+    var items = Array.isArray(item.cargoItems) ? item.cargoItems : [];
+    if (!items.length) {
+        items = [{
+            cgNo: item.cgNo || item.goodsNo,
+            goodsNo: item.goodsNo,
+            goodsName: item.goodsName || item.itemNm || item.itemCategory || item.frghtIemNm,
+            qty: item.cgQty || item.totalQty || item.goodsQty || item.qty,
+            price: item.cgPrice || item.goodsPrice || item.price,
+            totalPrice: item.cgTotalPrice || item.goodsTotalPrice || item.totalPrice,
+            weight: item.cgWeight || item.totalWeight || item.goodsWeight || item.weight,
+            origin: item.cgOrigin || item.originCountryCd || item.origin
+        }];
+    }
+
+    items = items.map(normalizeManifestCargoItem).filter(function (cargo) {
+        return cargo && ['goodsName', 'qty', 'weight', 'origin', 'cgNo', 'goodsNo'].some(function (key) {
+            return cargo[key] !== null && cargo[key] !== undefined && String(cargo[key]).trim() !== '';
+        });
+    });
+
+    var hasPackingFile = !!buildManifestPackingPreviewUrl(item);
+    var rows = [];
+
+    // 패킹리스트 전체 항목을 다 넣지 않고, 발표/시연에 필요한 대조 항목만 표시한다.
+    rows.push(buildManifestManualCheckRow('송장번호', item.invoiceNo || item.wirInvoiceNo || item.invoice || '', hasPackingFile, [item.invoiceNo, item.wirInvoiceNo]));
+    rows.push(buildManifestManualCheckRow('출발지', item.deptPortCd || item.deptPortNm || item.loadingPort || '', hasPackingFile, [item.deptPortCd, item.deptPortNm, item.loadingPort]));
+    rows.push(buildManifestManualCheckRow('목적지', item.arvlPortCd || item.arvlPortNm || item.dischargePort || '', hasPackingFile, [item.arvlPortCd, item.arvlPortNm, item.dischargePort]));
+    rows.push(buildManifestManualCheckRow('선박명/항공편명', item.carrierNm || item.shipNm || item.vesselVoyage || '', hasPackingFile, [item.carrierNm, item.shipNm, item.vesselVoyage]));
+    rows.push(buildManifestManualCheckRow('화인', item.shippingMarks || item.shippingMark || '', hasPackingFile, [item.shippingMarks, item.shippingMark]));
+    rows.push(buildManifestManualCheckRow('포장종류 및 수량', item.packageQty || item.pkgQty || item.packageTypeQty || '', hasPackingFile, [item.packageQty, item.pkgQty, item.packageTypeQty]));
+
+    if (!items.length) {
+        rows.push('<tr><td colspan="3" class="px-3 py-4 text-center text-slate-500 border-t border-slate-200">품목 DB 조회값이 없습니다.</td></tr>');
+    } else {
+        items.forEach(function (cargo, idx) {
+            rows.push(buildManifestManualCheckRow('품명 ' + (idx + 1), cargo.goodsName || '', hasPackingFile, [cargo.goodsName]));
+            rows.push(buildManifestManualCheckRow('수량 또는 순중량 ' + (idx + 1), cargo.qty || '', hasPackingFile, [cargo.qty]));
+            rows.push(buildManifestManualCheckRow('총중량 ' + (idx + 1), normalizeWeightForDisplay(cargo.weight), hasPackingFile, [cargo.weight, normalizeWeightForDisplay(cargo.weight)]));
+            if (cargo.origin) rows.push(buildManifestManualCheckRow('원산지 ' + (idx + 1), cargo.origin, hasPackingFile, [cargo.origin]));
+        });
+    }
+
+    tbody.innerHTML = rows.join('');
+}
+
+function buildManifestManualCheckRow(label, value, hasPackingFile, compareValues) {
+    var text = value === null || value === undefined || String(value).trim() === '' ? '-' : String(value);
+    var packingText = buildPackingCompareResult(value, hasPackingFile, compareValues);
+    return '' +
+        '<tr class="border-t border-slate-200 hover:bg-slate-50">' +
+        '<td class="px-5 py-4 font-extrabold text-slate-800 bg-slate-50 align-top">' + safeText(label) + '</td>' +
+        '<td class="px-5 py-4 align-top text-slate-900">' + safeText(text) + '</td>' +
+        '<td class="px-5 py-4 align-top text-slate-600">' + packingText + '</td>' +
+        '</tr>';
+}
+
+
+
+
+
+
+
+function normalizeCompareText(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/,/g, '')
+        .replace(/\s+/g, '')
+        .replace(/[()\-_/]/g, '')
+        .trim()
+        .toLowerCase();
+}
+
+function buildPackingCompareResult(manifestValue, hasPackingFile, compareValues) {
+    if (!hasPackingFile) {
+        return '<span class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-slate-100 text-slate-500 border border-slate-200">포장명세서 없음</span>';
+    }
+
+    var item = window.SELECTED_IMPORT_MANIFEST || {};
+    if (item.__packingTextLoading) {
+        return '<span class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200">PDF 텍스트 조회중</span>';
+    }
+
+    var packingText = item.packingText || '';
+    if (item.__packingTextLoaded && !normalizeCompareText(packingText)) {
+        return '<span class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">텍스트 추출불가</span>';
+    }
+
+    if (!item.__packingTextLoaded) {
+        return '<span class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200">PDF 확인 대기</span>';
+    }
+
+    var normalizedPdf = normalizeCompareText(packingText);
+    var values = Array.isArray(compareValues) && compareValues.length ? compareValues : [manifestValue];
+    values = values.filter(function (value) {
+        return value !== null && value !== undefined && String(value).trim() !== '';
+    });
+
+    if (!values.length) {
+        return '<span class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-slate-100 text-slate-500 border border-slate-200">DB 값 없음</span>';
+    }
+
+    var matched = values.filter(function (value) {
+        var normalizedValue = normalizeCompareText(value);
+        return normalizedValue && normalizedPdf.indexOf(normalizedValue) >= 0;
+    }).length;
+
+    if (matched === values.length) {
+        return '<span data-compare="match" class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">일치</span>';
+    }
+    if (matched > 0) {
+        return '<span data-compare="warn" class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">부분일치</span>';
+    }
+    return '<span data-compare="warn" class="inline-flex px-3 py-1 text-[11px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200">불일치</span>';
+}
+
+
+
+function setImportManifestValue(id, value) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var normalized = value == null ? '' : String(value);
+    if (el.tagName === 'SELECT') {
+        var label = normalized || '선택값 없음';
+        el.innerHTML = '<option value="' + escapeAttr(normalized) + '" selected>' + safeText(label) + '</option>';
+        el.value = normalized;
+        return;
+    }
+    el.value = normalized;
+}
+
+function formatManifestAttachmentNames(item) {
+    var seen = {};
+    return [
+        item && (item.packingListFile || item.packingListFileName)
+    ].filter(function (name) {
+        if (!name || seen[name]) return false;
+        seen[name] = true;
+        return true;
+    }).join(', ');
+}
+
+function buildManifestFileDownloadUrl(item, kind) {
+    item = item || {};
+    var fileNo = kind === 'invoice'
+        ? (item.invoiceFileNo || item.invFileNo || '')
+        : (item.packingListFileNo || item.pkgFileNo || '');
+    if (fileNo) return getTransportContextPath() + '/common/file/download.do?fileNo=' + encodeURIComponent(fileNo);
+
+    var directUrl = kind === 'invoice'
+        ? (item.invoiceUrl || item.invoiceFileUrl || item.invFileUrl || '')
+        : (item.packingListUrl || item.packingListFileUrl || item.pkgFileUrl || '');
+    if (directUrl) return directUrl;
+
+    return '';
+}
+
+function buildManifestPackingPreviewUrl(item) {
+    item = item || {};
+    var directUrl = item.packingListUrl || item.packingListFileUrl || item.pkgFileUrl || '';
+    if (directUrl) return directUrl;
+    var fileNo = item.packingListFileNo || item.pkgFileNo || '';
+    if (fileNo) return getTransportContextPath() + '/common/file/preview.do?fileNo=' + encodeURIComponent(fileNo);
+    return '';
+}
+
+function renderManifestAttachmentDownloadBox(item) {
+    item = item || {};
+    var packingName = item.packingListFile || item.packingListFileName || item.pkgFileNm || '';
+    var packingUrl = buildManifestFileDownloadUrl(item, 'packing');
+
+    var body = document.getElementById('manifestPackingPreviewBody');
+    if (body) {
+        body.innerHTML = '' +
+            '<div class="text-xs font-extrabold text-slate-500">포장명세서</div>' +
+            '<div class="border border-slate-200 bg-slate-100 px-4 py-3">' +
+            '  <span class="break-all">' + safeText(packingName || '포장명세서 파일 없음') + '</span>' +
+            '</div>' +
+            '<p class="pt-3 text-xs text-slate-500">아래 대조표는 이 포장명세서 PDF 텍스트와 적하목록 DB 값을 비교합니다.</p>';
+    }
+}
+
+function bindManifestPackingPreviewButtons(item) {
+    renderManifestAttachmentDownloadBox(item);
+}
+
+function loadManifestPackingText(item) {
+    item = item || {};
+    var fileNo = item.packingListFileNo || item.pkgFileNo || '';
+    if (!fileNo) {
+        item.packingText = '';
+        item.__packingTextLoaded = true;
+        item.__packingTextLoading = false;
+        renderImportManifestCargoItems(item);
+        return;
+    }
+    if (item.__packingTextLoaded || item.__packingTextLoading) return;
+
+    item.__packingTextLoading = true;
+    renderImportManifestCargoItems(item);
+
+    var basePath = window.contextPath || '';
+    fetchJsonWithFallback([
+        basePath + '/transport/import/manifest/packing-text.do?fileNo=' + encodeURIComponent(fileNo) + '&_=' + Date.now(),
+        basePath + '/transport/import/manifest/packing-text?fileNo=' + encodeURIComponent(fileNo) + '&_=' + Date.now()
+    ], {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        cache: 'no-store',
+        credentials: 'same-origin'
+    })
+        .then(function (data) {
+            item.packingText = data && data.success ? (data.text || '') : '';
+            item.__packingTextLoaded = true;
+            item.__packingTextLoading = false;
+            renderImportManifestCargoItems(item);
+        })
+        .catch(function (err) {
+            console.error('포장명세서 PDF 텍스트 조회 실패:', err);
+            item.packingText = '';
+            item.__packingTextLoaded = true;
+            item.__packingTextLoading = false;
+            renderImportManifestCargoItems(item);
+        });
+}
+
+
+
+function clearImportManifestForm() {
+    window.SELECTED_IMPORT_MANIFEST = null;
+    var detailArea = document.getElementById('importManifestDetailArea');
+    if (detailArea) detailArea.classList.add('hidden');
+    [
+        'manifestNo', 'manifestGgNo', 'manifestCargoMgmtNo', 'manifestInvoiceNo', 'manifestSubmitDt', 'manifestStatusNm',
+        'manifestMasterBl', 'manifestHouseBl', 'manifestCarrierNm', 'manifestEta', 'manifestDeptPort', 'manifestArvlPort',
+        'manifestOwnerId', 'manifestOwnerNm', 'manifestOwnerTelno', 'manifestOwnerEmail', 'manifestTraderNm', 'manifestTraderCountry',
+        'manifestWarehouseZone', 'manifestWarehouseManager', 'manifestInPlanDt', 'manifestWarehouseStatus',
+        'manifestReceivedFileName', 'manifestInvoiceFile', 'manifestInvoiceFileNo', 'manifestInvoicePath', 'manifestInvoiceStoredName', 'manifestPackingListFile', 'manifestPackingListUrl', 'manifestPackingListFileNo', 'manifestPackingListPath', 'manifestPackingListStoredName',
+        'manifestSupplementNo', 'manifestSupplementRefNo', 'manifestSupplementSenderId', 'manifestSupplementReceiverId', 'manifestSupplementTypeCd',
+        'manifestSupplementReason', 'manifestRemark'
+    ].forEach(function (id) {
+        setImportManifestValue(id, '');
+    });
+    var fileInput = document.getElementById('manifestAttachmentFiles');
+    if (fileInput) fileInput.value = '';
+    toggleImportManifestSupplementArea(null);
+    var tbody = document.getElementById('manifestCargoItemBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="px-5 py-8 text-center text-slate-500">목록에서 대상을 선택하세요.</td></tr>';
+    var previewBody = document.getElementById('manifestPackingPreviewBody');
+    if (previewBody) previewBody.innerHTML = '목록에서 대상을 선택하면 첨부파일이 표시됩니다.';
+    var previewTitle = document.getElementById('manifestPackingPreviewTitle');
+    if (previewTitle) previewTitle.textContent = 'DB에 연결된 포장명세서 파일입니다.';
+    var submitBtn = document.getElementById('importManifestSubmitBtn');
+    if (submitBtn) submitBtn.remove();
+}
+
+function formatManifestSupplementType(typeCd) {
+    if (!typeCd) return '';
+    var labels = {
+        FILE: '파일 재제출',
+        FILE_REUPLOAD: '파일 재제출',
+        DOC: '서류 보완',
+        DOCUMENT: '서류 보완',
+        DATA: '입력값 정정',
+        INFO: '입력값 정정'
+    };
+    return labels[typeCd] || typeCd;
+}
+
+function escapeAttr(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function safeText(value) {
+    if (value === null || value === undefined || value === '') return '-';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+
+/* 운송의뢰 반려사유 모달 */
+(function () {
+    if (window.__TACS_IMPORT_REQUEST_REJECT_REASON_HANDLER__) return;
+    window.__TACS_IMPORT_REQUEST_REJECT_REASON_HANDLER__ = true;
+
+    function ensureRejectReasonModal() {
+        var modal = document.getElementById('importRequestRejectReasonModal');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'importRequestRejectReasonModal';
+        modal.className = 'fixed inset-0 z-[10000] hidden items-center justify-center bg-slate-900/50 p-4';
+        modal.innerHTML = ''
+            + '<div class="w-full max-w-lg bg-white shadow-2xl border border-slate-200">'
+            + '  <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">'
+            + '    <h3 class="text-base font-black text-slate-900">운송의뢰 반려사유</h3>'
+            + '    <button type="button" data-import-reject-reason-close class="text-xl leading-none text-slate-500 hover:text-slate-900">x</button>'
+            + '  </div>'
+            + '  <div class="space-y-4 p-6 text-sm">'
+            + '    <div><label class="field-label">의뢰번호</label><input id="importRequestRejectReasonNo" class="field-input bg-slate-50" readonly></div>'
+            + '    <div><label class="field-label">화주명</label><input id="importRequestRejectReasonOwner" class="field-input bg-slate-50" readonly></div>'
+            + '    <div><label class="field-label">반려사유</label><textarea id="importRequestRejectReasonText" class="field-textarea h-28 bg-slate-50" readonly></textarea></div>'
+            + '  </div>'
+            + '  <div class="flex justify-end border-t border-slate-200 px-6 py-4">'
+            + '    <button type="button" data-import-reject-reason-close class="px-4 py-2 bg-slate-700 text-white text-xs font-bold hover:bg-slate-800">닫기</button>'
+            + '  </div>'
+            + '</div>';
+
+        document.body.appendChild(modal);
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal || e.target.closest('[data-import-reject-reason-close]')) {
+                closeRejectReasonModal();
+            }
+        });
+        return modal;
+    }
+
+    function setValue(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.value = value || '';
+    }
+
+    function openRejectReasonModal(btn) {
+        var modal = ensureRejectReasonModal();
+        var requestNo = btn.dataset.requestNo || '';
+        var shipperName = btn.dataset.shipperName || '';
+        var rejectReason = btn.dataset.rejectReason || '';
+
+        setValue('importRequestRejectReasonNo', requestNo);
+        setValue('importRequestRejectReasonOwner', shipperName);
+        setValue('importRequestRejectReasonText', rejectReason || '등록된 반려사유가 없습니다.');
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeRejectReasonModal() {
+        var modal = document.getElementById('importRequestRejectReasonModal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('.import-request-reject-reason-btn') : null;
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
+        openRejectReasonModal(btn);
+    }, true);
+})();
+
+/* === 2026-05-25 수입운송 6개 좌측 리스트 상태값 색상 자동 통일 ===
+ * 값/컬럼/조회 로직은 건드리지 않는다.
+ * 현재 화면에 렌더링된 상태 텍스트만 읽어서 공통 색상 class를 붙인다.
+ */
+(function installTacsImportLeftListStatusColorV1() {
+    if (window.__TACS_IMPORT_LEFT_LIST_STATUS_COLOR_V1_INSTALLED) return;
+    window.__TACS_IMPORT_LEFT_LIST_STATUS_COLOR_V1_INSTALLED = true;
+
+    function normalizeText(value) {
+        return String(value == null ? '' : value).replace(/\s+/g, '').trim();
+    }
+
+    var DONE = {
+        '접수완료': true,
+        '발송완료': true,
+        '발급완료': true,
+        '전달완료': true,
+        '정산완료': true,
+        '입고완료': true,
+        '반출완료': true,
+        '배차완료': true,
+        '최종완료': true,
+        '요청완료': true,
+        '보완제출완료': true,
+        'D/O발급완료': true,
+        'D/O전달완료': true
+    };
+
+    var REJECT = {
+        '접수반려': true,
+        '반려': true,
+        '보완요청': true,
+        '입고반려': true,
+        '반출반려': true,
+        'D/O반려': true
+    };
+
+    var WAIT = {
+        '접수대기': true,
+        '발송대기': true,
+        '발급대기': true,
+        '입고대기': true,
+        '반출대기': true,
+        '배차대기': true,
+        '정산대기': true,
+        '미정산': true,
+        'D/O발급대기': true
+    };
+
+    var NEUTRAL = {
+        '-': true,
+        '': true
+    };
+
+    function resolveStatusClass(text) {
+        var key = normalizeText(text);
+        if (DONE[key]) return 'tacs-status-done';
+        if (REJECT[key]) return 'tacs-status-reject';
+        if (WAIT[key]) return 'tacs-status-wait';
+        if (NEUTRAL[key]) return 'tacs-status-neutral';
+        return '';
+    }
+
+    function isCandidate(el) {
+        if (!el || !el.textContent) return false;
+        if (el.closest('thead')) return false;
+        if (el.matches('input,select,textarea,label')) return false;
+
+        /* 도착통지서 상태 버튼 등 전용 스타일이 있는 버튼은 자동 상태 색상 대상에서 제외 (둠칫거림 방지) */
+        if (el.classList.contains('import-manifest-arrival-status-btn') ||
+            el.classList.contains('import-manifest-arrival-btn') ||
+            el.classList.contains('import-manifest-arrival-action-btn')) {
+            return false;
+        }
+
+        var text = normalizeText(el.textContent);
+        if (!text || text.length > 12) return false;
+        if (!resolveStatusClass(text)) return false;
+
+        /* 상세/반려사유 같은 처리 버튼은 상태값이 아니므로 제외 */
+        if (text === '상세' || text === '반려사유' || text === '조회' || text === '검색') return false;
+        return true;
+    }
+
+    function applyStatusColor(root) {
+        root = root || document;
+        var cards = root.querySelectorAll ? root.querySelectorAll('#detail-body .import-left-list-card') : [];
+        cards.forEach(function (card) {
+            var targets = card.querySelectorAll('span,button,td > div,td > p');
+            targets.forEach(function (el) {
+                if (!isCandidate(el)) return;
+                var cls = resolveStatusClass(el.textContent);
+                if (!cls) return;
+
+                // 이미 해당 클래스가 있다면 중복 조작 방지 (성능 및 깜빡임 개선)
+                if (el.classList.contains(cls) && el.classList.contains('tacs-status-chip')) return;
+
+                el.classList.remove('tacs-status-done', 'tacs-status-reject', 'tacs-status-wait', 'tacs-status-neutral');
+                el.classList.add('tacs-status-chip', cls);
+            });
+        });
+    }
+
+    window.applyImportLeftListStatusColors = applyStatusColor;
+
+    function scheduleApply() {
+        window.clearTimeout(window.__TACS_IMPORT_STATUS_COLOR_TIMER);
+        window.__TACS_IMPORT_STATUS_COLOR_TIMER = window.setTimeout(function () {
+            applyStatusColor(document);
+        }, 30);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleApply);
+    } else {
+        scheduleApply();
+    }
+
+    var observer = new MutationObserver(scheduleApply);
+    observer.observe(document.documentElement, {childList: true, subtree: true});
+})();

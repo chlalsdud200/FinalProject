@@ -1,0 +1,1084 @@
+/* =========================================================
+ * export-detail-tabs.js
+ * 수출운송 상세/목록 정리본
+ * - 수입운송처럼 운송의뢰 상세 안에서 6개 탭 직접 렌더링
+ * - '수출 운송 연계업무' 카드/상세화면 열기 구조 제거
+ * ========================================================= */
+(function () {
+  'use strict';
+
+  if (window.__TACS_EXPORT_DETAIL_TABS_BOOTED__) return;
+  window.__TACS_EXPORT_DETAIL_TABS_BOOTED__ = true;
+
+  const EXPORT_GROUP = 'export';
+  const EXPORT_FIRST_ITEM = 'TACS-FW-001';
+  const DETAIL_ITEM = 'TACS-FW-001';
+  const EXPORT_ROUTE_STORAGE_KEY = 'tacs.export.currentRoute.v1';
+  const EXPORT_DETAIL_DRAFT_PREFIX = 'tacs.export.requestDetailDraft.';
+  const EXPORT_DETAIL_RESTORE_MS = 4500;
+  let exportBootRestoreRoute;
+  let exportBootRestoreDeadline = 0;
+
+  const DETAIL_TABS = [
+    { key: 'detail', label: '수출운송의뢰상세' },
+    { key: 'inbound', label: '보세구역 입고관리' },
+    { key: 'release', label: '보세구역 반출관리' },
+    { key: 'shipping', label: '선적처리' },
+    { key: 'bl', label: 'MBL 및 비용청구' },
+    { key: 'hbl', label: 'HBL 발급' }
+  ];
+
+  const SIDE_PANELS = {
+    'TACS-FW-009B': {
+      title: '보세구역 입고관리',
+      build: () => typeof buildExportInboundManagePanel === 'function' ? buildExportInboundManagePanel() : emptyPanel('보세구역 입고관리'),
+      bind: () => { if (typeof bindExportInboundManageActions === 'function') bindExportInboundManageActions(EXPORT_GROUP, 'TACS-FW-009B'); }
+    },
+    'TACS-FW-009': {
+      title: '보세구역 반출관리',
+      build: () => typeof buildBondedReleaseRequestListPanel === 'function' ? buildBondedReleaseRequestListPanel() : emptyPanel('보세구역 반출관리'),
+      bind: () => {
+        if (typeof bindBondedReleaseRequestActions === 'function') bindBondedReleaseRequestActions(EXPORT_GROUP, 'TACS-FW-009');
+        else if (typeof bindBondedWorkPanelActions === 'function') bindBondedWorkPanelActions(EXPORT_GROUP, 'TACS-FW-009');
+      }
+    },
+    'TACS-FW-007': {
+      title: '선적처리',
+      build: () => typeof buildPickupDispatchPanel === 'function' ? buildPickupDispatchPanel() : emptyPanel('선적처리'),
+      bind: () => { if (typeof bindPickupDispatchActions === 'function') bindPickupDispatchActions(EXPORT_GROUP, 'TACS-FW-007'); }
+    },
+    'TACS-FW-010': {
+      title: '선적지시서 작성 및 제출',
+      build: () => typeof buildShippingInstructionSubmitPanel === 'function' ? buildShippingInstructionSubmitPanel() : emptyPanel('선적지시서 작성 및 제출'),
+      bind: () => { if (typeof bindShippingInstructionActions === 'function') bindShippingInstructionActions(EXPORT_GROUP, 'TACS-FW-010'); }
+    },
+    'TACS-FW-010B': {
+      title: 'MBL 및 비용청구',
+      build: () => typeof buildBLIssuePanel === 'function' ? buildBLIssuePanel() : emptyPanel('MBL 및 비용청구'),
+      bind: () => { if (typeof bindBLIssueActions === 'function') bindBLIssueActions(EXPORT_GROUP, 'TACS-FW-010B'); }
+    },
+    'TACS-FW-011': {
+      title: '적하목록 작성 및 제출',
+      build: () => typeof buildExportManifestPanel === 'function' ? buildExportManifestPanel() : emptyPanel('적하목록 작성 및 제출'),
+      bind: () => { if (typeof bindExportManifestActions === 'function') bindExportManifestActions(EXPORT_GROUP, 'TACS-FW-011'); }
+    }
+  };
+
+  function $(id) { return document.getElementById(id); }
+
+  function esc(value) {
+    if (value === undefined || value === null || value === '') return '-';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function html(value) {
+    return esc(value).replace(/^-$/, '');
+  }
+
+  function dateOnly(value) {
+    const raw = String(value === undefined || value === null ? '' : value).trim();
+    if (!raw || raw === '-') return '';
+    const match = raw.replace(/[./]/g, '-').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (!match) return raw;
+    return match[1] + '-' + match[2].padStart(2, '0') + '-' + match[3].padStart(2, '0');
+  }
+
+  function normalizeText(value) {
+    return String(value === undefined || value === null ? '' : value).trim();
+  }
+
+  function pdfName(value) {
+    const raw = normalizeText(value);
+    if (!raw || raw === '-') return '';
+    return /\.pdf$/i.test(raw) ? raw : raw + '.pdf';
+  }
+
+  function pick(row, keys, fallback) {
+    for (const key of keys) {
+      const value = row && row[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+    }
+    return fallback === undefined ? '' : fallback;
+  }
+
+  function normalizeStatus(value) {
+    const text = String(value || '').trim();
+    const upper = text.toUpperCase();
+    if (['TRC_DONE', 'ACCEPTED', 'ACC', 'APPROVED', 'APV'].includes(upper) || text === '접수완료' || text === '승인' || text === '승인완료') return '접수완료';
+    if (['TRC_REJECT', 'REJECTED', 'REJ'].includes(upper) || text === '접수반려') return '접수반려';
+    if (['TRC_WAIT', 'REQUESTED', 'REQ'].includes(upper) || text === '접수대기') return '접수대기';
+    return text || '확인중';
+  }
+
+  function requestStatus(row) {
+    const keys = ['receiptStatus', 'statusNm', 'statusCd', 'requestStatus', 'approvalStatus'];
+    const values = keys.map(key => row && row[key]).filter(value => value !== undefined && value !== null && String(value).trim() !== '');
+    if (!values.length) return '';
+    if (values.some(value => normalizeStatus(value) === '접수완료')) return '접수완료';
+    if (values.some(value => normalizeStatus(value) === '접수반려')) return '접수반려';
+    return normalizeStatus(values[0]);
+  }
+
+  function isExportRequestAccepted(row) {
+    const status = requestStatus(row);
+    if (!status) return true;
+    return status === '접수완료';
+  }
+
+  function lockedPanelHtml() {
+    return ''
+      + '<div class="import-ui-request-detail">'
+      + '  <div class="import-ui-section" style="margin:16px;">'
+      + '    <h5>접수완료 후 진행 가능</h5>'
+      + '    <p class="text-sm text-slate-600" style="margin:0;">운송의뢰가 접수완료 상태가 아니면 보세구역 입고관리, 보세구역 반출관리, 선적처리, MBL 및 비용청구, HBL 발급을 진행할 수 없습니다.</p>'
+      + '  </div>'
+      + '</div>';
+  }
+
+  function workErrorPanelHtml() {
+    return ''
+      + '<div class="import-ui-request-detail">'
+      + '  <div class="import-ui-section" style="margin:16px;">'
+      + '    <h5>화면 로딩 오류</h5>'
+      + '    <p class="text-sm text-slate-600" style="margin:0;">탭 화면을 불러오는 중 오류가 발생했습니다. 다시 조회 후 시도해주세요.</p>'
+      + '  </div>'
+      + '</div>';
+  }
+
+
+  function requestNo(row) {
+    return pick(row, ['trcNo', 'requestNo', 'treId', 'trcNo']);
+  }
+
+  function isRefreshNavigation() {
+    try {
+      const nav = window.performance && window.performance.getEntriesByType
+        ? window.performance.getEntriesByType('navigation')[0]
+        : null;
+      if (nav && nav.type) return nav.type === 'reload';
+      if (window.performance && window.performance.navigation) return window.performance.navigation.type === 1;
+    } catch (ignore) {}
+    return false;
+  }
+
+  function requestSnapshot(row) {
+    if (!row || typeof row !== 'object') return null;
+    const snap = {};
+    Object.keys(row).forEach(key => {
+      const value = row[key];
+      if (value == null || ['string', 'number', 'boolean'].includes(typeof value)) snap[key] = value;
+    });
+    const no = requestNo(row);
+    if (no) {
+      snap.trcNo = snap.trcNo || no;
+      snap.requestNo = snap.requestNo || no;
+      snap.treId = snap.treId || no;
+    }
+    return snap;
+  }
+
+  function readStoredExportRoute() {
+    try {
+      const raw = window.sessionStorage && window.sessionStorage.getItem(EXPORT_ROUTE_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (ignore) {
+      return null;
+    }
+  }
+
+  function routeFromHistoryState() {
+    try {
+      const state = window.history && window.history.state ? window.history.state : null;
+      if (!state) return null;
+      if (state.tacsExportRoute) return state.tacsExportRoute;
+    } catch (ignore) {}
+    return null;
+  }
+
+  function isExportDetailRoute(route) {
+    return !!(route && route.type === 'request-detail' && route.requestNo);
+  }
+
+  function clearExportDetailRestore() {
+    exportBootRestoreDeadline = 0;
+    exportBootRestoreRoute = null;
+  }
+
+  function isRecentUserExportNav(itemId) {
+    const nav = window.__TACS_TRANSPORT_USER_NAV || null;
+    return !!(nav
+      && nav.group === EXPORT_GROUP
+      && String(nav.item || '') === String(itemId || '')
+      && Date.now() - Number(nav.ts || 0) < 2000);
+  }
+
+  function bootExportDetailRoute() {
+    if (exportBootRestoreRoute !== undefined) return exportBootRestoreRoute;
+    const stored = routeFromHistoryState() || readStoredExportRoute();
+    exportBootRestoreRoute = isRefreshNavigation() && isExportDetailRoute(stored) ? stored : null;
+    if (exportBootRestoreRoute) exportBootRestoreDeadline = Date.now() + EXPORT_DETAIL_RESTORE_MS;
+    return exportBootRestoreRoute;
+  }
+
+  function activeExportDetailRoute() {
+    if (isRecentUserExportNav(EXPORT_FIRST_ITEM)) {
+      clearExportDetailRestore();
+      return null;
+    }
+    const boot = bootExportDetailRoute();
+    if (boot && exportBootRestoreDeadline && Date.now() <= exportBootRestoreDeadline) return boot;
+    return routeFromHistoryState() || (isRefreshNavigation() ? readStoredExportRoute() : null);
+  }
+
+  function rememberExportDetailRoute(row, activeKey) {
+    const no = requestNo(row);
+    if (!no) return;
+    const route = {
+      type: 'request-detail',
+      requestNo: no,
+      activeKey: activeKey || 'detail',
+      request: requestSnapshot(row),
+      ts: Date.now()
+    };
+    try {
+      if (window.sessionStorage) window.sessionStorage.setItem(EXPORT_ROUTE_STORAGE_KEY, JSON.stringify(route));
+    } catch (ignore) {}
+    try {
+      if (window.history && window.history.replaceState) {
+        const url = new URL(window.location.href);
+        url.pathname = (typeof getContextPath === 'function' ? getContextPath() : '') + '/transport/export.do';
+        url.searchParams.set('tab', activeKey === 'detail' ? 'request' : activeKey);
+        const state = Object.assign({}, window.history.state || {});
+        state.group = EXPORT_GROUP;
+        state.item = EXPORT_FIRST_ITEM;
+        state.tacsExportRoute = route;
+        window.history.replaceState(state, '', url.pathname + url.search + url.hash);
+      }
+    } catch (ignore) {}
+  }
+
+  function rememberExportListRoute(itemId) {
+    clearExportDetailRestore();
+    try { if (window.sessionStorage) window.sessionStorage.removeItem(EXPORT_ROUTE_STORAGE_KEY); } catch (ignore) {}
+    try {
+      if (window.history && window.history.replaceState) {
+        const url = new URL(window.location.href);
+        url.pathname = (typeof getContextPath === 'function' ? getContextPath() : '') + '/transport/export.do';
+        url.searchParams.delete('tab');
+        if (itemId && itemId !== EXPORT_FIRST_ITEM) url.searchParams.set('page', itemId);
+        const state = Object.assign({}, window.history.state || {});
+        state.group = EXPORT_GROUP;
+        state.item = itemId || EXPORT_FIRST_ITEM;
+        delete state.tacsExportRoute;
+        window.history.replaceState(state, '', url.pathname + url.search + url.hash);
+      }
+    } catch (ignore) {}
+  }
+
+  function draftKey(no) {
+    return EXPORT_DETAIL_DRAFT_PREFIX + normalizeText(no);
+  }
+
+  function readDraft(no) {
+    no = normalizeText(no);
+    if (!no || !window.sessionStorage) return null;
+    try {
+      const raw = sessionStorage.getItem(draftKey(no));
+      return raw ? JSON.parse(raw) : null;
+    } catch (ignore) {
+      return null;
+    }
+  }
+
+  function removeDraft(no) {
+    no = normalizeText(no);
+    if (!no || !window.sessionStorage) return;
+    try { sessionStorage.removeItem(draftKey(no)); } catch (ignore) {}
+  }
+
+  function mergeDraft(row) {
+    row = Object.assign({}, row || {});
+    const draft = readDraft(requestNo(row));
+    if (!draft || !draft.requestNo) return row;
+    row.buyerNm = row.consigneeName = draft.buyerName || '';
+    row.buyerCountryCd = row.consigneeCountry = draft.buyerCountry || '';
+    row.transportMeanNm = row.transportMode = draft.transportMode || '';
+    row.transportTypeCd = row.transportType = draft.transportType || '';
+    row.deptPortNm = row.origin = draft.originPort || '';
+    row.arvlPortNm = row.destination = draft.destinationPort || '';
+    row.blType = draft.blType || '';
+    row.itemCategory = row.goodsName = draft.itemCategory || '';
+    row.requestCn = row.requestNote = row.requestMemo = draft.requestNote || '';
+    return row;
+  }
+
+  function readDraftPayload(root) {
+    const value = function (name) {
+      const el = root ? root.querySelector('[name="' + name + '"]') : null;
+      return el ? normalizeText(el.value) : '';
+    };
+    return {
+      requestNo: root ? normalizeText(root.dataset.requestNo || '') : requestNo(window.selectedExportRequest || {}),
+      buyerName: value('buyerName'),
+      buyerCountry: value('buyerCountry'),
+      transportMode: value('transportMode'),
+      transportType: value('transportType'),
+      originPort: value('originPort'),
+      destinationPort: value('destinationPort'),
+      blType: value('blType'),
+      itemCategory: value('itemCategory'),
+      requestNote: value('requestNote')
+    };
+  }
+
+  function saveDraft(root) {
+    if (!root || !root.classList || !root.classList.contains('import-ui-main-request-detail')) return;
+    const payload = readDraftPayload(root);
+    if (!payload.requestNo || !window.sessionStorage) return;
+    try { sessionStorage.setItem(draftKey(payload.requestNo), JSON.stringify(payload)); } catch (ignore) {}
+  }
+
+  function allRequests() {
+    return Array.isArray(window.TRANSPORT_EXPORT_REQUESTS) ? window.TRANSPORT_EXPORT_REQUESTS : [];
+  }
+
+  function findRequest(no) {
+    return allRequests().find(row => String(requestNo(row)) === String(no)) || {};
+  }
+
+  function rowFromExportRoute(route) {
+    if (!isExportDetailRoute(route)) return {};
+    return mergeSelected(Object.assign({}, route.request || {}, findRequest(route.requestNo), {
+      trcNo: route.requestNo,
+      requestNo: route.requestNo,
+      treId: route.requestNo
+    }));
+  }
+
+  function mergeSelected(row) {
+    const base = row || window.selectedExportRequest || window.currentExportDetail || window.__currentExportDetailRow || {};
+    const no = requestNo(base);
+    const dbRow = no ? findRequest(no) : {};
+    const merged = mergeDraft(Object.assign({}, dbRow, base));
+    window.selectedExportRequest = merged;
+    window.currentExportDetail = merged;
+    window.__currentExportDetailRow = merged;
+    return merged;
+  }
+
+  function rowFromDetailButton(btn) {
+    const ds = btn && btn.dataset ? btn.dataset : {};
+    const no = ds.requestNo || ds.trcNo || ds.treId || '';
+    return mergeSelected(Object.assign({}, findRequest(no), {
+      trcNo: no,
+      requestNo: no,
+      requestDt: ds.receiptDate || ds.requestDt,
+      ownerNm: ds.shipperName || ds.ownerNm,
+      ownerPicNm: ds.shipperContact || ds.ownerPicNm,
+      ownerTelno: ds.shipperPhone || ds.ownerTelno,
+      ownerEmail: ds.shipperEmail || ds.ownerEmail,
+      buyerNm: ds.consigneeName || ds.buyerNm,
+      buyerCountryCd: ds.consigneeCountry || ds.buyerCountryCd,
+      buyerAdres: ds.consigneeAddress || ds.buyerAdres,
+      buyerTelno: ds.consigneePhone || ds.buyerTelno,
+      deptPortNm: ds.origin || ds.deptPortNm,
+      arvlPortNm: ds.destination || ds.arvlPortNm,
+      transportMeanNm: ds.transportMode || ds.transportMeanNm,
+      transportTypeCd: ds.transportType || ds.transportTypeCd,
+      incoTermsCd: ds.tradeTerm || ds.incoTermsCd,
+      requestCn: ds.requestNote || ds.requestCn,
+      invoiceFile: ds.invoiceFile,
+      invoiceFileNo: ds.invoiceFileNo,
+      packingListFile: ds.packingListFile,
+      packingListFileNo: ds.packingListFileNo,
+      requestFile: ds.requestFile,
+      statusNm: ds.receiptStatus || ds.statusNm,
+      statusCd: ds.statusCd,
+      rejectReason: ds.rejectReason
+    }));
+  }
+
+  function setPageShell(title, itemId) {
+    const dashboard = $('dashboard-view');
+    const detail = $('detail-view');
+    const pageTitle = $('page-title');
+    const crumb = $('breadcrumb');
+    const body = $('detail-body');
+
+    if (dashboard) dashboard.classList.add('hidden');
+    if (detail) detail.classList.remove('hidden');
+    if (pageTitle) pageTitle.textContent = title || '운송의뢰';
+    if (crumb) crumb.innerHTML = '수출운송 &gt; <span class="font-semibold text-slate-900">' + esc(title || '운송의뢰') + '</span>';
+    if (body) {
+      body.dataset.currentGroup = EXPORT_GROUP;
+      body.dataset.currentItem = itemId || EXPORT_FIRST_ITEM;
+      window.detailBody = body;
+    }
+    try { currentGroupKey = EXPORT_GROUP; currentItemId = itemId || EXPORT_FIRST_ITEM; } catch (ignore) {}
+    if (typeof toggleMenuGroup === 'function') toggleMenuGroup(EXPORT_GROUP, true);
+    if (typeof setActiveNav === 'function') setActiveNav(EXPORT_GROUP, itemId || EXPORT_FIRST_ITEM);
+  }
+
+  function clearExportBody(itemId) {
+    const body = $('detail-body');
+    if (!body) return null;
+    body.dataset.currentGroup = EXPORT_GROUP;
+    body.dataset.currentItem = itemId || EXPORT_FIRST_ITEM;
+    body.innerHTML = '';
+    return body;
+  }
+
+
+
+  function purgeDuplicateExportRequestScreens() {
+    const body = $('detail-body');
+    if (!body) return;
+    if (body.dataset.currentGroup !== EXPORT_GROUP || body.dataset.currentItem !== EXPORT_FIRST_ITEM) return;
+
+    const roots = [];
+    Array.from(body.children || []).forEach(function (child) {
+      if (child && child.id === 'export-request-root-final') roots.push(child);
+    });
+    if (!roots.length) return;
+
+    const keep = roots[roots.length - 1];
+    Array.from(body.children || []).forEach(function (child) {
+      if (child !== keep) child.remove();
+    });
+  }
+
+  function ensureExportRequestSingleScreenGuard() {
+    const body = $('detail-body');
+    if (!body || body.__tacsExportRequestSingleScreenGuard) return;
+    body.__tacsExportRequestSingleScreenGuard = true;
+    const observer = new MutationObserver(function () {
+      setTimeout(purgeDuplicateExportRequestScreens, 0);
+    });
+    observer.observe(body, { childList: true });
+    setTimeout(purgeDuplicateExportRequestScreens, 0);
+  }
+
+  function injectDetailStyle() {
+    [
+      'export-detail-tabs-clean-style-20260522',
+      'export-detail-tabs-import-same-20260522-v2',
+      'tacs-export-import-ui-style-20260522-v3'
+    ].forEach(id => {
+      const old = document.getElementById(id);
+      if (old) old.remove();
+    });
+
+    const cssPath = '/resources/css/transport/pages/export.css';
+    const ctx = window.contextPath || '';
+    let link = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .find(node => (node.getAttribute('href') || '').indexOf(cssPath) > -1);
+
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = ctx + cssPath + '?v=20260601-export-single-style2';
+    }
+
+    // SPA에서 import.css가 남아 있어도 export.css가 항상 뒤에 오게 한다.
+    document.head.appendChild(link);
+  }
+
+  function csrfHeaders(contentType) {
+    const headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+    if (contentType) headers['Content-Type'] = contentType;
+    const csrf = window.TRANSPORT_CSRF || {};
+    const headerName = csrf.header || document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+    const token = csrf.token || document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+    if (headerName && token) headers[headerName] = token;
+    return headers;
+  }
+
+  function loadExportTransportRequestList() {
+    return fetch((window.contextPath || '') + '/transport/export/request/list.do?_=' + Date.now(), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      cache: 'no-store',
+      credentials: 'same-origin'
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(list => {
+        window.TRANSPORT_EXPORT_REQUESTS = Array.isArray(list) ? list : [];
+        return window.TRANSPORT_EXPORT_REQUESTS;
+      });
+  }
+
+  function transportMeanLabel(code) {
+    if (code === 'SEA') return '해상';
+    if (code === 'AIR') return '항공';
+    if (code === 'LAND') return '육상';
+    return code || '';
+  }
+
+  function emptyPanel(title) {
+    return '<div class="section-card border border-slate-300 bg-white p-6 text-sm font-bold text-slate-600">' + esc(title) + ' 화면을 준비 중입니다.</div>';
+  }
+
+  function requestListRow(req) {
+    const status = normalizeStatus(pick(req, ['statusNm', 'statusCd', 'receiptStatus']));
+    const rejectReason = pick(req, ['rejectReason', 'rejectMemo']);
+    const no = esc(pick(req, ['trcNo', 'requestNo']));
+    const owner = esc(pick(req, ['ownerNm', 'shipperName']));
+    const buyer = esc(pick(req, ['buyerNm', 'consigneeName']));
+    const blNo = esc(pick(req, ['mblNo', 'masterBlNo', 'blNo', 'hblNo'], '-'));
+    const port = esc(pick(req, ['arvlPortCd', 'destination', 'arvlPortNm', 'deptPortCd', 'deptPortNm'], '-'));
+    const date = esc(pick(req, ['requestDt', 'receiptDate', 'registDt']));
+    return '<tr>'
+      + '<td class="font-bold whitespace-nowrap import-request-no-cell" title="' + no + '">' + no + '</td>'
+      + '<td class="import-request-owner-cell" title="' + owner + '">' + owner + '</td>'
+      + '<td class="import-request-buyer-cell" title="' + buyer + '">' + buyer + '</td>'
+      + '<td class="import-request-bl-cell" title="' + blNo + '">' + blNo + '</td>'
+      + '<td class="import-request-port-cell" title="' + port + '">' + port + '</td>'
+      + '<td class="import-request-status-cell">' + statusBadge(status) + '</td>'
+      + '<td class="import-request-date-cell" title="' + date + '">' + date + '</td>'
+      + '<td class="import-request-action-cell">' + requestActionButton(req, status, rejectReason) + '</td>'
+      + '</tr>';
+  }
+
+  // 수입(import) 목록과 동일한 스타일을 쓰기 위해 import.css 의 클래스를 그대로 사용한다.
+  function statusBadge(status) {
+    const text = String(status || '-').trim() || '-';
+    const compact = text.replace(/\s+/g, '');
+    const tone = compact.indexOf('반려') >= 0
+      ? 'danger'
+      : compact.indexOf('보완') >= 0
+        ? 'warn'
+        : (compact.indexOf('완료') >= 0 || compact === '최종완료')
+          ? 'done'
+          : (compact.indexOf('대기') >= 0 || compact.indexOf('요청') >= 0 || compact.indexOf('미') === 0)
+            ? 'wait'
+            : 'neutral';
+    return '<span class="import-request-status-badge import-tone-' + tone + '" title="' + html(text) + '">' + html(text) + '</span>';
+  }
+
+  function requestActionButton(req, status, rejectReason) {
+    const no = pick(req, ['trcNo', 'requestNo']);
+    if (status === '접수반려') {
+      return '<div class="import-action-wrap"><button type="button" class="import-list-action-btn import-request-reject-reason-btn export-request-reject-reason-btn bg-red-700 text-white text-xs font-bold" '
+        + 'data-request-no="' + html(no) + '" data-shipper-name="' + html(pick(req, ['ownerNm', 'shipperName'])) + '" data-reject-reason="' + html(rejectReason) + '">반려사유</button></div>';
+    }
+    return '<div class="import-action-wrap"><button type="button" class="import-list-action-btn import-request-detail-btn bg-slate-800 text-white text-xs font-bold" data-export-request-detail '
+      + 'data-request-no="' + html(no) + '" '
+      + 'data-status-cd="' + html(pick(req, ['statusCd'])) + '" '
+      + 'data-receipt-status="' + html(status) + '" '
+      + 'data-receipt-date="' + html(pick(req, ['requestDt', 'receiptDate', 'registDt'])) + '" '
+      + 'data-shipper-name="' + html(pick(req, ['ownerNm', 'shipperName'])) + '" '
+      + 'data-shipper-contact="' + html(pick(req, ['ownerPicNm', 'ownerNm'])) + '" '
+      + 'data-shipper-phone="' + html(pick(req, ['ownerTelno'])) + '" '
+      + 'data-shipper-email="' + html(pick(req, ['ownerEmail'])) + '" '
+      + 'data-consignee-name="' + html(pick(req, ['buyerNm'])) + '" '
+      + 'data-consignee-country="' + html(pick(req, ['buyerCountryCd'])) + '" '
+      + 'data-origin="' + html(pick(req, ['deptPortCd', 'deptPortNm'])) + '" '
+      + 'data-destination="' + html(pick(req, ['arvlPortCd', 'arvlPortNm'])) + '" '
+      + 'data-transport-mode="' + html(pick(req, ['transportMeanNm'], transportMeanLabel(pick(req, ['transportMeanCd'])))) + '" '
+      + 'data-transport-type="' + html(pick(req, ['transportTypeCd', 'transportTypeNm'])) + '" '
+      + 'data-trade-term="' + html(pick(req, ['incoTermsCd'])) + '" '
+      + 'data-request-note="' + html(pick(req, ['requestCn', 'requestMemo'])) + '" '
+      + 'data-invoice-file="' + html(pick(req, ['invoiceFile', 'invoiceNo'])) + '" '
+      + 'data-invoice-file-no="' + html(pick(req, ['invoiceFileNo'])) + '" '
+      + 'data-packing-list-file="' + html(pick(req, ['packingListFile'])) + '" '
+      + 'data-packing-list-file-no="' + html(pick(req, ['packingListFileNo'])) + '">상세</button></div>';
+  }
+
+  function buildExportRequestPanel() {
+    const rows = allRequests().length
+      ? allRequests().map(requestListRow).join('')
+      : '<tr><td colspan="8" class="text-center text-slate-500 py-6">조회된 수출 운송의뢰가 없습니다.</td></tr>';
+
+    return '<div class="import-left-list-card">'
+      + '<div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">'
+      + '<div><h4 class="text-sm font-bold text-slate-900">운송의뢰</h4></div>'
+      + '</div>'
+      + '<div class="p-6 space-y-6">'
+      + '<div class="list-search-grid">'
+      + '<div><label class="field-label">의뢰번호</label><input class="field-input js-exp-search-no" type="text" placeholder="EXP 의뢰번호 검색" /></div>'
+      + '<div><label class="field-label">Master B/L</label><input class="field-input js-exp-search-bl" type="text" placeholder="Master B/L 번호 검색" /></div>'
+      + '<div><label class="field-label">접수상태</label><select class="field-select js-exp-search-status"><option>전체</option><option>접수대기</option><option>접수완료</option><option>접수반려</option></select></div>'
+      + '<div><label class="field-label">보세/선적상태</label><select class="field-select js-exp-search-work-status"><option>전체</option><option>입고대기</option><option>입고완료</option><option>반출대기</option><option>반출완료</option><option>선적대기</option><option>선적완료</option></select></div>'
+      + '<div><label class="field-label">B/L 발급</label><select class="field-select js-exp-search-bl-status"><option>전체</option><option>발급대기</option><option>발급완료</option></select></div>'
+      + '<button type="button" class="js-export-request-refresh">조회</button>'
+      + '</div>'
+      + '<div class="overflow-x-auto import-request-table-wrap"><table class="w-full tbl import-request-table"><colgroup><col style="width:17%"><col style="width:11%"><col style="width:12%"><col style="width:18%"><col style="width:9%"><col style="width:11%"><col style="width:14%"><col style="width:8%"></colgroup><thead><tr><th>의뢰번호</th><th>화주명</th><th>바이어명</th><th>Master B/L</th><th>도착항</th><th>진행상태</th><th>등록일시</th><th>처리</th></tr></thead><tbody class="text-sm text-slate-700 js-export-request-tbody">' + rows + '</tbody></table></div>'
+      + '</div></div>';
+  }
+
+  // 수출 목록은 수입과 동일한 import.css 스타일을 쓴다. JSP/SPA 어느 경로로 들어와도
+  // import.css 가 보장되도록 JS에서 직접 link 를 주입한다.
+  function ensureImportCssLoaded() {
+    try {
+      var path = '/resources/css/transport/pages/import.css';
+      var links = document.querySelectorAll('link[rel="stylesheet"]');
+      for (var i = 0; i < links.length; i++) {
+        if ((links[i].getAttribute('href') || '').indexOf(path) > -1) return;
+      }
+      var ctx = (window.contextPath != null ? window.contextPath : '');
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = ctx + path + '?v=20260601-export-single-style5';
+      document.head.appendChild(link);
+    } catch (e) {}
+  }
+
+  function renderExportRequestPage() {
+    // import.css 만 보장하면 목록 스타일이 import 과 동일. 무거운 injectDetailStyle 은
+    // 부팅 시 1회만 주입하므로 여기서 재주입하지 않는다(렌더마다 재주입 시 화면이 덜컹거림).
+    ensureImportCssLoaded();
+    rememberExportListRoute(EXPORT_FIRST_ITEM);
+    setPageShell('운송의뢰', EXPORT_FIRST_ITEM);
+    const body = clearExportBody(EXPORT_FIRST_ITEM);
+    if (!body) return;
+    body.innerHTML = '<div id="export-request-root-final" class="space-y-6 export-request-list-only-final">' + buildExportRequestPanel() + '</div>';
+    ensureExportRequestSingleScreenGuard();
+    purgeDuplicateExportRequestScreens();
+    bindRequestList(body);
+    if (typeof normalizeDetailActionButtons === 'function') normalizeDetailActionButtons();
+  }
+
+  function refreshExportTransportRequestList() {
+    return loadExportTransportRequestList()
+      .then(() => renderExportRequestPage())
+      .catch(err => {
+        console.error('[수출 운송의뢰 목록 조회 실패]', err);
+        alert('수출 운송의뢰 목록 조회 중 오류가 발생했습니다.');
+      });
+  }
+
+  function bindRequestList(root) {
+    const refreshBtn = root.querySelector('.js-export-request-refresh');
+    if (refreshBtn) refreshBtn.addEventListener('click', refreshExportTransportRequestList);
+
+    root.querySelectorAll('.export-request-reject-reason-btn').forEach(btn => {
+      btn.addEventListener('click', () => openExportRejectReasonModal(btn));
+    });
+  }
+
+  function ensureExportRejectReasonModal() {
+    let modal = document.getElementById('exportRequestRejectReasonModal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'exportRequestRejectReasonModal';
+    modal.className = 'fixed inset-0 z-[9999] hidden items-center justify-center bg-black/40';
+    modal.innerHTML = ''
+      + '<div class="w-full max-w-lg bg-white shadow-2xl border border-slate-200">'
+      + '  <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">'
+      + '    <h3 class="text-base font-black text-slate-900">운송의뢰 반려사유</h3>'
+      + '    <button type="button" data-export-reject-reason-close class="text-xl leading-none text-slate-500 hover:text-slate-900">x</button>'
+      + '  </div>'
+      + '  <div class="space-y-4 p-6 text-sm">'
+      + '    <div><label class="field-label">의뢰번호</label><input id="exportRequestRejectReasonNo" class="field-input bg-slate-50" readonly></div>'
+      + '    <div><label class="field-label">화주명</label><input id="exportRequestRejectReasonOwner" class="field-input bg-slate-50" readonly></div>'
+      + '    <div><label class="field-label">반려사유</label><textarea id="exportRequestRejectReasonText" class="field-textarea h-28 bg-slate-50" readonly></textarea></div>'
+      + '  </div>'
+      + '  <div class="flex justify-end border-t border-slate-200 px-6 py-4">'
+      + '    <button type="button" data-export-reject-reason-close class="px-4 py-2 bg-slate-700 text-white text-xs font-bold hover:bg-slate-800">닫기</button>'
+      + '  </div>'
+      + '</div>';
+    document.body.appendChild(modal);
+
+    function close() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    modal.querySelectorAll('[data-export-reject-reason-close]').forEach(btn => btn.addEventListener('click', close));
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) close();
+    });
+    return modal;
+  }
+
+  function openExportRejectReasonModal(button) {
+    const modal = ensureExportRejectReasonModal();
+    const setValue = function (id, value) {
+      const el = document.getElementById(id);
+      if (el) el.value = value || '';
+    };
+    setValue('exportRequestRejectReasonNo', button.dataset.requestNo || '');
+    setValue('exportRequestRejectReasonOwner', button.dataset.shipperName || '');
+    setValue('exportRequestRejectReasonText', button.dataset.rejectReason || '등록된 반려사유가 없습니다.');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function tabHeader(activeKey, row) {
+    const accepted = isExportRequestAccepted(row);
+    return '<div class="import-ui-tabs import-inline-tabs-0513" data-active-work-id="' + esc(activeKey || 'detail') + '">'
+      + '<div class="import-ui-tab-bar">' + DETAIL_TABS.map(tab =>
+        '<button type="button" class="import-ui-tab import-inline-tab ' + (tab.key === activeKey ? 'is-active ' : '') + (tab.key !== 'detail' && !accepted ? 'is-disabled' : '') + '" data-export-detail-tab="' + tab.key + '" aria-disabled="' + (tab.key !== 'detail' && !accepted ? 'true' : 'false') + '">' + esc(tab.label) + '</button>'
+      ).join('') + '</div></div>';
+  }
+
+  function formField(label, value) {
+    return formInput(label, value);
+  }
+
+  function fileField(label, fileName, fileNo) {
+    const name = fileName || '';
+    const no = fileNo || '';
+    const displayName = pdfName(name) || (no ? label + '.pdf' : '첨부파일 없음');
+    const button = no
+      ? '<a class="import-ui-file-download" href="' + (window.contextPath || '') + '/common/file/download.do?fileNo=' + encodeURIComponent(no) + '">다운로드</a>'
+      : '';
+    return '<div class="import-ui-field"><label>' + esc(label) + '</label><div class="import-ui-file-cell"><input value="' + esc(displayName) + '" readonly>' + button + '</div></div>';
+  }
+
+  function formInput(label, value, type) {
+    const inputType = type || 'text';
+    const displayValue = inputType === 'date' ? dateOnly(value) : value;
+    return '<div class="import-ui-field"><label>' + esc(label) + '</label><input type="' + inputType + '" value="' + esc(displayValue) + '" readonly></div>';
+  }
+
+  function formTextarea(label, value) {
+    return '<div class="import-ui-field"><label>' + esc(label) + '</label><textarea readonly>' + esc(value) + '</textarea></div>';
+  }
+
+  function formEditableInput(label, value, name, type, placeholder) {
+    const inputType = type || 'text';
+    const displayValue = inputType === 'date' || inputType === 'datetime-local' ? dateOnly(value) : value;
+    return '<div class="import-ui-field"><label>' + esc(label) + '</label><input class="import-ui-editable" name="' + esc(name || '') + '" type="' + inputType + '" value="' + esc(displayValue) + '" placeholder="' + esc(placeholder || '') + '"></div>';
+  }
+
+  function formEditableTextarea(label, value, name, placeholder) {
+    return '<div class="import-ui-field"><label>' + esc(label) + '</label><textarea class="import-ui-editable" name="' + esc(name || '') + '" placeholder="' + esc(placeholder || '') + '">' + esc(value) + '</textarea></div>';
+  }
+
+  function normalizeInboundStatus(row) {
+    const raw = pick(row, ['warehouseInStatusNm', 'inboundStatusNm', 'requestStatus', 'warehouseInStatusCd'], '');
+    const upper = String(raw || '').toUpperCase();
+    if (['WAIT', 'REL_WAIT'].includes(upper) || raw === '입고대기' || raw === '입고요청대기') return '입고대기';
+    if (['REQ_SENT', 'SENT'].includes(upper) || raw === '보완제출완료' || raw === '입고요청완료') return '입고요청완료';
+    if (['REQ_FIX', 'FIX'].includes(upper) || raw === '보완요청') return '보완요청';
+    if (['IN_DONE', 'DONE'].includes(upper) || raw === '입고완료') return '입고완료';
+    return raw || '입고요청대기';
+  }
+
+  function postExportInboundRequest(params) {
+    return fetch((window.contextPath || '') + '/transport/export/inbound/request.do', {
+      method: 'POST',
+      headers: csrfHeaders('application/x-www-form-urlencoded;charset=UTF-8'),
+      body: params.toString(),
+      credentials: 'same-origin'
+    }).then(res => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(result => {
+      if (!result || result.success !== true) throw new Error('입고요청 등록 실패');
+      return result;
+    });
+  }
+
+  function formPanel(title, content) {
+    return '<section class="import-ui-section"><h5>' + esc(title) + '</h5>' + content + '</section>';
+  }
+
+  function detailPane(row) {
+    const status = requestStatus(row) || '확인중';
+    const no = requestNo(row);
+    const actions = status === '접수대기'
+      ? '<div class="import-ui-actions export-request-status-actions"><button type="button" class="import-ui-btn danger request-reject-btn" data-request-type="수출" data-request-no="' + html(no) + '">반려</button><button type="button" class="import-ui-btn export-request-accept-btn" data-request-no="' + html(no) + '">수락</button></div>'
+      : '<div class="import-ui-actions"><span class="info-chip">' + esc(status) + '</span></div>';
+
+    return '<div class="import-ui-request-detail import-ui-main-request-detail" data-request-no="' + html(no) + '"><div class="import-ui-grid3">'
+      + formPanel('1. 의뢰/화주 정보',
+          formField('의뢰번호', no)
+        + formField('접수일자', pick(row, ['requestDt', 'receiptDate', 'registDt']))
+        + formField('접수상태', status)
+        + formField('화주명', pick(row, ['ownerNm', 'shipperName', 'owrNm']))
+        + formField('화주 연락처', pick(row, ['ownerTelno', 'shipperPhone', 'ownerTel']))
+        + formField('화주 이메일', pick(row, ['ownerEmail', 'shipperEmail'])))
+      + formPanel('2. 운송/B/L 정보',
+          formEditableInput('바이어명', pick(row, ['buyerNm', 'consigneeName']), 'buyerName')
+        + formEditableInput('거래자 국가', pick(row, ['buyerCountryCd', 'consigneeCountry']), 'buyerCountry')
+        + formEditableInput('운송수단', pick(row, ['transportMeanNm', 'transportMeanCd', 'transportMode'], '해상'), 'transportMode')
+        + formEditableInput('운송형태', pick(row, ['transportTypeNm', 'transportTypeCd', 'transportType']), 'transportType')
+        + formEditableInput('출발항', pick(row, ['deptPortNm', 'deptPortCd', 'origin']), 'originPort')
+        + formEditableInput('도착항', pick(row, ['arvlPortNm', 'arvlPortCd', 'destination']), 'destinationPort')
+        + formEditableInput('B/L 구분', pick(row, ['blTypeNm', 'blType'], 'Master B/L'), 'blType')
+)
+      + formPanel('3. 화물/첨부/요청',
+          fileField('송장', pick(row, ['invoiceFile', 'invoiceFileNm', 'invoiceNo']), pick(row, ['invoiceFileNo', 'invoiceDfiNo', 'invoiceDfiFileNo']))
+        + fileField('포장명세서', pick(row, ['packingListFile', 'packingListFileNm', 'packingFileNm']), pick(row, ['packingListFileNo', 'packingDfiNo', 'packingDfiFileNo']))
+        + formTextarea('요청사항', pick(row, ['requestCn', 'requestNote', 'requestMemo']))
+        + (status === '접수반려' ? formTextarea('반려사유', pick(row, ['rejectReason', 'rejectMemo'])) : ''))
+      + '</div>' + actions + '</div>';
+  }
+
+  function workPane(row, key) {
+    const no = requestNo(row);
+    if (key === 'inbound') {
+      const inboundStatus = normalizeInboundStatus(row);
+      const isDone = inboundStatus === '입고완료';
+      return '<div class="import-ui-request-detail" data-work-type="inbound" data-trc-no="' + html(no) + '"><div class="import-ui-grid3">'
+        + formPanel('1. 의뢰/입고 정보',
+            formField('의뢰번호', no)
+          + formField('화주명', pick(row, ['ownerNm', 'shipperName', 'owrNm']))
+          + formField('바이어명', pick(row, ['buyerNm', 'consigneeName']))
+          + formField('입고요청번호', pick(row, ['wirNo', 'inboundReqNo', 'inboundRequestNo'], no))
+          + formField('입고상태', inboundStatus)
+          + formField('창고회신상태', pick(row, ['warehouseReplyStatusNm', 'warehouseReplyStatusCd', 'warehouseReplyStatus'], '회신대기')))
+        + formPanel('2. 보세구역 입고요청',
+            formEditableInput('입고예정일', pick(row, ['inPlanDt', 'inboundPlanDt']), 'inPlanDt', 'date')
+          + formEditableInput('창고담당자ID', pick(row, ['wmId', 'warehouseManagerId', 'bondedManagerId']), 'wmId', 'text', '예: 222')
+          + formEditableInput('보세구역', pick(row, ['wzNo', 'warehouseAreaNo', 'bondedZoneNo', 'warehouseZoneNm']), 'wzNo', 'text', '예: WZ-001')
+          + formEditableInput('화물관리번호', pick(row, ['cargoMgmtNo', 'inboundCargoNo']), 'cargoMgmtNo', 'text', '예: CARGO-EXP-...')
+          + formEditableInput('송장번호', pick(row, ['invoiceNo', 'invoiceFile']), 'invoiceNo', 'text')
+          + formEditableInput('인코텀즈', pick(row, ['incoTermsCd', 'incoterms']), 'incoTermsCd', 'text', 'FOB'))
+        + formPanel('3. 화물/필증 정보',
+            formField('화물품목구분', pick(row, ['itemCategory', 'goodsName']))
+          + formField('수출신고번호', pick(row, ['exportDeclNo', 'expDclrNo']))
+          + formField('운송수단', pick(row, ['transportMeanNm', 'transportMeanCd', 'transportMode'], '해상'))
+          + formField('출발항', pick(row, ['deptPortCd', 'deptPortNm', 'origin']))
+          + formField('도착항', pick(row, ['arvlPortCd', 'arvlPortNm', 'destination']))
+          + formEditableTextarea('요청사항', pick(row, ['requestNote', 'requestCn', 'requestMemo'], '수출 보세구역 반입 요청'), 'remark', '창고관리자에게 전달할 요청사항'))
+        + '</div><div class="import-ui-actions">'
+        + '<button type="button" class="import-ui-btn js-export-inbound-submit" data-trc-no="' + html(no) + '"' + (isDone ? ' disabled style="opacity:.55;cursor:not-allowed"' : '') + '>' + (isDone ? '입고완료' : '입고요청등록') + '</button>'
+        + '</div></div>';
+    }
+    if (key === 'release') {
+      return '<div class="import-ui-request-detail" data-work-type="release"><div class="import-ui-grid3">'
+        + formPanel('1. 의뢰/반출 정보', formField('의뢰번호', no) + formInput('반출요청번호', pick(row, ['releaseReqNo', 'crrNo'])) + formField('반출상태', pick(row, ['releaseStatusNm'], '반출대기')))
+        + formPanel('2. 보세구역/창고 승인 정보', formInput('보세구역', pick(row, ['warehouseZoneNm', 'bondedZoneNm', 'wzNo'])) + formInput('창고담당자', pick(row, ['warehouseManagerNm', 'wmId'])) + formInput('반출예정일', pick(row, ['releasePlanDt']), 'date'))
+        + formPanel('3. 반출 처리 정보', formField('수출신고번호', pick(row, ['exportDeclNo', 'expDclrNo'])) + formField('화물품목구분', pick(row, ['itemCategory', 'goodsName'])) + formTextarea('처리메모', '운송업체 반출요청 → 창고관리자 반출승인 → 반출완료'))
+        + '</div><div class="import-ui-actions"><button type="button" class="import-ui-btn">반출요청등록</button></div></div>';
+    }
+    if (key === 'shipping') {
+      return '<div class="import-ui-request-detail" data-work-type="shipping"><div class="import-ui-grid3">'
+        + formPanel('1. 선적배차 정보', formField('의뢰번호', no) + formInput('배차번호', pick(row, ['dispatchNo'])) + formInput('차량번호', pick(row, ['carNo'])) + formInput('기사명', pick(row, ['driverNm'])) + formInput('기사연락처', pick(row, ['driverTelno'])) + formField('배차상태', pick(row, ['dispatchStatusNm'], '배차대기')))
+        + formPanel('2. 선적지시 정보', formInput('선적지시서 번호', pick(row, ['shippingInstructionNo', 'siNo'])) + formInput('선사', pick(row, ['carrierNm'])) + formInput('출발항', pick(row, ['deptPortNm', 'deptPortCd'])) + formInput('도착항', pick(row, ['arvlPortNm', 'arvlPortCd'])) + formInput('선적예정일', pick(row, ['siSubmitDt', 'shippingPlanDt']), 'date'))
+        + formPanel('3. 선적 처리 상태', formField('선적상태', pick(row, ['shippingStatusNm', 'siStatusNm'], '선적대기')) + formField('화물품목구분', pick(row, ['itemCategory', 'goodsName'])) + formTextarea('처리메모', '선적배차와 선적지시서를 같은 탭에서 처리합니다.'))
+        + '</div><div class="import-ui-actions"><button type="button" class="import-ui-btn">선적처리 등록</button></div></div>';
+    }
+    if (key === 'bl') {
+      return '<div class="import-ui-request-detail" data-work-type="bl"><div class="import-ui-grid3">'
+        + formPanel('1. MBL 관리 정보', formField('의뢰번호', no) + formInput('Master B/L', pick(row, ['mblNo', 'masterBlNo', 'blNo'])) + formField('MBL 상태', pick(row, ['mblStatusNm', 'blStatusNm', 'blStatusCd'], 'MBL 보유/확인대기')) + formInput('MBL 등록일자', pick(row, ['mblIssueDt', 'blIssueDt']), 'date'))
+        + formPanel('2. 비용청구 정보', formInput('수출 운임비', pick(row, ['freightAmt'])) + formInput('창고비', pick(row, ['warehouseAmt', 'whAmt'])) + formInput('수수료', pick(row, ['commissionAmt', 'feeAmt'])) + formInput('총 청구금액', pick(row, ['totalBillAmt', 'totalAmt'])))
+        + formPanel('3. 정산 확인', formInput('청구일자', pick(row, ['billDt', 'chargeDt']), 'date') + formInput('정산상태', pick(row, ['settlementStatusNm', 'settlementStatusCd'], '미정산')) + formTextarea('청구 설명', 'MBL 확인 후 화주에게 비용을 청구합니다.'))
+        + '</div><div class="import-ui-actions"><button type="button" class="import-ui-btn">비용청구 등록</button></div></div>';
+    }
+    if (key === 'hbl') {
+      return '<div class="import-ui-request-detail" data-work-type="hbl"><div class="import-ui-grid3">'
+        + formPanel('1. HBL 발급 정보', formField('의뢰번호', no) + formInput('House B/L', pick(row, ['hblNo', 'houseBlNo'])) + formField('HBL 상태', pick(row, ['hblStatusNm', 'hblStatusCd'], '발급대기')) + formInput('HBL 발급일자', pick(row, ['hblIssueDt']), 'date'))
+        + formPanel('2. 결제 확인 정보', formField('정산상태', pick(row, ['settlementStatusNm', 'settlementStatusCd'], '미정산')) + formInput('결제일자', pick(row, ['paymentDt', 'stlDt']), 'date') + formInput('전달대상', pick(row, ['ownerNm', 'shipperName', 'owrNm'])))
+        + formPanel('3. HBL 전달/파일', formField('Master B/L', pick(row, ['mblNo', 'masterBlNo', 'blNo'])) + formField('화주명', pick(row, ['ownerNm', 'shipperName', 'owrNm'])) + formTextarea('처리메모', '화주 결제 완료 후 HBL을 발급/전달합니다.'))
+        + '</div><div class="import-ui-actions"><button type="button" class="import-ui-btn">HBL 발급</button></div></div>';
+    }
+    return detailPane(row);
+  }
+
+  function renderExportRequestDetailPage(activeKey, row) {
+    injectDetailStyle();
+    const key = activeKey || window.__exportRequestActiveTab || 'detail';
+    window.__exportRequestActiveTab = key;
+    const data = mergeSelected(row);
+    const body = $('detail-body');
+    if (!body) return '';
+
+    const accepted = isExportRequestAccepted(data);
+    let contentHtml = '';
+    try {
+      contentHtml = key === 'detail'
+        ? detailPane(data)
+        : '<div class="import-ui-panel import-inline-panel is-active">' + (accepted ? workPane(data, key) : lockedPanelHtml()) + '</div>';
+    } catch (error) {
+      console.error('[수출 상세 탭 렌더링 실패]', key, data, error);
+      contentHtml = '<div class="import-ui-panel import-inline-panel is-active">' + workErrorPanelHtml() + '</div>';
+    }
+
+    setPageShell('운송의뢰', DETAIL_ITEM);
+    rememberExportDetailRoute(data, key);
+    clearExportBody(DETAIL_ITEM);
+    body.innerHTML = '<div id="export-detail-root-final">'
+      + tabHeader(key, data)
+      + contentHtml
+      + '</div>';
+    bindExportDetail(body);
+    return body.innerHTML;
+  }
+
+  function bindExportDetail(root) {
+    root.querySelectorAll('[data-export-detail-tab]').forEach(btn => {
+      btn.addEventListener('click', function () {
+        renderExportRequestDetailPage(this.dataset.exportDetailTab || 'detail');
+      });
+    });
+
+    root.querySelectorAll('.import-ui-main-request-detail input[name], .import-ui-main-request-detail textarea[name], .import-ui-main-request-detail select[name]').forEach(el => {
+      if (el.dataset.exportDraftBound === 'true') return;
+      el.dataset.exportDraftBound = 'true';
+      ['input', 'change'].forEach(type => {
+        el.addEventListener(type, function () {
+          saveDraft(this.closest('.import-ui-main-request-detail'));
+        });
+      });
+    });
+
+    root.querySelectorAll('.export-request-accept-btn').forEach(btn => {
+      if (btn.dataset.exportAcceptDraftBound === 'true') return;
+      btn.dataset.exportAcceptDraftBound = 'true';
+      btn.addEventListener('click', function () {
+        removeDraft(this.dataset.requestNo || requestNo(window.selectedExportRequest || {}));
+      });
+    });
+
+    const inboundSubmitBtn = root.querySelector('.js-export-inbound-submit');
+    if (inboundSubmitBtn && inboundSubmitBtn.dataset.bound !== 'true') {
+      inboundSubmitBtn.dataset.bound = 'true';
+      inboundSubmitBtn.addEventListener('click', function () {
+        if (this.disabled) return;
+        const panel = this.closest('[data-work-type="inbound"]');
+        const trcNo = this.dataset.trcNo || (panel && panel.dataset.trcNo) || requestNo(window.selectedExportRequest || {});
+        if (!trcNo) return alert('입고요청할 수출운송 의뢰번호가 없습니다.');
+
+        const params = new URLSearchParams();
+        params.set('trcNo', trcNo);
+        ['inPlanDt', 'wmId', 'wzNo', 'cargoMgmtNo', 'invoiceNo', 'incoTermsCd', 'remark'].forEach(function (name) {
+          const el = panel ? panel.querySelector('[name="' + name + '"]') : null;
+          if (el && String(el.value || '').trim() !== '') params.set(name, String(el.value).trim());
+        });
+
+        if (!params.get('wmId')) return alert('창고담당자ID를 입력해주세요.');
+        if (!params.get('wzNo')) return alert('보세구역을 입력해주세요.');
+
+        if (!confirm('창고관리자에게 수출 보세구역 입고요청을 등록하시겠습니까?')) return;
+
+        this.disabled = true;
+        postExportInboundRequest(params)
+          .then(function () {
+            const current = Object.assign({}, window.selectedExportRequest || {}, {
+              trcNo: trcNo,
+              wirNo: trcNo,
+              inboundReqNo: trcNo,
+              warehouseInStatusNm: '입고대기',
+              warehouseReplyStatusNm: '회신대기',
+              inPlanDt: params.get('inPlanDt') || '',
+              wmId: params.get('wmId') || '',
+              wzNo: params.get('wzNo') || '',
+              cargoMgmtNo: params.get('cargoMgmtNo') || '',
+              invoiceNo: params.get('invoiceNo') || '',
+              incoTermsCd: params.get('incoTermsCd') || '',
+              requestNote: params.get('remark') || ''
+            });
+            alert('수출 보세구역 입고요청이 등록되었습니다.');
+            renderExportRequestDetailPage('inbound', current);
+          })
+          .catch(function (err) {
+            console.error('[수출 입고요청 등록 실패]', err);
+            alert('수출 보세구역 입고요청 등록 중 오류가 발생했습니다.');
+            inboundSubmitBtn.disabled = false;
+          });
+      });
+    }
+  }
+
+  function renderSidePanel(itemId) {
+    const meta = SIDE_PANELS[itemId];
+    if (!meta) return false;
+    rememberExportListRoute(itemId);
+    setPageShell(meta.title, itemId);
+    const body = clearExportBody(itemId);
+    const back = $('backBtn');
+    if (body) body.innerHTML = '<div class="space-y-6">' + meta.build() + '</div>';
+    if (back) {
+      back.innerHTML = '<span class="material-symbols-outlined text-lg">arrow_back</span><span>대시보드로</span>';
+      back.onclick = typeof showDashboard === 'function' ? showDashboard : null;
+    }
+    try { meta.bind(); } catch (err) { console.warn('[export side panel bind skipped]', itemId, err); }
+    if (typeof normalizeStatusChips === 'function' && body) normalizeStatusChips(body);
+    return true;
+  }
+
+  const previousOpenDetail = window.openDetail;
+  window.openDetail = function (groupKey, itemId) {
+    if (groupKey === EXPORT_GROUP && itemId === EXPORT_FIRST_ITEM) {
+      const route = activeExportDetailRoute();
+      if (isExportDetailRoute(route) && !isRecentUserExportNav(EXPORT_FIRST_ITEM)) {
+        return renderExportRequestDetailPage(route.activeKey || 'detail', rowFromExportRoute(route));
+      }
+      return renderExportRequestPage();
+    }
+    if (groupKey === EXPORT_GROUP && SIDE_PANELS[itemId]) {
+      return renderSidePanel(itemId);
+    }
+    if (typeof previousOpenDetail === 'function') return previousOpenDetail.apply(this, arguments);
+  };
+  try { openDetail = window.openDetail; } catch (ignore) {}
+
+  document.addEventListener('click', function (event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+
+    const detailBtn = target.closest('.export-request-detail-btn[data-request-no], .export-detail-open-btn[data-request-no], [data-export-request-detail][data-request-no]');
+    if (detailBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+      window.__exportRequestActiveTab = 'detail';
+      renderExportRequestDetailPage('detail', rowFromDetailButton(detailBtn));
+      return;
+    }
+
+    const parentTitle = target.closest('.menu-group .menu-item[data-group="export"]');
+    const firstSubItem = target.closest('.sub-item[data-group="export"][data-item-id="TACS-FW-001"]');
+    if (parentTitle || firstSubItem) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+      window.__TACS_TRANSPORT_USER_NAV = { group: EXPORT_GROUP, item: EXPORT_FIRST_ITEM, ts: Date.now() };
+      rememberExportListRoute(EXPORT_FIRST_ITEM);
+      renderExportRequestPage();
+    }
+  }, true);
+
+  window.addEventListener('beforeunload', function () {
+    const root = document.querySelector('.import-ui-main-request-detail');
+    if (root && document.getElementById('detail-body')?.dataset.currentGroup === EXPORT_GROUP) saveDraft(root);
+  });
+
+  function bootInitial() {
+    ensureImportCssLoaded();
+    injectDetailStyle();
+    window.TRANSPORT_PAGE_READY = window.TRANSPORT_PAGE_READY || {};
+    window.TRANSPORT_PAGE_READY.export = true;
+
+    const initial = window.TRANSPORT_INITIAL_VIEW || {};
+    if (initial.group === EXPORT_GROUP) {
+      const route = activeExportDetailRoute();
+      if (isExportDetailRoute(route)) renderExportRequestDetailPage(route.activeKey || 'detail', rowFromExportRoute(route));
+      else if (initial.item && SIDE_PANELS[initial.item]) renderSidePanel(initial.item);
+      else renderExportRequestPage();
+    }
+
+    if (!window.TRANSPORT_DEFER_PAGE_BOOT) {
+      if (typeof autoBuildNav === 'function') autoBuildNav();
+      if (typeof openInitialTransportView === 'function') openInitialTransportView();
+    }
+  }
+
+  window.renderExportRequestPage = renderExportRequestPage;
+  window.refreshExportTransportRequestList = refreshExportTransportRequestList;
+  window.renderExportRequestDetailPage = renderExportRequestDetailPage;
+  window.renderExportRequestBaseHTML = function (row, activeKey) {
+    mergeSelected(row);
+    return renderExportRequestDetailPage(activeKey || 'detail', row);
+  };
+  window.renderExportRequestDetailHTML = function (row) {
+    mergeSelected(row);
+    return renderExportRequestDetailPage('detail', row);
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootInitial);
+  else bootInitial();
+})();

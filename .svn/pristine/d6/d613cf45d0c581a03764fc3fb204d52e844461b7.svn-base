@@ -1,0 +1,31 @@
+package kr.or.tacs.officer.fulfillmentandexport.service;
+
+import java.util.List;
+
+import kr.or.tacs.dto.officer.LoadedCargoListDTO;
+
+public interface ILoadedCargoListService {
+
+    List<LoadedCargoListDTO> selectLoadedCargoList(
+            String reqNo,
+            String declareStatusCd,
+            String declareType,
+            String startDate,
+            String endDate,
+            String keyword
+    );
+
+    List<LoadedCargoListDTO> selectMixedCargoList(
+            String reqNo,
+            String declareStatusCd,
+            String declareType,
+            String startDate,
+            String endDate,
+            String keyword
+    );
+
+    List<LoadedCargoListDTO> selectCargoItemList(
+            String reqNo,
+            String declareType
+    );
+}

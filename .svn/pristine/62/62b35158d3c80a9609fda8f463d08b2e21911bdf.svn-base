@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.officer.xlsx.mapper.ICustomsTariffRateMapper">
+	
+	<select id="selectTariffRateByHsCode"
+	        resultType="kr.or.tacs.dto.officer.xlsx.CustomsTariffRateDTO">
+	
+	    SELECT *
+	    FROM (
+	        SELECT
+	            HC.HS_CODE AS ctrHsCode,
+	            CASE
+	                WHEN FT.FTA_TARIFF_NO IS NOT NULL THEN 'F'
+	                ELSE 'A'
+	            END AS ctrRateType,
+	            TO_CHAR(NVL(FT.FTA_TARIFF_RATE, HC.HS_TARIFF_RATE)) AS ctrTariffRate,
+	            NVL(FT.COUNTRY_CD, NVL(#{countryCd}, '-')) AS ctrApplyCountryType,
+	            NVL(FT.APPLY_START_YMD, '-') AS ctrStartDate,
+	            NVL(FT.APPLY_END_YMD, '-') AS ctrEndDate,
+	            FT.AGREEMENT_CD AS ftaAgreementCd,
+	            FT.AGREEMENT_NM AS ftaAgreementNm,
+	            FT.ORGN_DTRMN_CD AS ftaOrgnDtrmnCd
+	        FROM HS_CODE HC
+	        LEFT JOIN FTA_TARIFF FT
+	          ON SUBSTR(REPLACE(REPLACE(FT.HS_CODE, '.', ''), '-', ''), 1, 6)
+	             = SUBSTR(REPLACE(REPLACE(HC.HS_CODE, '.', ''), '-', ''), 1, 6)
+	         AND FT.USE_YN = 'Y'
+	         AND (
+	                #{countryCd} IS NULL
+	             OR #{countryCd} = ''
+	             OR FT.COUNTRY_CD = #{countryCd}
+	         )
+	        WHERE SUBSTR(REPLACE(REPLACE(HC.HS_CODE, '.', ''), '-', ''), 1, 6)
+	              = SUBSTR(REPLACE(REPLACE(#{hsCode}, '.', ''), '-', ''), 1, 6)
+	        ORDER BY
+	            CASE WHEN FT.FTA_TARIFF_NO IS NOT NULL THEN 0 ELSE 1 END,
+	            LENGTH(HC.HS_CODE) DESC,
+	            HC.HS_CODE
+	    )
+	    WHERE ROWNUM &lt;= 1
+	
+	</select>
+</mapper>

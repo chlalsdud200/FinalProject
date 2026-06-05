@@ -1,0 +1,18 @@
+package kr.or.tacs.officer.basicscreen.mapper;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Mapper;
+
+import kr.or.tacs.dto.officer.BasicScreenDetailDTO;
+
+@Mapper
+public interface IScreenDetailMapper {
+	
+	BasicScreenDetailDTO selectImportDetail(String reqNo);
+    BasicScreenDetailDTO selectExportDetail(String reqNo);
+
+	List<BasicScreenDetailDTO> selectImportItems(String reqNo);
+	List<BasicScreenDetailDTO> selectExportItems(String reqNo);
+
+}

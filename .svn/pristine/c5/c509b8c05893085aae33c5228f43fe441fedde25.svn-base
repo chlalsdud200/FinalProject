@@ -1,0 +1,271 @@
+@charset "UTF-8";
+
+.officer-community-page .p-8 {
+  padding: 32px;
+}
+
+.officer-community-page .page-wrap {
+  width: 100%;
+}
+
+.officer-community-page .breadcrumb {
+  margin-bottom: 20px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.officer-community-page .content-shell {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #d9eafc;
+  border-left: 4px solid #565e74;
+  padding: 18px 20px 22px;
+  margin-bottom: 16px;
+}
+
+.officer-community-page .page-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.officer-community-page .page-header .material-symbols-outlined {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.officer-community-page .prog-tab-bar {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.officer-community-page .prog-tab {
+  height: auto;
+  padding: 12px 20px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+
+.officer-community-page .prog-tab:hover {
+  background: transparent;
+  color: #334155;
+}
+
+.officer-community-page .prog-tab.active {
+  color: #565e74;
+  border-bottom-color: #565e74;
+}
+
+.officer-community-page .filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  padding: 12px 16px;
+}
+
+.officer-community-page .filter-bar select,
+.officer-community-page .filter-bar input[type="date"] {
+  height: 34px;
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #203444;
+  font-size: 12px;
+}
+
+.officer-community-page .filter-bar .search-wrap {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  min-width: 240px;
+  background: #fff;
+  border: 1px solid #cbd8e8;
+  padding: 0 10px;
+}
+
+.officer-community-page .filter-bar .search-wrap .material-symbols-outlined {
+  margin-right: 6px;
+  color: #60748a;
+  font-size: 18px;
+}
+
+.officer-community-page .filter-bar .search-wrap input {
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1f3347;
+  font-size: 12px;
+  outline: 0;
+}
+
+.officer-community-page .btn,
+.officer-community-page .btn-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.officer-community-page .btn-dark {
+  background: #373f54;
+  color: #f7f7ff;
+}
+
+.officer-community-page .btn-dark:hover {
+  background: #2a3142;
+}
+
+.officer-community-page .card-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.officer-community-page .tacs-notice-unified .tacs-notice-table th:nth-child(2) {
+  padding-left: 118px !important;
+  text-align: left !important;
+}
+
+.officer-community-page .tacs-notice-unified .tacs-notice-table td:nth-child(2) {
+  padding-left: 58px !important;
+  text-align: left !important;
+}
+
+.officer-community-page .tacs-notice-unified .notice-badge {
+  width: 50px;
+  margin-right: 10px !important;
+  text-align: center;
+}
+
+.officer-community-page .tacs-notice-unified .notice-title-link {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.officer-community-page .notice-strip,
+.officer-community-page .alert-bar {
+  box-sizing: border-box;
+}
+
+.officer-community-page .cs-category {
+  display: inline-block;
+  height: auto;
+  padding: 6px 14px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #697d8f;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-right: 4px;
+  margin-bottom: 8px;
+}
+
+.officer-community-page .cs-category.active {
+  background: #565e74;
+  color: #fff;
+  border-color: #565e74;
+}
+
+.officer-community-page .faq-item {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.officer-community-page .faq-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  color: #203444;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.officer-community-page .faq-q:hover {
+  background: #f6f9ff;
+}
+
+.officer-community-page .faq-a {
+  display: none;
+  padding: 0 16px 16px;
+  background: #f8fafc;
+  color: #4d6172;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.officer-community-page .faq-a.open {
+  display: block;
+}
+
+.officer-community-page .pagination {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.officer-community-page .resource-archive-toolbar {
+  flex-wrap: wrap;
+}
+
+.officer-community-page .resource-archive-toolbar input[type="text"] {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.officer-community-page .fake-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .officer-community-page .p-8 {
+    padding: 16px;
+  }
+
+  .officer-community-page .filter-bar,
+  .officer-community-page .fake-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .officer-community-page .filter-bar .search-wrap {
+    width: 100%;
+    min-width: 0;
+    flex-basis: auto !important;
+  }
+
+  .officer-community-page .prog-tab {
+    flex: 1;
+    padding: 12px 8px;
+  }
+}

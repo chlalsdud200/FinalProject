@@ -1,0 +1,26 @@
+package kr.or.tacs.dto.warehouse;
+
+import lombok.Data;
+
+@Data
+public class WarehouseInventory3DDTO {
+
+	
+	private String wirNo;           // 입고의뢰번호
+	private String wiGgNo;			// 입고 그룹 번호
+	private String wilClNo;			// 물품 위치 번호
+	private String wiCgNo;			// 통관 물품 번호
+	private String wiStatusCd;		// 창고 물품 상태 코드
+	private String wiStatusNm;		// 창고 물품 상태 코드 한글명
+	private String locationCode;	// 실제 위치 번호
+	private String wilWhZoneNo;		// 위치가 속한 창고 구역 번호
+	private String zone;			// 구역 코드
+	private String wzNm;			// 구역명
+	private String wilDescCn;		// 위치 설명
+	private String goodsName;		// 물품명
+	private String wirIoSeCd;		// 수입/수출 구분 코드
+	private String wirIoSeNm;		// 수압/수출 구분 코드 한글명
+	
+	private String wilInDt;     // 위치반입일시
+	private String wilOutDt;    // 위치반출일시
+}

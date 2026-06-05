@@ -1,0 +1,452 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>보세입고 처리 - TACS</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet" />
+
+<link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/warehouse/base.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/warehouse/sidebar.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/warehouse/topbar.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/warehouse/inbound.css">
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+
+<body>
+<div class="app" id="app">
+	<jsp:include page="/WEB-INF/views/warehouse/common/sidebar.jsp" />
+
+	<div class="main-wrap">
+		<jsp:include page="/WEB-INF/views/warehouse/common/header.jsp" />
+
+		<div class="content">
+		
+		   <!-- CSRF 토큰
+         		fetch로 POST 요청을 보낼 때 Spring Security CSRF 검사를 통과하기 위해 사용한다. -->
+		    <input type="hidden" id="csrfParameterName" value="${_csrf.parameterName}">
+		    <input type="hidden" id="csrfToken" value="${_csrf.token}">
+		    
+			<div class="page-title-row">
+				<h2>보세입고 처리</h2>
+			</div>
+
+			<div class="filter-bar" style="margin-bottom: 20px; border-left: 4px solid #565e74; padding: 16px;">
+				<div class="form-item">
+					<label>입고 의뢰 기간</label>
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<input type="date" id="startDate" style="width: 135px">
+						<span style="font-size: 11px; color: #94a3b8">~</span>
+						<input type="date" id="endDate" style="width: 135px">
+					</div>
+				</div>
+
+				<div class="filter-sep"></div>
+
+				<div class="form-item">
+					<label>유형</label>
+					<select id="ioType" style="width: 120px;">
+						<option value="">전체</option>
+						<option value="IMPORT">수입</option>
+						<option value="EXPORT">수출</option>
+					</select>
+				</div>
+				
+				<div class="filter-sep"></div>
+
+				<div class="form-item">
+				    <label>상태</label>
+				    <select id="inboundStatus">
+				        <option value="">전체</option>
+				        <option value="WAIT">입고대기</option>
+				        <option value="REQ_FIX">보완요청</option>
+				        <option value="REQ_SENT">보완제출완료</option>
+				        <option value="IN_DONE">입고완료</option>
+				        <option value="REJECT">반려</option>
+				    </select>
+				</div>
+				
+				<div class="filter-sep"></div>
+
+				<div class="form-item">
+				    <label>검색구분</label>
+				    <select id="searchType" style="width: 120px;">
+				        <option value="">전체</option>
+				        <option value="owrNm">화주명</option>
+				        <option value="invoiceNo">송장번호</option>
+				        <option value="cargoNo">화물관리번호</option>
+				    </select>
+				</div>
+
+				<div class="search-wrap" style="flex: 1">
+					<span class="material-symbols-outlined">search</span>
+					<input id="searchWord" placeholder="B/L 번호 또는 화주사명 직접 입력">
+				</div>
+
+				<button type="button" id="searchBtn" class="btn btn-dark" style="padding: 10px 24px;">
+					<span class="material-symbols-outlined">search</span>입고 데이터 조회
+				</button>
+			</div>
+
+			<div class="card-section">
+				<div class="card-header">
+					<h3>입고 리스트</h3>
+				</div>
+
+				<table class="data-table" id="inbound-pending-table">
+					<thead>
+						<tr>
+							<th class="col-no">NO</th>
+							<th>입고의뢰번호</th>
+							<th>유형</th>
+							<th>화주명</th>
+							<th>품명</th>
+							<th>입고일시</th>
+							<th>상태</th>
+							<th>관리</th>
+						</tr>
+					</thead>
+
+					<tbody id="inboundTableBody">
+						<c:choose>
+							<c:when test="${not empty inboundList}">
+								<c:forEach var="item" items="${inboundList}" varStatus="status">
+									<tr>
+										<td class="td-no">${status.index + 1}</td>
+    									<td class="td-id" style="text-align: left">${item.wirNo}</td>
+
+										<td style="text-align: left">
+											<c:choose>
+												<c:when test="${item.wirIoSeCd eq 'IMPORT' or item.wirIoSeCd eq 'IMP'}">
+													<span class="badge badge-success">수입</span>
+												</c:when>
+												<c:when test="${item.wirIoSeCd eq 'EXPORT' or item.wirIoSeCd eq 'EXP'}">
+													<span class="badge badge-wait">수출</span>
+												</c:when>
+												<c:otherwise>
+													<span class="badge">-</span>
+												</c:otherwise>
+											</c:choose>
+										</td>
+
+										<td style="font-weight: 600; text-align: left">${item.wirOwrNm}</td>
+
+										<td style="text-align: left">
+											<c:choose>
+												<c:when test="${not empty item.firstItemName}">
+													<c:choose>
+														<c:when test="${item.itemCnt > 1}">
+															${item.firstItemName} 외 ${item.itemCnt - 1}건
+														</c:when>
+														<c:otherwise>
+															${item.firstItemName}
+														</c:otherwise>
+													</c:choose>
+												</c:when>
+												<c:otherwise>
+												    -
+												</c:otherwise>
+											</c:choose>
+										</td>
+
+										<td style="text-align: left">${item.wirInPlanDt}</td>
+
+										<td style="text-align: left">
+										    <c:choose>
+										        <c:when test="${item.wirStatusCd eq 'IN_DONE' or item.wirStatusNm eq '입고완료'}">
+										            <span class="badge badge-success">입고완료</span>
+										        </c:when>
+										
+										        <c:when test="${item.wirStatusCd eq 'REJECT' or item.wirStatusNm eq '반려'}">
+										            <span class="badge badge-urgent">반려</span>
+										        </c:when>
+										
+										        <c:when test="${item.wirStatusCd eq 'REQ_FIX' or item.wirStatusNm eq '보완요청'}">
+										            <span class="badge" style="background: #f59e0b; color: #fff; border-color: #f59e0b;">
+										                보완요청
+										            </span>
+										        </c:when>
+										
+										        <c:when test="${item.wirStatusCd eq 'REQ_SENT' or item.wirStatusNm eq '보완제출완료'}">
+										            <span class="badge" style="background: #2563eb; color: #fff; border-color: #2563eb;">
+										                보완제출완료
+										            </span>
+										        </c:when>
+										
+										        <c:when test="${item.wirStatusCd eq 'WAIT' or item.wirStatusNm eq '입고대기' or item.wirStatusNm eq '입고요청'}">
+										            <span class="badge badge-wait">입고요청</span>
+										        </c:when>
+										
+										        <c:otherwise>
+										            <span class="badge badge-wait">${item.wirStatusNm}</span>
+										        </c:otherwise>
+										
+										    </c:choose>
+										</td>
+
+										<td style="text-align: left">
+											<button class="mini mini-primary"
+										        data-wir-no="${item.wirNo}"
+										        data-wir-gg-no="${item.wirGgNo}"
+										        data-wir-invoice-no="${item.wirInvoiceNo}"
+										        data-wir-owr-nm="${item.wirOwrNm}"
+										        data-first-item-name="${item.firstItemName}"
+										        data-wir-in-plan-dt="${item.wirInPlanDt}"
+										        data-wir-cargo-mgmt-no="${item.wirCargoMgmtNo}"
+										        data-wir-inco-terms-cd="${item.wirIncoTermsCd}"
+										        data-wir-rqst-cn="${item.wirRqstCn}"
+										        data-wir-status-cd="${item.wirStatusCd}"
+										        data-wir-wz-no="${item.wirwzno}"
+										        data-location-code="${item.locationCode}"
+										        data-tm-cp-nm="${item.tmCpNm}"
+										        data-tm-name="${item.tmName}"
+										        data-tm-cp-telno="${item.tmCpTelno}"
+										        onclick="openInboundModal(
+										            this.dataset.wirNo,
+										            this.dataset.wirGgNo,
+										            this.dataset.wirInvoiceNo,
+										            this.dataset.wirOwrNm,
+										            this.dataset.firstItemName,
+										            this.dataset.wirInPlanDt,
+										            this.dataset.wirCargoMgmtNo,
+										            this.dataset.wirIncoTermsCd,
+										            this.dataset.wirRqstCn,
+										            this.dataset.wirStatusCd,
+										            this.dataset.wirWzNo,
+										            this.dataset.locationCode,
+										            this.dataset.tmCpNm,
+										            this.dataset.tmName,
+										            this.dataset.tmCpTelno
+										        )">
+										    상세보기
+										</button>
+										</td>
+									</tr>
+								</c:forEach>
+							</c:when>
+
+							<c:otherwise>
+								<tr>
+									<td colspan="8" style="text-align: center; padding: 50px 0; color: #94a3b8;">
+										조회하신 목록이 없습니다.
+									</td>
+								</tr>
+							</c:otherwise>
+						</c:choose>
+					</tbody>
+				</table>
+				<!-- 입고 리스트 페이지네이션 영역 -->
+				<div id="inboundPagination" class="inbound-pagination"></div>
+			</div>
+
+			<div class="modal-overlay" id="inboundModal">
+				<div class="modal-box" style="width: 800px; border: 2px solid #0f172a; max-height: 92vh; display: flex; flex-direction: column;">					
+				<form id="inboundActionForm">
+						<input type="hidden" name="wirNo" id="modal-wir-no">
+						<input type="hidden" name="wirGgNo" id="modal-wir-gg-no">
+						<input type="hidden" name="wirWhReplyStatusCd" id="modal-reply-status">
+
+						<div class="modal-head" style="background: #0f172a; padding: 15px 24px;">
+							<div>
+								<div class="modal-title" style="color: #fff;">
+									보세화물 입고 상세 및 승인
+								</div>
+								<div class="modal-subtitle" style="color: rgba(255, 255, 255, 0.7);">
+									CUSTOMS CARGO INBOUND APPROVAL
+								</div>
+							</div>
+
+							<button type="button" class="modal-close-btn" onclick="$('#inboundModal').removeClass('open')">
+								<span class="material-symbols-outlined">close</span>
+							</button>
+						</div>
+
+						<div style="padding: 24px; overflow-y: auto; background: #fff; flex: 1;">
+
+							<h4 style="font-size: 13px; border-left: 4px solid #0f172a; padding-left: 8px; margin-bottom: 10px;">
+								1. 반입신고서 기본 정보
+							</h4>
+
+							<div style="display: grid; grid-template-columns: 120px 1fr 120px 1fr; border: 1px solid #000; margin-bottom: 20px;">
+
+								<div class="label">입고의뢰번호</div>
+								<div class="value">
+									<input id="decl-wir-no" readonly>
+								</div>
+
+								<div class="label">화주명</div>
+								<div class="value">
+									<input id="decl-shipper" readonly>
+								</div>
+								
+								<div class="label">운송업체</div>
+									<div class="value">
+									    <input id="decl-tm-cp-nm" readonly>
+									</div>
+									
+									<div class="label">운송담당자</div>
+									<div class="value">
+									    <input id="decl-tm-name" readonly>
+									</div>
+									
+									<div class="label">운송업체 연락처</div>
+									<div class="value">
+									    <input id="decl-tm-cp-telno" readonly>
+									</div>
+
+								<div class="label">입고일시</div>
+								<div class="value">
+									<input id="decl-date" readonly>
+								</div>
+
+								<div class="label">화물관리번호</div>
+								<div class="value">
+									<input id="decl-cargo" readonly>
+								</div>
+
+								<div class="label">송장번호</div>
+								<div class="value">
+									<input id="decl-invoice" readonly>
+								</div>
+
+								<div class="label">인코텀즈</div>
+								<div class="value">
+									<input id="decl-inco" readonly>
+								</div>
+							</div>
+
+							<h4 style="font-size: 13px; border-left: 4px solid #0f172a; padding-left: 8px; margin-bottom: 10px;">
+								2. 물품 내역
+							</h4>
+							
+							<div style="border: 1px solid #000; padding: 12px 15px; margin-bottom: 10px; background: #f8fafc;">
+							    <label style="font-size: 11px; font-weight: 700;">담당 창고</label>
+							    <input id="decl-warehouse" type="text" readonly style="width: 100%; margin-top: 6px;">
+							</div>
+
+							<div style="border: 1px solid #000; padding: 15px; margin-bottom: 20px;">
+								<label style="font-size: 11px; font-weight: 700;">전달대상 / 품명</label>
+								<input id="decl-item" type="text" readonly style="width: 100%;">
+							</div>
+
+							<table class="data-table" style="margin-bottom: 20px;">
+								<thead>
+									<tr>
+										<th>물품명</th>
+										<th>수량</th>
+										<th>중량</th>
+										<th>원산지</th>
+										<th>창고구역</th>
+    									<th>창고위치</th>
+									</tr>
+								</thead>
+								<tbody id="goodsTableBody">
+									<tr>
+										<td colspan="6" style="text-align:center;">데이터 없음</td>
+									</tr>
+								</tbody>
+							</table>
+
+							<div style="border: 1px solid #000; padding: 15px; margin-bottom: 20px;">
+								<label style="font-size: 11px; font-weight: 700;">요청내용</label>
+								<textarea id="decl-rqst" readonly style="width: 100%; height: 60px;"></textarea>
+							</div>
+						</div>
+
+						<div class="modal-footer" style="gap: 10px; flex-shrink: 0; background: #fff; border-top: 1px solid #e2e8f0;">
+						    <button type="button" onclick="$('#inboundModal').removeClass('open')">취소</button>
+						    <button type="button" id="rejectBtn" onclick="submitApproval('REJECT')" style="background: #ef4444; color: #fff;">반려</button>
+						    <!-- 보완요청 버튼
+						         기존 반려/승인 로직은 건드리지 않고,
+						         추후 SUPP_RQST / SUPP_RQST_ITEM 등록용 모달을 열기 위한 버튼이다. -->
+						    <button type="button" id="suppBtn" onclick="openSupplementModal()" style="background: #f59e0b; color: #fff;">보완요청</button>
+						    <button type="button" id="approveBtn" onclick="submitApproval('APPROVE')" style="background: #0f172a; color: #fff;">승인</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+		<!-- =========================================================
+     보완요청 사유 입력 모달
+     - SUPP_RQST / SUPP_RQST_ITEM 등록 전에 사유를 입력받는 화면
+     - 아직 DB 저장은 다음 단계에서 연결
+     ========================================================= -->
+<div class="modal-overlay" id="supplementModal">
+    <div class="modal-box" style="width: 520px; border: 2px solid #0f172a;">
+        <div class="modal-head" style="background: #0f172a; padding: 15px 24px;">
+            <div>
+                <div class="modal-title" style="color: #fff;">
+                    보완요청 사유 입력
+                </div>
+                <div class="modal-subtitle" style="color: rgba(255, 255, 255, 0.7);">
+                    SUPPLEMENT REQUEST
+                </div>
+            </div>
+
+            <button type="button" class="modal-close-btn" onclick="$('#supplementModal').removeClass('open')">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div style="padding: 24px; background: #fff;">
+            <input type="hidden" id="supp-wir-no">
+
+            <div style="border: 1px solid #000; padding: 15px; margin-bottom: 16px;">
+                <label style="font-size: 11px; font-weight: 700;">입고의뢰번호</label>
+                <input id="supp-wir-no-view" type="text" readonly style="width: 100%; margin-top: 6px;">
+            </div>
+
+			<div style="border: 1px solid #000; padding: 15px; margin-bottom: 16px;">
+			    <label style="font-size: 11px; font-weight: 700;">보완유형</label>
+			    <select id="supp-type" style="width: 100%; margin-top: 6px;">
+			        <option value="DATA">데이터수정</option>
+			        <option value="FILE">파일재제출</option>
+			    </select>
+			</div>
+            <div style="border: 1px solid #000; padding: 15px;">
+                <label style="font-size: 11px; font-weight: 700;">보완요청 사유</label>
+                <textarea id="supp-reason"
+                          placeholder="운송업체가 확인할 보완요청 사유를 입력하세요."
+                          style="width: 100%; height: 110px; margin-top: 6px;"></textarea>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="gap: 10px; flex-shrink: 0; background: #fff; border-top: 1px solid #e2e8f0;">
+            <button type="button" onclick="$('#supplementModal').removeClass('open')">취소</button>
+            <button type="button" onclick="submitSupplementRequest()" style="background: #f59e0b; color: #fff;">보완요청 등록</button>
+        </div>
+    </div>
+</div>
+
+		<jsp:include page="/WEB-INF/views/warehouse/common/footer.jsp" />
+	</div>
+</div>
+
+<script src="${pageContext.request.contextPath}/resources/js/warehouse/common.js"></script>
+<script src="${pageContext.request.contextPath}/resources/js/warehouse/navigation.js"></script>
+<script src="${pageContext.request.contextPath}/resources/js/warehouse/inbound.js"></script>
+
+<script>
+    (function () {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab') || 'pending';
+
+        if (!window._inboundInitialLoaded) {
+            if (typeof switchInboundTab === 'function') {
+                setTimeout(function() { switchInboundTab(tab); }, 10);
+            }
+            window._inboundInitialLoaded = true;
+        }
+    })();
+	
+</script>
+</body>
+</html>

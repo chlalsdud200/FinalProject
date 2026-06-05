@@ -1,0 +1,157 @@
+package kr.or.tacs.broker.status.service;
+
+import java.util.List;
+import java.util.Map;
+
+import kr.or.tacs.broker.status.mapper.IStatusMapper;
+import kr.or.tacs.dto.PageDTO;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+@Service
+public class StatusServiceImpl implements IStatusService {
+
+    private final IStatusMapper statusMapper;
+
+    public StatusServiceImpl(IStatusMapper statusMapper) {
+        this.statusMapper = statusMapper;
+    }
+
+
+    @Override
+    public int selectImportDeclareCount(String brokerId, PageDTO pageDTO) {
+        return statusMapper.selectImportDeclareCount(brokerId, pageDTO);
+    }
+
+    @Override
+    public List<Map<String, Object>> selectImportDeclareList(String brokerId, PageDTO pageDTO) {
+        return statusMapper.selectImportDeclareList(brokerId, pageDTO);
+    }
+
+    @Override
+    public Map<String, Object> selectImportDeclareDetail(String idIrNo, String brokerId) {
+        return statusMapper.selectImportDeclareDetail(idIrNo, brokerId);
+    }
+
+    @Override
+    public List<Map<String, Object>> selectImportDeclareItemList(String idIrNo) {
+        return statusMapper.selectImportDeclareItemList(idIrNo);
+    }
+
+    @Override
+    public List<Map<String, Object>> selectImportDeclareMdlspecList(String idIrNo) {
+        return statusMapper.selectImportDeclareMdlspecList(idIrNo);
+    }
+    
+    @Override
+    public Map<String, Object> selectSupplementItem(String idIrNo, Integer idiSn, String brokerId) {
+        return statusMapper.selectSupplementItem(idIrNo, idiSn, brokerId);
+    }
+
+    @Override
+    public List<Map<String, Object>> selectSupplementMdlspecList(String idIrNo, Integer idiSn) {
+        return statusMapper.selectSupplementMdlspecList(idIrNo, idiSn);
+    }
+
+    @Transactional
+    @Override
+    public void submitSupplementItem(
+            String idIrNo,
+            Integer idiSn,
+            String brokerId,
+            String idiHsCd,
+            String idiDclrGdsnm,
+            String idiTrdngGdsnm,
+            String idiTrdmkNm,
+            String idiQty,
+            String idiQtyUnitCd,
+            String idiNetWt,
+            String idiTaxtPrcKrw,
+            String idiOrgnCntryCd,
+            String[] idimMdlspecNo,
+            String[] idimMdlspecNm,
+            String[] idimQty1,
+            String[] idimQty1UnitCd,
+            String[] idimUnitPrc,
+            String[] idimAmt
+    ) {
+        Map<String, Object> item = statusMapper.selectSupplementItem(idIrNo, idiSn, brokerId);
+
+        if (item == null) {
+            throw new IllegalArgumentException("수정 가능한 란사항을 찾을 수 없습니다.");
+        }
+
+        Object statusObj = item.get("IDISTATUSCD");
+        String statusCd = statusObj == null ? null : String.valueOf(statusObj);
+
+        if (!"ITEM_SUPP_REQ".equals(statusCd)) {
+            throw new IllegalStateException("보완요청 상태의 란사항만 수정할 수 있습니다.");
+        }
+
+        Map<String, Object> param = new HashMap<>();
+        param.put("idIrNo", idIrNo);
+        param.put("idiSn", idiSn);
+        param.put("idiHsCd", emptyToNull(idiHsCd));
+        param.put("idiDclrGdsnm", emptyToNull(idiDclrGdsnm));
+        param.put("idiTrdngGdsnm", emptyToNull(idiTrdngGdsnm));
+        param.put("idiTrdmkNm", emptyToNull(idiTrdmkNm));
+        param.put("idiQty", toDecimal(idiQty));
+        param.put("idiQtyUnitCd", emptyToNull(idiQtyUnitCd));
+        param.put("idiNetWt", toDecimal(idiNetWt));
+        param.put("idiTaxtPrcKrw", toDecimal(idiTaxtPrcKrw));
+        param.put("idiOrgnCntryCd", emptyToNull(idiOrgnCntryCd));
+
+        statusMapper.updateSupplementItem(param);
+
+        statusMapper.deleteSupplementMdlspecByItem(idIrNo, idiSn);
+
+        if (idimMdlspecNo != null) {
+            for (int i = 0; i < idimMdlspecNo.length; i++) {
+                String specNo = getArrayValue(idimMdlspecNo, i);
+                String specNm = getArrayValue(idimMdlspecNm, i);
+
+                if (isBlank(specNo) && isBlank(specNm)) {
+                    continue;
+                }
+
+                Map<String, Object> m = new HashMap<>();
+                m.put("idimSn", idiSn);
+                m.put("idimIrNo", idIrNo);
+                m.put("idimMdlspecNo", emptyToNull(specNo));
+                m.put("idimMdlspecNm", emptyToNull(specNm));
+                m.put("idimQty1", toDecimal(getArrayValue(idimQty1, i)));
+                m.put("idimQty1UnitCd", emptyToNull(getArrayValue(idimQty1UnitCd, i)));
+                m.put("idimUnitPrc", toDecimal(getArrayValue(idimUnitPrc, i)));
+                m.put("idimAmt", toDecimal(getArrayValue(idimAmt, i)));
+
+                statusMapper.insertSupplementMdlspec(m);
+            }
+        }
+
+        statusMapper.updateItemStatusToSuppSub(idIrNo, idiSn);
+    }
+
+    private String getArrayValue(String[] arr, int idx) {
+        if (arr == null || idx >= arr.length) return null;
+        return arr[idx];
+    }
+
+    private String emptyToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private BigDecimal toDecimal(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return new BigDecimal(value.replace(",", "").trim());
+    }
+}

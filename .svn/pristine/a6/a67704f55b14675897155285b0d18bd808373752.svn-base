@@ -1,0 +1,107 @@
+package kr.or.tacs.officer.xlsx.service;
+
+
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.List;
+
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import kr.or.tacs.dto.officer.xlsx.CustomsTariffRateDTO;
+import kr.or.tacs.officer.xlsx.mapper.ICustomsTariffRateMapper;
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class CustomsTariffRateService {
+
+	@Autowired
+    private ICustomsTariffRateMapper mapper;
+
+    public void uploadTariffRateExcel(String filePath) {
+
+        try {
+
+            mapper.deleteAllTariffRate();
+
+            InputStream is = new FileInputStream(filePath);
+            org.apache.poi.util.IOUtils.setByteArrayMaxOverride(200_000_000);
+            Workbook workbook = new XSSFWorkbook(is);
+
+            Sheet sheet = workbook.getSheetAt(0);
+
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+
+                Row row = sheet.getRow(i);
+
+                if (row == null) continue;
+
+                CustomsTariffRateDTO dto = new CustomsTariffRateDTO();
+
+                dto.setCtrHsCode(getCellValue(row, 0));
+                dto.setCtrRateType(getCellValue(row, 1));
+                dto.setCtrTariffRate(getCellValue(row, 2));
+
+                String unitTax = getCellValue(row, 3);
+                String basePrice = getCellValue(row, 4);
+
+                dto.setCtrUnitTaxAmount(parseDouble(unitTax));
+                dto.setCtrBasePrice(parseDouble(basePrice));
+
+                dto.setCtrApplyCountryType(getCellValue(row, 5));
+                dto.setCtrUseRateType(getCellValue(row, 6));
+                dto.setCtrStartDate(getCellValue(row, 7));
+                dto.setCtrEndDate(getCellValue(row, 8));
+
+                mapper.insertTariffRate(dto);
+            }
+
+            workbook.close();
+            is.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String getCellValue(Row row, int cellNum) {
+
+        if (row.getCell(cellNum) == null) {
+            return null;
+        }
+
+        row.getCell(cellNum).setCellType(
+                org.apache.poi.ss.usermodel.CellType.STRING);
+
+        return row.getCell(cellNum).getStringCellValue().trim();
+    }
+
+    private Double parseDouble(String value) {
+
+        try {
+
+            if (value == null || value.isBlank()) {
+                return null;
+            }
+
+            return Double.parseDouble(value);
+
+        } catch (Exception e) {
+            return null;
+        }
+        
+    }
+    
+    public List<CustomsTariffRateDTO> getTariffRateByHsCode(String hsCode) {
+
+        String cleanHsCode = hsCode.replaceAll("[^0-9]", "");
+
+        return mapper.selectTariffRateByHsCode(cleanHsCode);
+    }
+}

@@ -1,0 +1,481 @@
+@charset "UTF-8";
+
+/* ── Transport specific ── */
+.bl-review-card { background: #fff; border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 20px; }
+.bl-review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.bl-review-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+.bl-review-body { background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; margin-bottom: 14px; font-size: 12px; color: #475569; line-height: 1.8; }
+.bl-review-body strong { color: #0f172a; }
+
+/* ── B/L version select bar ── */
+.version-bar { display: flex; align-items: center; gap: 10px; }
+.version-bar label { font-size: 11px; font-weight: 700; color: #475569; }
+.version-bar select { padding: 6px 10px; border: 1px solid #e2e8f0; font-size: 12px; background: #fff; color: #203444; font-family: inherit; outline: none; }
+.version-bar select:focus { border-color: #565e74; }
+
+.prog-tab-bar a.prog-tab {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.prog-tab-bar a.prog-tab.active {
+    color: #0f172a;
+    font-weight: 800;
+}
+
+/* ─────────────────────────────
+   Owner Transport - Forwarder Contract List
+───────────────────────────── */
+
+.forwarder-list-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 10px 12px;
+    border-left: 3px solid #565e74;
+    background: #fff;
+}
+
+.forwarder-list-filter .forwarder-search-wrap {
+    flex: 1 1 360px;
+    min-width: 320px;
+}
+
+.forwarder-list-filter .search-wrap .material-symbols-outlined {
+    left: 12px;
+    font-size: 17px;
+    color: #697d8f;
+}
+
+.forwarder-list-filter .forwarder-search-input {
+    width: 100%;
+    height: 36px;
+    padding: 0 12px 0 38px;
+    border: 1px solid #e2e8f0;
+    border-bottom: 2px solid #94a3b8;
+    background: #f8fafc;
+    font-size: 12px;
+    color: #203444;
+}
+
+.forwarder-list-filter .forwarder-search-input:focus {
+    border-color: #565e74;
+    background: #fff;
+}
+
+.forwarder-filter-select,
+.forwarder-date-input {
+    height: 36px;
+    border: 1px solid #e2e8f0;
+    border-bottom: 2px solid #94a3b8;
+    background: #fff;
+    color: #203444;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+}
+
+.forwarder-filter-select {
+    width: 128px;
+    min-width: 128px;
+    padding: 0 10px;
+}
+
+.forwarder-date-input {
+    width: 134px;
+    padding: 0 10px;
+}
+
+.forwarder-filter-select:focus,
+.forwarder-date-input:focus {
+    border-color: #565e74;
+    background: #f8fafc;
+}
+
+.forwarder-date-sep {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.forwarder-list-filter .btn {
+    height: 36px;
+    padding: 0 14px;
+}
+
+.forwarder-contract-btn {
+    text-decoration: none;
+}
+
+.forwarder-contract-btn .material-symbols-outlined {
+    font-size: 15px;
+}
+
+.forwarder-list-title {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #334155;
+}
+
+#trans-fwd-list-view .card-section {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    overflow-x: auto;
+}
+
+#trans-fwd-list-view table.data-table {
+    min-width: 960px;
+}
+
+#trans-fwd-list-view table.data-table thead th {
+    padding: 11px 14px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 800;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+#trans-fwd-list-view table.data-table tbody td {
+    padding: 13px 14px;
+    color: #334155;
+    vertical-align: middle;
+}
+
+#trans-fwd-list-view table.data-table tbody tr:hover {
+    background: #f8fbff;
+}
+
+#trans-fwd-list-view .td-id {
+    font-weight: 800;
+    color: #0f172a;
+}
+
+#trans-fwd-list-view .td-muted {
+    display: inline-block;
+    margin-top: 3px;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.forwarder-manage-col {
+    width: 112px;
+    text-align: center;
+}
+
+#trans-fwd-list-view table.data-table td:last-child {
+    text-align: center;
+}
+
+#trans-fwd-list-view .btn-row {
+    justify-content: center;
+    gap: 6px;
+}
+
+#trans-fwd-list-view .mini {
+    min-width: 46px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+}
+
+.forwarder-empty-cell {
+    padding: 44px 16px !important;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.forwarder-manage-col {
+    width: 112px;
+    text-align: center;
+}
+
+#trans-fwd-list-view table.data-table th:nth-child(7),
+#trans-fwd-list-view table.data-table td:nth-child(7),
+#trans-fwd-list-view table.data-table th:nth-child(8),
+#trans-fwd-list-view table.data-table td:nth-child(8) {
+    text-align: center;
+}
+
+#trans-fwd-list-view table.data-table td:nth-child(7),
+#trans-fwd-list-view table.data-table td:nth-child(8) {
+    vertical-align: middle;
+}
+
+#trans-fwd-list-view .doc-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    height: 22px;
+    padding: 0 8px;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+#trans-fwd-list-view .btn-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+#trans-fwd-list-view .mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 46px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+    line-height: 1;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
+#trans-fwd-list-view a.mini,
+#trans-fwd-list-view a.mini:link,
+#trans-fwd-list-view a.mini:visited,
+#trans-fwd-list-view a.mini:hover,
+#trans-fwd-list-view a.mini:active {
+    text-decoration: none;
+}
+
+/* ── Forwarder Detail ── */
+
+.forwarder-detail-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.forwarder-back-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    text-decoration: none;
+}
+
+.forwarder-back-icon {
+    font-size: 14px;
+}
+
+.forwarder-detail-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.forwarder-profile-card {
+    padding: 20px 24px;
+    margin-bottom: 18px;
+}
+
+.forwarder-profile-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.forwarder-profile-label {
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+
+.forwarder-profile-name {
+    font-size: 20px;
+    font-weight: 900;
+    color: #0f172a;
+    margin-bottom: 8px;
+}
+
+.forwarder-profile-meta {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.forwarder-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.forwarder-summary-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 14px;
+}
+
+.forwarder-summary-label {
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.forwarder-summary-value {
+    font-size: 13px;
+    font-weight: 800;
+    margin-top: 6px;
+}
+
+.forwarder-action-row {
+    display: flex;
+    gap: 10px;
+}
+
+.forwarder-contract-btn {
+    text-decoration: none;
+}
+
+.forwarder-contract-icon {
+    font-size: 15px;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+/* ── Import Transport List ── */
+
+.import-transport-filter {
+    margin-bottom: 20px;
+}
+
+.import-transport-filter .forwarder-search-wrap {
+    flex: 1 1 520px;
+    min-width: 420px;
+}
+
+.import-transport-filter .forwarder-filter-select {
+    width: 132px;
+    min-width: 132px;
+}
+
+.import-transport-filter .forwarder-date-input {
+    width: 134px;
+    min-width: 134px;
+}
+
+.import-transport-filter .btn {
+    min-width: 54px;
+}
+
+.transport-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 10px;
+}
+
+#trans-import-trans .card-section {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    overflow-x: auto;
+}
+
+#trans-import-trans table.data-table {
+    min-width: 960px;
+}
+
+#trans-import-trans table.data-table thead th {
+    padding: 11px 14px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 800;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+#trans-import-trans table.data-table tbody td {
+    padding: 13px 14px;
+    color: #334155;
+    vertical-align: middle;
+}
+
+#trans-import-trans table.data-table tbody tr:hover {
+    background: #f8fbff;
+}
+
+#trans-import-trans table.data-table td:last-child {
+    text-align: center;
+}
+
+#trans-import-trans .doc-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    height: 22px;
+    padding: 0 8px;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+.transport-type-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    margin-right: 6px;
+    display: inline-block;
+}
+
+.transport-type-badge.import {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.transport-request-link {
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.transport-request-link:hover {
+    text-decoration: underline;
+}
+
+.transport-request-link.import {
+    color: #15803d;
+}
+
+.transport-route-cell {
+    font-weight: 600;
+}
+
+.transport-route-icon {
+    font-size: 14px;
+    vertical-align: middle;
+    margin-right: 4px;
+    color: #94a3b8;
+}
+
+.transport-route-arrow {
+    color: #cbd5e1;
+}
+
+.transport-eta-danger {
+    font-weight: 700;
+    color: #dc2626;
+}
+
+.transport-detail-link {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    height: 26px;
+}

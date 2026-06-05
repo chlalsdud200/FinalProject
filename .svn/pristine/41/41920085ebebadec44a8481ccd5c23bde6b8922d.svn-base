@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.broker.info.mapper.IInfoMapper">
+
+    <select id="selectCustomsCode" parameterType="map" resultType="map">
+        SELECT *
+        FROM (
+            <if test="codeType == null or codeType == '' or codeType == 'IMPORT'">
+            SELECT
+                'IMPORT' AS codeType,
+                '수입' AS codeTypeNm,
+                IR_CSTM_IDF_NO AS customsCode,
+                IR_CORP_REG_NO AS bizrno,
+                NULL AS ownerName,
+                IR_OWR_ID AS ownerId,
+                IR_NO AS refNo
+            FROM IMP_RQST
+            WHERE IR_CSTM_IDF_NO IS NOT NULL
+            <if test="customsCode != null and customsCode != ''">
+                AND IR_CSTM_IDF_NO LIKE '%' || #{customsCode} || '%'
+            </if>
+            <if test="bizrno != null and bizrno != ''">
+                AND REPLACE(IR_CORP_REG_NO, '-', '') LIKE '%' || REPLACE(#{bizrno}, '-', '') || '%'
+            </if>
+            <if test="ownerId != null and ownerId != ''">
+                AND IR_OWR_ID LIKE '%' || #{ownerId} || '%'
+            </if>
+            <if test="ownerName != null and ownerName != ''">
+                AND 1 = 0
+            </if>
+            </if>
+
+            <if test="(codeType == null or codeType == '')">
+            UNION ALL
+            </if>
+
+            <if test="codeType == null or codeType == '' or codeType == 'EXPORT'">
+            SELECT
+                'EXPORT' AS codeType,
+                '수출' AS codeTypeNm,
+                ER_CSTM_IDF_NO AS customsCode,
+                NVL(ER_BIZRNO, ER_CORP_REG_NO) AS bizrno,
+                ER_ONER_NM AS ownerName,
+                ER_OWR_ID AS ownerId,
+                ER_NO AS refNo
+            FROM EXP_RQST
+            WHERE ER_CSTM_IDF_NO IS NOT NULL
+            <if test="customsCode != null and customsCode != ''">
+                AND ER_CSTM_IDF_NO LIKE '%' || #{customsCode} || '%'
+            </if>
+            <if test="bizrno != null and bizrno != ''">
+                AND REPLACE(NVL(ER_BIZRNO, ER_CORP_REG_NO), '-', '') LIKE '%' || REPLACE(#{bizrno}, '-', '') || '%'
+            </if>
+            <if test="ownerName != null and ownerName != ''">
+                AND ER_ONER_NM LIKE '%' || #{ownerName} || '%'
+            </if>
+            <if test="ownerId != null and ownerId != ''">
+                AND ER_OWR_ID LIKE '%' || #{ownerId} || '%'
+            </if>
+            </if>
+        )
+        ORDER BY codeType, refNo DESC
+    </select>
+
+    <select id="selectStandardName" parameterType="map" resultType="map">
+        SELECT
+            G.GOODS_NO AS goodsNo,
+            G.GOODS_NAME AS goodsName,
+            G.GOODS_HS_CODE AS hsCode,
+            H.HS_NAME AS hsName,
+            H.HS_TARIFF_RATE AS tariffRate
+        FROM GOODS G
+        LEFT JOIN HS_CODE H
+            ON H.HS_CODE = G.GOODS_HS_CODE
+        WHERE 1 = 1
+        <if test="goodsName != null and goodsName != ''">
+            AND G.GOODS_NAME LIKE '%' || #{goodsName} || '%'
+        </if>
+        <if test="hsCode != null and hsCode != ''">
+            AND G.GOODS_HS_CODE LIKE '%' || #{hsCode} || '%'
+        </if>
+        <if test="hsName != null and hsName != ''">
+            AND H.HS_NAME LIKE '%' || #{hsName} || '%'
+        </if>
+        ORDER BY G.GOODS_NO DESC
+    </select>
+
+    <select id="selectTariffRate" parameterType="map" resultType="map">
+        SELECT
+            H.HS_CODE AS hsCode,
+            H.HS_NAME AS hsName,
+            H.HS_TARIFF_RATE AS tariffRate,
+            LISTAGG(C.CONTROLS_NAME, ', ') WITHIN GROUP (ORDER BY C.CONTROLS_NAME) AS controlsName,
+            MAX(HC.HS_CONTROLS_NEED_INS) AS needIns
+        FROM HS_CODE H
+        LEFT JOIN HS_CONTROLS HC
+            ON HC.HS_CONTROLS_HS_CODE = H.HS_CODE
+        LEFT JOIN CONTROLS C
+            ON C.CONTROLS_NO = HC.HS_CONTROLS_NO
+        WHERE 1 = 1
+        <if test="hsCode != null and hsCode != ''">
+            AND H.HS_CODE LIKE '%' || #{hsCode} || '%'
+        </if>
+        <if test="hsName != null and hsName != ''">
+            AND H.HS_NAME LIKE '%' || #{hsName} || '%'
+        </if>
+        <if test="needIns != null and needIns != ''">
+            AND NVL(HC.HS_CONTROLS_NEED_INS, 'N') = #{needIns}
+        </if>
+        GROUP BY H.HS_CODE, H.HS_NAME, H.HS_TARIFF_RATE
+        ORDER BY H.HS_CODE
+    </select>
+
+    <select id="selectItemClass" parameterType="map" resultType="map">
+        SELECT
+            SUBSTR(H.HS_CODE, 1, 2) AS chapterCode,
+            H.HS_CODE AS hsCode,
+            H.HS_NAME AS hsName,
+            H.HS_TARIFF_RATE AS tariffRate
+        FROM HS_CODE H
+        WHERE 1 = 1
+        <if test="chapterCode != null and chapterCode != ''">
+            AND SUBSTR(H.HS_CODE, 1, 2) = #{chapterCode}
+        </if>
+        <if test="hsCode != null and hsCode != ''">
+            AND H.HS_CODE LIKE '%' || #{hsCode} || '%'
+        </if>
+        <if test="hsName != null and hsName != ''">
+            AND H.HS_NAME LIKE '%' || #{hsName} || '%'
+        </if>
+        ORDER BY H.HS_CODE
+    </select>
+
+</mapper>

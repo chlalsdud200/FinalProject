@@ -1,0 +1,127 @@
+package kr.or.tacs.vo.broker.declare;
+
+
+import java.math.BigDecimal;
+import java.util.Date;
+
+/**
+ * 수입신고서 란사항 VO (IMP_DCLR_ITEM 테이블)
+ *  · 부모: IMP_DCLR (idi_ir_no = id_ir_no)
+ *  · 복합키: idi_sn (란번호) + idi_ir_no
+ *  · 1:N — 한 신고서에 여러 란
+ *  · 관리 방식: 부모 저장 시 자식 행 전체 삭제 후 재삽입 (delete-all + bulk insert)
+ */
+public class ImpDclrItemVO {
+
+	private String idiStatusCd;
+	
+    /** 란번호 (1, 2, 3...) — 복합키 */
+    private Integer idiSn;
+    /** 통관의뢰번호 — 복합키 (FK to IMP_DCLR.id_ir_no) */
+    private String idiIrNo;
+
+    /** 관세구분 */
+    private String idiCstmsDvsnCd;
+    /** HS코드 */
+    private String idiHsCd;
+    /** 관세액기준 (종가/종량) */
+    private String idiTaxtStndrdCd;
+    /** 세율 */
+    private BigDecimal idiTaxtRt;
+    /** 신고품명 */
+    private String idiDclrGdsnm;
+    /** 상표명 */
+    private String idiTrdmkNm;
+    /** 상표코드 */
+    private String idiTrdmkCd;
+    /** 거래품명 */
+    private String idiTrdngGdsnm;
+    /** 과세가격 (KRW) */
+    private BigDecimal idiTaxtPrcKrw;
+    /** 과세가격 (USD) */
+    private BigDecimal idiTaxtPrcUsd;
+    /** 순중량 */
+    private BigDecimal idiNetWt;
+    /** 수량 */
+    private BigDecimal idiQty;
+    /** 수량 단위 */
+    private String idiQtyUnitCd;
+    /** 원산지국 코드 (2자리) */
+    private String idiOrgnCntryCd;
+    /** 원산지결정기준 */
+    private String idiOrgnDtrmnCd;
+
+    
+    
+    private Date idiRegistDt;
+    private Date idiUpdtDt;
+
+    
+    
+    // ===== getters / setters =====
+    
+    public String getIdiStatusCd() {
+        return idiStatusCd;
+    }
+
+    public void setIdiStatusCd(String idiStatusCd) {
+        this.idiStatusCd = idiStatusCd;
+    }
+    
+    public Integer getIdiSn() { return idiSn; }
+    public void setIdiSn(Integer idiSn) { this.idiSn = idiSn; }
+
+    public String getIdiIrNo() { return idiIrNo; }
+    public void setIdiIrNo(String idiIrNo) { this.idiIrNo = idiIrNo; }
+
+    public String getIdiCstmsDvsnCd() { return idiCstmsDvsnCd; }
+    public void setIdiCstmsDvsnCd(String idiCstmsDvsnCd) { this.idiCstmsDvsnCd = idiCstmsDvsnCd; }
+
+    public String getIdiHsCd() { return idiHsCd; }
+    public void setIdiHsCd(String idiHsCd) { this.idiHsCd = idiHsCd; }
+
+    public String getIdiTaxtStndrdCd() { return idiTaxtStndrdCd; }
+    public void setIdiTaxtStndrdCd(String idiTaxtStndrdCd) { this.idiTaxtStndrdCd = idiTaxtStndrdCd; }
+
+    public BigDecimal getIdiTaxtRt() { return idiTaxtRt; }
+    public void setIdiTaxtRt(BigDecimal idiTaxtRt) { this.idiTaxtRt = idiTaxtRt; }
+
+    public String getIdiDclrGdsnm() { return idiDclrGdsnm; }
+    public void setIdiDclrGdsnm(String idiDclrGdsnm) { this.idiDclrGdsnm = idiDclrGdsnm; }
+
+    public String getIdiTrdmkNm() { return idiTrdmkNm; }
+    public void setIdiTrdmkNm(String idiTrdmkNm) { this.idiTrdmkNm = idiTrdmkNm; }
+
+    public String getIdiTrdmkCd() { return idiTrdmkCd; }
+    public void setIdiTrdmkCd(String idiTrdmkCd) { this.idiTrdmkCd = idiTrdmkCd; }
+
+    public String getIdiTrdngGdsnm() { return idiTrdngGdsnm; }
+    public void setIdiTrdngGdsnm(String idiTrdngGdsnm) { this.idiTrdngGdsnm = idiTrdngGdsnm; }
+
+    public BigDecimal getIdiTaxtPrcKrw() { return idiTaxtPrcKrw; }
+    public void setIdiTaxtPrcKrw(BigDecimal idiTaxtPrcKrw) { this.idiTaxtPrcKrw = idiTaxtPrcKrw; }
+
+    public BigDecimal getIdiTaxtPrcUsd() { return idiTaxtPrcUsd; }
+    public void setIdiTaxtPrcUsd(BigDecimal idiTaxtPrcUsd) { this.idiTaxtPrcUsd = idiTaxtPrcUsd; }
+
+    public BigDecimal getIdiNetWt() { return idiNetWt; }
+    public void setIdiNetWt(BigDecimal idiNetWt) { this.idiNetWt = idiNetWt; }
+
+    public BigDecimal getIdiQty() { return idiQty; }
+    public void setIdiQty(BigDecimal idiQty) { this.idiQty = idiQty; }
+
+    public String getIdiQtyUnitCd() { return idiQtyUnitCd; }
+    public void setIdiQtyUnitCd(String idiQtyUnitCd) { this.idiQtyUnitCd = idiQtyUnitCd; }
+
+    public String getIdiOrgnCntryCd() { return idiOrgnCntryCd; }
+    public void setIdiOrgnCntryCd(String idiOrgnCntryCd) { this.idiOrgnCntryCd = idiOrgnCntryCd; }
+
+    public String getIdiOrgnDtrmnCd() { return idiOrgnDtrmnCd; }
+    public void setIdiOrgnDtrmnCd(String idiOrgnDtrmnCd) { this.idiOrgnDtrmnCd = idiOrgnDtrmnCd; }
+
+    public Date getIdiRegistDt() { return idiRegistDt; }
+    public void setIdiRegistDt(Date idiRegistDt) { this.idiRegistDt = idiRegistDt; }
+
+    public Date getIdiUpdtDt() { return idiUpdtDt; }
+    public void setIdiUpdtDt(Date idiUpdtDt) { this.idiUpdtDt = idiUpdtDt; }
+}

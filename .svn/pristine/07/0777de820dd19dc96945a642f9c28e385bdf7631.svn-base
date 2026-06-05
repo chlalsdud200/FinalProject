@@ -1,0 +1,16 @@
+package kr.or.tacs.officer.xlsx.mapper;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Mapper;
+
+import kr.or.tacs.dto.officer.xlsx.CustomsTariffRateDTO;
+
+@Mapper
+public interface ICustomsTariffRateMapper {
+	 int insertTariffRate(CustomsTariffRateDTO dto);
+
+	 void deleteAllTariffRate();
+	    
+	List<CustomsTariffRateDTO> selectTariffRateByHsCode(String hsCode);
+}

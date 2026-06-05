@@ -1,0 +1,238 @@
+@charset "UTF-8";
+
+/* sidebar.css — 행정공무원 사이드바 전용
+   기준 JSP 클래스:
+   .aside / .logo-area / .logo-row / .logo-icon / .logo-text
+   .nav-link / .nav-card / .nav-group-header / .nav-submenu / .nav-sub-link
+*/
+
+.aside {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 100vh;
+  background: #f1f5f9;
+  border-right: 1px solid #dce6f0;
+  z-index: 1000;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.aside * {
+  box-sizing: border-box;
+}
+
+.aside::-webkit-scrollbar {
+  width: 3px;
+}
+
+.aside::-webkit-scrollbar-thumb {
+  background: #b0c4d8;
+}
+
+/* 로고 영역 */
+.logo-area {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid #e2eaf3;
+  flex-shrink: 0;
+}
+
+.logo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  background: #1e3054;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-icon .material-symbols-outlined {
+  font-size: 20px;
+  color: #fff;
+}
+
+.logo-text h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.logo-text p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #7a90a8;
+  white-space: nowrap;
+}
+
+/* NAV */
+.aside nav {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  flex: 1;
+}
+
+.nav-link,
+.nav-group-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 18px;
+  color: #4a5e75;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.nav-link {
+  gap: 12px;
+}
+
+.nav-link:hover,
+.nav-group-header:hover {
+  background: #e4eef8;
+  color: #1a2f45;
+}
+
+.nav-link.active,
+.nav-card.active > .nav-group-header,
+.nav-card.open > .nav-group-header {
+  background: #fff;
+  color: #1a2f45;
+  font-weight: 900;
+}
+
+.nav-link .material-symbols-outlined,
+.nav-group-left .material-symbols-outlined {
+  font-size: 20px;
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.nav-card {
+  width: 100%;
+}
+
+.nav-group-header {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nav-group-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-group-arrow {
+  margin-left: auto;
+  font-size: 18px !important;
+  color: #8fa4bc;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.nav-card.open .nav-group-arrow {
+  transform: rotate(180deg);
+}
+
+/* 하위 메뉴 */
+.nav-submenu {
+  display: none;
+  flex-direction: column;
+  padding: 2px 0 4px;
+}
+
+.nav-card.open > .nav-submenu,
+.nav-card.active > .nav-submenu {
+  display: flex;
+}
+
+.nav-sub-link {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px 0 50px;
+  color: #546880;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.nav-sub-link:hover {
+  background: #e0eaf5;
+  color: #1a2f45;
+}
+
+.nav-sub-link.active-sub {
+  background: #d8e8f6;
+  color: #1a2f45;
+  font-weight: 900;
+}
+
+/* 하단 */
+.nav-bottom {
+  padding: 8px 0;
+  border-top: 1px solid #d0dce9;
+  flex-shrink: 0;
+}
+
+/* 본문/헤더 위치 보정 */
+.officer-main,
+main.officer-main,
+.main-content,
+main.main-content {
+  margin-left: 240px;
+}
+
+.topbar {
+  left: 240px;
+  width: calc(100% - 240px);
+}
+
+@media (max-width: 900px) {
+  .aside {
+    transform: translateX(-100%);
+  }
+
+  .aside.open {
+    transform: translateX(0);
+  }
+
+  .officer-main,
+  main.officer-main,
+  .main-content,
+  main.main-content {
+    margin-left: 0;
+  }
+
+  .topbar {
+    left: 0;
+    width: 100%;
+  }
+}

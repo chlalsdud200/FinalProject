@@ -1,0 +1,105 @@
+@charset "UTF-8";
+
+/* ===== 화주 관리 전용 스타일 =====
+ * 공통 스타일은 common.css 사용. 이 파일은 화주관리 페이지에만 적용되는
+ * 스타일이 필요할 때 추가한다. (현재는 비어있음)
+ */
+ .td-actions {
+  text-align: right;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-buttons form {
+  margin: 0;
+}
+
+.status-pill.status-done {
+  background: #d1fae5;
+  color: #065f46;
+  border-left: 3px solid #1d6b4f;
+}
+
+.status-pill.status-done .dot {
+  background: #1d6b4f;
+}
+ 
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+.detail-action-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.detail-action-row form {
+  margin: 0;
+}
+.action-buttons form {
+  margin: 0;
+}
+
+.mini-accept {
+  background: #2563eb;
+  color: #fff;
+  border: 1px solid #2563eb;
+}
+
+.mini-accept:hover {
+  background: #1d4ed8;
+}
+
+.status-pill.status-rej {
+  background: #fee2e2;
+  color: #991b1b;
+  border-left: 3px solid #dc2626;
+}
+
+.status-pill.status-rej .dot {
+  background: #dc2626;
+}
+
+
+/* ===== 상태: 처리중 ===== */
+.status-pill.status-progress {
+  background: #eff6ff;
+  color: #1e40af;
+  border-left: 3px solid #2563eb;
+}
+
+.status-pill.status-progress .dot {
+  background: #2563eb;
+}
+
+/* ===== 상태: 보완제출 ===== */
+.status-pill.status-submitted {
+  background: #fef3c7;
+  color: #92400e;
+  border-left: 3px solid #d97706;
+}
+
+.status-pill.status-submitted .dot {
+  background: #d97706;
+}
+
+/* ===== 상태: 취소 - 빨간색 표시 ===== */
+.status-pill.status-cancel {
+  background: #fee2e2;
+  color: #991b1b;
+  border-left: 3px solid #dc2626;
+}
+
+.status-pill.status-cancel .dot {
+  background: #dc2626;
+}

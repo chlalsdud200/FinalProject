@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.tacs.warehouse.mypage.mapper.IWarehouseMyPageMapper">
+	<select id="selectMypage" resultType="kr.or.tacs.vo.WarehouseManagerVO">
+		select 
+			wm_id, wm_password, wm_nm, wm_email, wm_telno, wm_zip, wm_adres, 
+			wm_detail_adres, wm_use_yn, wm_regist_dt, wm_updt_dt
+			from warehouse_manager
+		where wm_id = #{wmId}
+	</select>
+</mapper>

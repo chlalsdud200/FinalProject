@@ -1,0 +1,85 @@
+<%@ page pageEncoding="UTF-8" %>
+<aside class="aside">
+    <div class="logo-area">
+        <div class="logo-row">
+            <div class="logo-icon"><span class="material-symbols-outlined">fact_check</span></div>
+            <div class="logo-text">
+                <h1>검역기관</h1>
+                <p>현장공무원 시스템</p>
+            </div>
+        </div>
+    </div>
+
+    <nav>
+        <a class="nav-link ${activeMenu eq 'dashboard' ? 'active' : ''}" data-p="dash" href="${ctx}/fieldofficer/dashboard.do">
+            <span class="material-symbols-outlined">dashboard</span>대시보드
+        </a>
+        <a class="nav-link ${activeMenu eq 'receipt' ? 'active' : ''}" data-p="receipt" href="${ctx}/fieldofficer/inspectionRequest.do">
+            <span class="material-symbols-outlined">inbox</span>검역 요청 조회
+        </a>
+        <a class="nav-link ${activeMenu eq 'cert' ? 'active' : ''}" data-p="cert" href="${ctx}/fieldofficer/certs.do">
+            <span class="material-symbols-outlined">science</span>검역 합격 증명서 발급
+        </a>
+        <div class="nav-card nav-hover-group ${activeMenu eq 'docs' ? 'active' : ''}">
+            <div class="nav-group-header">
+                <span class="nav-group-left">
+                    <span class="material-symbols-outlined">folder</span>
+                    문서함
+                </span>
+                <span class="material-symbols-outlined nav-group-arrow">expand_more</span>
+            </div>
+            <div class="nav-submenu" id="docs-menu">
+                <a class="nav-sub-link ${activeSub eq 'myDocs' || empty activeSub ? 'active-sub' : ''}" data-p="myDocs" href="${ctx}/fieldofficer/docs.do">내문서</a>
+                <a class="nav-sub-link ${activeSub eq 'trash' ? 'active-sub' : ''}" data-p="trash" href="${ctx}/fieldofficer/docs/trash.do">휴지통</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="nav-divider"></div>
+
+    <div class="nav-card nav-hover-group ${activeMenu eq 'community' ? 'active' : ''}">
+        <div class="nav-group-header">
+            <span class="nav-group-left">
+                <span class="material-symbols-outlined">forum</span>
+                커뮤니티
+            </span>
+            <span class="material-symbols-outlined nav-group-arrow">expand_more</span>
+        </div>
+        <div class="nav-submenu" id="community-menu">
+            <a class="nav-sub-link ${activeSub eq 'notice' ? 'active-sub' : ''}" data-p="notice" data-community-tab="notice" href="${ctx}/fieldofficer/community.do?tab=notice" onclick="event.preventDefault(); if (typeof switchFieldCommunityTab === 'function') switchFieldCommunityTab('notice'); else location.href=this.href;">공지사항</a>
+            <a class="nav-sub-link ${activeSub eq 'archive' ? 'active-sub' : ''}" data-p="archive" data-community-tab="archive" href="${ctx}/fieldofficer/community.do?tab=archive" onclick="event.preventDefault(); if (typeof switchFieldCommunityTab === 'function') switchFieldCommunityTab('archive'); else location.href=this.href;">자료실</a>
+            <a class="nav-sub-link ${activeSub eq 'center' ? 'active-sub' : ''}" data-p="center" data-community-tab="center" href="${ctx}/fieldofficer/community.do?tab=center" onclick="event.preventDefault(); if (typeof switchFieldCommunityTab === 'function') switchFieldCommunityTab('center'); else location.href=this.href;">고객센터</a>
+        </div>
+    </div>
+
+    <div class="nav-card nav-hover-group ${activeMenu eq 'mypage' ? 'active' : ''}">
+	    <div class="nav-group-header" onclick="location.href='${ctx}/fieldofficer/mypage.do'">
+	        <span class="nav-group-left">
+	            <span class="material-symbols-outlined">account_circle</span>
+	            마이페이지
+	        </span>
+	        <span class="material-symbols-outlined nav-group-arrow">expand_more</span>
+	    </div>
+	
+	    <div class="nav-submenu">
+	        <a class="nav-sub-link ${activeSub eq 'profile' ? 'active-sub' : ''}"
+	           href="${ctx}/fieldofficer/mypage.do?tab=profile">
+	            회원정보 수정
+	        </a>
+	
+	        <a class="nav-sub-link ${activeSub eq 'alarm' ? 'active-sub' : ''}"
+	           href="${ctx}/fieldofficer/mypage.do?tab=alarm">
+	            알림 수신 설정
+	        </a>
+	    </div>
+	</div>
+
+    <div class="nav-bottom">
+        <form action="${pageContext.request.contextPath}/logout" method="post" id="logoutForm" style="display:none;">
+            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+        </form>
+        <a class="nav-link" href="javascript:void(0)" onclick="document.getElementById('logoutForm').submit();">
+            <span class="material-symbols-outlined">logout</span>로그아웃
+        </a>
+    </div>
+</aside>

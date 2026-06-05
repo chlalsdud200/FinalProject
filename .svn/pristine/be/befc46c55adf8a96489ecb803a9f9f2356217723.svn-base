@@ -1,0 +1,152 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ include file="/WEB-INF/views/fieldofficer/common/taglibs.jsp" %>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="activeMenu" value="cert" />
+<c:set var="activeSub" value="" />
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <%@ include file="/WEB-INF/views/fieldofficer/header/head.jsp" %>
+    
+     <!-- 검역 합격 증명서 전용 CSS -->
+    <link rel="stylesheet" href="${ctx}/resources/css/fieldofficer/certs.css">
+    
+    <link rel="stylesheet" href="${ctx}/resources/lib/tui-grid/tui-pagination.min.css">
+	<link rel="stylesheet" href="${ctx}/resources/lib/tui-grid/tui-grid.min.css">
+</head>
+<body>
+<div class="app" id="app">
+    <%@ include file="/WEB-INF/views/fieldofficer/header/sidebar.jsp" %>
+
+    <div class="main-wrap">
+        <%@ include file="/WEB-INF/views/fieldofficer/header/header.jsp" %>
+
+        <div class="content">
+<div class="page active" id="pg-cert">
+<!-- 발급 대상 목록 -->
+<div class="sub-page" id="cert-list-view">
+<h2><span class="material-symbols-outlined">description</span> 검역 합격 증명서 발급</h2>
+    
+    <form id="certSearchForm" class="cert-search-panel" method="get" action="${ctx}/fieldofficer/certs.do">
+
+	    <input type="hidden" name="page" id="page" value="${pagingVO.currentPage}" />
+	
+	    <div class="cert-search-title">
+	        <span></span>
+	        검색 조건
+	    </div>
+	
+	    <div class="form-grid cert-search-grid">
+	
+	        <div class="form-item">
+	            <label>검역요청번호</label>
+	            <input
+	                id="certSearchNo"
+	                name="reqNo"
+	                value="${searchDTO.reqNo}"
+	                placeholder="검역요청번호 입력"
+	            />
+	        </div>
+	
+	        <div class="form-item">
+	            <label>수입화주명</label>
+				<input
+				    id="certSearchBiz"
+				    name="bizNm"
+				    value="${searchDTO.bizNm}"
+				    placeholder="수입화주명 입력"
+				/>
+	        </div>
+	
+	        <div class="form-item">
+	            <label>품목명</label>
+	            <input
+	                id="certSearchItem"
+	                name="itemNm"
+	                value="${searchDTO.itemNm}"
+	                placeholder="품목명 입력"
+	            />
+	        </div>
+	
+	        <div class="form-item">
+	            <label>HS CODE</label>
+	            <input
+	                id="certSearchHs"
+	                name="hsCode"
+	                value="${searchDTO.hsCode}"
+	                placeholder="HS CODE 입력"
+	            />
+	        </div>
+	
+	        <div class="form-item">
+	            <label>판정상태</label>
+	            <select id="certSearchJudgeStatus" name="iirResultCd">
+	                <option value="">전체</option>
+					<option value="PASS" <c:if test="${searchDTO.iirResultCd eq 'PASS'}">selected</c:if>>합격</option>
+					<option value="FAIL" <c:if test="${searchDTO.iirResultCd eq 'FAIL'}">selected</c:if>>불합격</option>
+					<option value="SUPP" <c:if test="${searchDTO.iirResultCd eq 'SUPP'}">selected</c:if>>보완요청</option>
+	            </select>
+	        </div>
+	
+	        <div class="form-item">
+	            <label>발급상태</label>
+	            <select id="certSearchStatus" name="certIssueStatus">
+	                <option value="">전체</option>
+	                <option value="발급 대기" <c:if test="${searchDTO.certIssueStatus eq '발급 대기'}">selected</c:if>>발급 대기</option>
+	                <option value="발급 불가" <c:if test="${searchDTO.certIssueStatus eq '발급 불가'}">selected</c:if>>발급 불가</option>
+	                <option value="보완요청" <c:if test="${searchDTO.certIssueStatus eq '보완요청'}">selected</c:if>>보완요청</option>
+	                <option value="발급 완료" <c:if test="${searchDTO.certIssueStatus eq '발급 완료'}">selected</c:if>>발급 완료</option>
+	            </select>
+	        </div>
+	
+	    </div>
+	
+	    <div class="cert-search-actions">
+	        <button class="btn btn-primary" type="button" id="certSearchBtn">
+	            <span class="material-symbols-outlined">search</span>
+	            조회
+	        </button>
+	
+	        <button class="btn btn-secondary" type="button" id="certResetBtn">
+	            초기화
+	        </button>
+	
+	        <button class="btn btn-outline" type="button" onclick="downloadCertsExcel('${ctx}')">
+			    엑셀 다운로드
+			</button>
+	    </div>
+	</form>
+	
+	 <div class="table-card">
+	 	<div id="certsGrid"></div>
+	 </div>
+</div>
+
+</div>
+</div>
+<%@ include file="/WEB-INF/views/fieldofficer/footer/footer.jsp" %>
+</div>
+</div>
+<%@ include file="/WEB-INF/views/fieldofficer/footer/modals.jsp" %>
+<%@ include file="/WEB-INF/views/fieldofficer/footer/scripts.jsp" %>
+
+<script src="${ctx}/resources/lib/tui-grid/tui-pagination.min.js"></script>
+<script src="${ctx}/resources/lib/tui-grid/tui-grid.min.js"></script>
+<script src="${ctx}/resources/js/common/toast-grid.js"></script>
+<script src="${ctx}/resources/js/fieldofficer/certs.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+

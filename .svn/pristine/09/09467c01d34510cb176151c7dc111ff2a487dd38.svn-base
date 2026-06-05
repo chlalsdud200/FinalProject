@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.tacs.transport.importp.mapper.ImportTransportMapper">
+  <!-- ============================================================ -->
+  <!-- 공통 SQL 조각 / 기능별 XML 분리 기준 파일 -->
+  <!-- namespace는 기존 ImportTransportMapper와 동일하게 유지한다. -->
+  <!-- 발표 전 안전 분리를 위해 Java Mapper/Service/Controller는 변경하지 않는다. -->
+  <!-- ============================================================ -->
+  <sql id="impReleaseStatusCdCase">
+        CASE
+        WHEN CRR.CRR_NO IS NULL THEN NULL
+        WHEN CRR.CRR_RELEASE_DT IS NOT NULL THEN 'REL_DONE'
+        WHEN CRR.CRR_STATUS_CD IN ('DONE', 'RELEASED', 'APPROVED') THEN 'REL_DONE'
+        ELSE CRR.CRR_STATUS_CD
+        END
+    </sql>
+  <sql id="impReleaseStatusNmCase">
+        CASE
+        WHEN CRR.CRR_NO IS NULL THEN '-'
+        WHEN CRR.CRR_RELEASE_DT IS NOT NULL THEN '반출완료'
+        WHEN CRR.CRR_STATUS_CD IN ('REL_WAIT', 'REL_REQ', 'REQUESTED', 'READY') THEN '반출대기'
+        WHEN CRR.CRR_STATUS_CD IN ('REL_DONE', 'DONE', 'RELEASED', 'APPROVED') THEN '반출완료'
+        WHEN CRR.CRR_STATUS_CD IN ('REL_FIX', 'REL_REJECT', 'REJECT') THEN '보완요청'
+        WHEN CRR.CRR_STATUS_CD IN ('REL_SENT', 'REQ_SENT') THEN '보완제출완료'
+        ELSE NVL(CRR.CRR_STATUS_CD, '-')
+        END
+    </sql>
+</mapper>

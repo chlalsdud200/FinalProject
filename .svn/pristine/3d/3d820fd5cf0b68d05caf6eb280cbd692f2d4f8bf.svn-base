@@ -1,0 +1,184 @@
+/* ── KPI Stat Cards ── */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card { background: #fff; padding: 20px 22px; border: 1px solid #e2e8f0; border-bottom: 4px solid #565e74; cursor: pointer; transition: transform .1s, box-shadow .1s; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.07); }
+.stat-card.c2 { border-bottom-color: #d97706; }
+.stat-card.c3 { border-bottom-color: #605c78; }
+.stat-card.c4 { border-bottom-color: #1d6b4f; }
+.stat-card .s-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748b; margin-bottom: 12px; }
+.stat-card .s-num { font-size: 40px; font-weight: 900; letter-spacing: -2px; color: #0f172a; line-height: 1; }
+.stat-card .s-sub { font-size: 12px; font-weight: 600; color: #64748b; margin-top: 6px; }
+.stat-card.c2 .s-sub { color: #d97706; }
+.stat-card.c3 .s-sub { color: #605c78; }
+.stat-card.c4 .s-sub { color: #1d6b4f; }
+
+/* ── Document Flow ── */
+.doc-flow-grid { display: grid; grid-template-columns: 1fr 40px 1fr 40px 1fr 40px 1fr; align-items: start; padding: 20px 24px; gap: 0; }
+.flow-col { min-width: 0; }
+.flow-col-header { display: flex; align-items: center; gap: 8px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; }
+.flow-col-header.c1 { border-bottom-color: #565e74; }
+.flow-col-header.c2 { border-bottom-color: #d97706; }
+.flow-col-header.c3 { border-bottom-color: #1d6b4f; }
+.flow-col-header.c4 { border-bottom-color: #605c78; }
+.flow-col-dot { width: 8px; height: 8px; flex-shrink: 0; }
+.flow-col-dot.c1 { background: #565e74; }
+.flow-col-dot.c2 { background: #d97706; }
+.flow-col-dot.c3 { background: #1d6b4f; }
+.flow-col-dot.c4 { background: #605c78; }
+.flow-col-name { font-size: 13px; font-weight: 800; color: #0f172a; }
+.flow-col-sub { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+.flow-arrow { display: flex; align-items: center; justify-content: center; padding-top: 20px; color: #cbd5e1; font-size: 20px; font-weight: 300; }
+.flow-doc-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; gap: 8px; }
+.flow-doc-row:last-child { border-bottom: none; }
+.flow-doc-name { font-size: 11px; color: #334155; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fds { font-size: 9px; font-weight: 700; padding: 2px 6px; flex-shrink: 0; }
+.fds-ok { background: #d1fae5; color: #065f46; }
+.fds-wait { background: #fef3c7; color: #92400e; }
+.fds-req { background: #fecaca; color: #991b1b; }
+.fds-done { background: #e2e8f0; color: #64748b; }
+
+/* ── Task List ── */
+.task-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #f1f5f9; transition: background .1s; }
+.task-row:hover { background: #fafbff; }
+.task-row:last-child { border-bottom: none; }
+.task-row.urgent { border-left: 3px solid #9f403d; padding-left: 17px; }
+.task-row.new-item { border-left: 3px solid #565e74; padding-left: 17px; }
+.task-left { flex: 1; min-width: 0; }
+.task-title { font-size: 13px; font-weight: 700; color: #203444; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.task-sub { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+.task-right { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Right side cards ── */
+.dash-layout { display: grid; grid-template-columns: 1fr 280px; gap: 20px; margin-bottom: 20px; }
+.dash-side { display: flex; flex-direction: column; gap: 16px; }
+.white-card { background: #fff; border: 1px solid #e2e8f0; padding: 20px; }
+.white-card-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 14px; }
+.partner-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #f1f5f9; }
+.partner-row:last-child { border-bottom: none; }
+.partner-info { display: flex; align-items: center; gap: 8px; }
+.partner-dot { width: 6px; height: 6px; background: #565e74; flex-shrink: 0; }
+.partner-name { font-size: 12px; font-weight: 700; color: #203444; }
+.partner-detail { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+.partner-cnt { font-size: 11px; font-weight: 800; color: #565e74; }
+.ck-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #f1f5f9; }
+.ck-row:last-child { border-bottom: none; }
+.ck-label { font-size: 12px; font-weight: 600; color: #203444; }
+.ck-ref { font-size: 10px; color: #94a3b8; display: block; margin-top: 1px; }
+.ck-badge { font-size: 11px; font-weight: 800; }
+.ck-badge.urgent { color: #9f403d; }
+.ck-badge.safe { color: #1d6b4f; }
+
+/* ── Step Bar ── */
+.step-bar { display: flex; align-items: flex-start; margin-bottom: 28px; overflow-x: auto; padding-bottom: 2px; }
+.step-item { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 80px; position: relative; }
+.step-item:not(:last-child)::after { content: ''; position: absolute; top: 15px; left: 60%; width: 80%; height: 2px; background: #e2e8f0; z-index: 0; }
+.step-item.done:not(:last-child)::after { background: #565e74; }
+.step-circle { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; background: #e2e8f0; color: #94a3b8; position: relative; z-index: 1; flex-shrink: 0; transition: all .2s; }
+.step-item.done .step-circle { background: #565e74; color: #fff; }
+.step-item.active .step-circle { background: #0f172a; color: #fff; }
+.step-item.warn .step-circle { background: #d97706; color: #fff; }
+.step-label { font-size: 10px; font-weight: 600; color: #94a3b8; text-align: center; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+.step-item.done .step-label { color: #565e74; }
+.step-item.active .step-label { color: #0f172a; font-weight: 800; }
+.step-item.warn .step-label { color: #d97706; }
+/* 역할 뱃지 */
+.step-role { font-size: 9px; font-weight: 700; margin-top: 3px; padding: 1px 6px; white-space: nowrap; }
+.step-role.화주 { background: #dae2fd; color: #373f54; }
+.step-role.관세사 { background: #fef3c7; color: #92400e; }
+.step-role.세관 { background: #f0fdf4; color: #14532d; }
+.step-role.포워더 { background: #faf5ff; color: #6d28d9; }
+/* 서류/목록 테이블 공통 (운송업체 선택 테이블 기준 통일) */
+.doc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.doc-table thead tr { background: #f8fafc; }
+.doc-table thead th { padding: 10px 16px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.doc-table tbody td { padding: 11px 16px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
+.doc-table tbody tr:last-child td { border-bottom: none; }
+.doc-table tbody tr:hover { background: #fafbff; }
+.doc-status { font-size: 10px; font-weight: 700; padding: 2px 8px; display: inline-block; }
+.doc-status.ok   { background: #d1fae5; color: #065f46; }
+.doc-status.wait { background: #fef3c7; color: #92400e; }
+.doc-status.req  { background: #fecaca; color: #991b1b; }
+.doc-status.none { background: #e2e8f0; color: #64748b; }
+.doc-upload-row { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 14px; }
+.doc-upload-row .fi { flex: 1; }
+
+/* ── Metric strip ── */
+.metric-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.metric-box { background: #fff; border: 1px solid #e2e8f0; padding: 18px 20px; }
+.metric-box .k { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
+.metric-box .v { font-size: 22px; font-weight: 900; color: #0f172a; letter-spacing: -0.5px; }
+.metric-box .s { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+/* ── Timeline ── */
+.timeline { border-left: 2px solid #e2e8f0; margin-left: 8px; padding-left: 20px; }
+.tl-item { position: relative; padding-bottom: 20px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-dot { position: absolute; left: -27px; top: 4px; width: 10px; height: 10px; background: #565e74; }
+.tl-item.done .tl-dot { background: #1d6b4f; }
+.tl-item.warn .tl-dot { background: #d97706; }
+.tl-item.hold .tl-dot { background: #9f403d; }
+.tl-item.pending .tl-dot { background: #e2e8f0; border: 2px solid #94a3b8; }
+.tl-title { font-size: 13px; font-weight: 700; color: #203444; margin-bottom: 3px; }
+.tl-desc { font-size: 11px; color: #64748b; line-height: 1.6; }
+
+/* ── Kanban board ── */
+.kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.kanban-col { background: #fff; border: 1px solid #e2e8f0; overflow: hidden; }
+.kanban-item { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; }
+.kanban-item:last-child { border-bottom: none; }
+.kanban-item:hover { background: #fafbff; }
+.kanban-item-title { font-size: 13px; font-weight: 700; color: #203444; margin-bottom: 3px; }
+.kanban-item-sub { font-size: 11px; color: #94a3b8; }
+
+/* ── 대시보드 3컬럼 ── */
+.dash-3col { display:grid; grid-template-columns:1fr 1fr 280px; gap:20px; margin-bottom:20px; }
+/* 진행 건 탭 */
+.prog-tab-bar { display:flex; border-bottom:1px solid #e2e8f0; margin-bottom:0; }
+.prog-tab { background:none; border:none; border-bottom:2px solid transparent; padding:10px 16px; font-size:12px; font-weight:700; color:#64748b; cursor:pointer; margin-bottom:-1px; transition:all .12s; }
+.prog-tab.active { color:#565e74; border-bottom-color:#565e74; }
+.prog-list { display:none; }
+.prog-list.active { display:block; }
+.prog-item { display:flex; align-items:center; justify-content:space-between; padding:11px 16px; border-bottom:1px solid #f1f5f9; gap:10px; }
+.prog-item:last-child { border-bottom:none; }
+.prog-item-left { flex:1; min-width:0; }
+.prog-item-id { font-size:11px; font-weight:700; color:#565e74; }
+.prog-item-party { font-size:12px; font-weight:600; color:#203444; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.prog-item-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.prog-dday { font-size:10px; font-weight:800; padding:2px 7px; }
+.prog-dday.urgent { background:#fecaca; color:#991b1b; }
+.prog-dday.warn   { background:#fef3c7; color:#92400e; }
+.prog-dday.safe   { background:#e2e8f0; color:#334155; }
+/* 추가 서류 요청 */
+.doc-req-item { display:flex; align-items:flex-start; gap:10px; padding:12px 16px; border-bottom:1px solid #f1f5f9; }
+.doc-req-item:last-child { border-bottom:none; }
+.doc-req-icon { width:8px; height:8px; flex-shrink:0; margin-top:4px; }
+.doc-req-icon.customs { background:#9f403d; }
+.doc-req-icon.broker  { background:#d97706; }
+.doc-req-body { flex:1; min-width:0; }
+.doc-req-title { font-size:12px; font-weight:700; color:#203444; }
+.doc-req-meta  { font-size:10px; color:#64748b; margin-top:2px; }
+.doc-req-right { display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0; }
+.doc-req-dday { font-size:10px; font-weight:800; padding:2px 7px; }
+.doc-req-dday.urgent { background:#fecaca; color:#991b1b; }
+.doc-req-dday.warn   { background:#fef3c7; color:#92400e; }
+.doc-req-dday.safe   { background:#e2e8f0; color:#334155; }
+/* 알림 피드 */
+.feed-item { display:flex; align-items:flex-start; gap:10px; padding:10px 16px; border-bottom:1px solid #f1f5f9; }
+.feed-item:last-child { border-bottom:none; }
+.feed-dot { width:6px; height:6px; background:#565e74; flex-shrink:0; margin-top:5px; }
+.feed-body { flex:1; min-width:0; }
+.feed-time { font-size:10px; color:#94a3b8; margin-bottom:2px; }
+.feed-text { font-size:12px; color:#334155; font-weight:500; line-height:1.4; }
+.feed-ref  { font-size:10px; color:#565e74; font-weight:700; margin-top:2px; }
+/* ETA 스트립 */
+.eta-strip { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:20px; }
+.eta-card { background:#fff; border:1px solid #e2e8f0; padding:16px 18px; }
+.eta-bl   { font-size:10px; font-weight:700; color:#94a3b8; margin-bottom:6px; letter-spacing:.3px; }
+.eta-route { font-size:13px; font-weight:800; color:#0f172a; margin-bottom:4px; }
+.eta-vessel { font-size:11px; color:#475569; margin-bottom:8px; }
+.eta-footer { display:flex; justify-content:space-between; align-items:center; }
+.eta-date  { font-size:11px; font-weight:700; color:#203444; }
+.eta-badge { font-size:10px; font-weight:700; padding:2px 8px; }
+.eta-badge.sailing  { background:#dae2fd; color:#373f54; }
+.eta-badge.ready    { background:#fef3c7; color:#92400e; }
+.eta-badge.waiting  { background:#e2e8f0; color:#334155; }

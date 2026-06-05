@@ -1,0 +1,32 @@
+package kr.or.tacs.broker.quarantine.service;
+
+import java.util.List;
+
+import org.springframework.web.multipart.MultipartFile;
+
+import kr.or.tacs.vo.broker.quarantine.QuarantineItemVO;
+import kr.or.tacs.vo.broker.quarantine.QuarantineVO;
+
+public interface IQuarantineService {
+    List<QuarantineVO> selectImportQuarantineResultList(QuarantineVO searchVO);
+    QuarantineVO selectImportQuarantineDetail(String iirReqNo);
+    List<QuarantineVO> selectImportRequestCandidateList(String brokerId);
+    QuarantineVO selectImportRequestForQuarantine(String irNo, String brokerId);
+    void insertImportQuarantineRequest(QuarantineVO quarantineVO);
+	QuarantineVO extractImportQuarantineData(MultipartFile[] attachFiles, String irNo);
+	
+	// 검역요청번호 기준으로 검역기관이 발급한 합격증명서 파일번호 조회
+	Long retriveIssuedCertFileNo(String iirReqNo, String brokerId);
+	
+	// 관세사 보완완료 전송
+	void modifySupplementSubmit(QuarantineVO quarantineVO);
+	
+	// 수입의뢰 기준 검역장소 선택 목록 조회
+	List<QuarantineVO> selectWarehouseLocationListByImportRequest(String irNo, String brokerId);
+	
+	// 현장공무원 선책 목록 조회
+	List<QuarantineVO> selectFieldOfficerList();
+	
+	// 검역결과 상세 - 검역대상 품목 목록 조회
+	List<QuarantineItemVO> selectImportQuarantineItemList(String iirReqNo);
+}

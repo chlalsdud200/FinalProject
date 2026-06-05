@@ -1,0 +1,951 @@
+function buildExportRequestReviewPanel() {
+  const req = selectedExportRequest || {
+    requestNo: '',
+    receiptDate: '',
+    shipperName: '',
+    shipperContact: '',
+    shipperPhone: '',
+    shipperEmail: '',
+    consigneeName: '',
+    consigneeCountry: '',
+    consigneeAddress: '',
+    consigneePhone: '',
+    origin: '',
+    destination: '',
+    transportMode: '',
+    transportType: '',
+    tradeTerm: '',
+    itemCategory: '',
+    bondedWarehouse: '',
+    exportDeclNo: '',
+    containerSpec: '',
+    blType: '',
+    mblNo: '',
+    hblNo: '',
+    requestNote: '',
+    requestFile: '',
+    invoiceFile: '',
+    packingListFile: '',
+    receiptStatus: '',
+    rejectReason: ''
+  };
+
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+  function show(v) {
+    return esc(v == null ? '' : v);
+  }
+
+  const roInput = 'field-input bg-slate-200 text-slate-600 cursor-not-allowed border-slate-300';
+  const roArea = 'field-textarea bg-slate-200 text-slate-600 cursor-not-allowed border-slate-300';
+  const statusText = req.receiptStatus || '접수상태';
+  const shipperTel = req.shipperPhone || req.shipperContact || '';
+  const bonded = req.bondedWarehouse || req.bondedZoneNm || req.warehouseNm || req.bondedZoneNo || '';
+  const exportDeclNo = req.exportDeclNo || req.declNo || req.reportNo || '';
+  const containerSpec = req.containerSpec || req.cntrSpec || req.containerType || '';
+  const itemCategory = req.itemCategory || req.itemNm || req.goodsNm || '';
+  const masterBl = req.mblNo || req.masterBlNo || req.blNo || '';
+  const houseBl = req.hblNo || req.houseBlNo || '';
+
+  return `
+    <div class="section-card border border-slate-300">
+      <div class="bg-white px-6 py-4 border-b border-slate-200 flex items-start justify-between gap-4">
+        <div>
+          <h4 class="text-sm font-black text-slate-900">수출 운송의뢰 상세</h4>
+          <p class="text-xs text-slate-500 mt-1">상세 항목은 검토용으로만 표시되며 수정할 수 없습니다.</p>
+        </div>
+        <span class="px-3 py-2 border border-slate-300 bg-slate-50 text-xs font-black text-primary">${show(statusText)}</span>
+      </div>
+
+      <div class="p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <section class="border border-slate-300 bg-white p-5 min-h-[520px]">
+            <h5 class="text-sm font-black text-slate-950 mb-4 border-l-4 border-slate-700 pl-3">1&nbsp;&nbsp;의뢰/화주 정보</h5>
+            <div class="space-y-4">
+              <div><label class="field-label">의뢰번호</label><input class="${roInput}" type="text" value="${show(req.requestNo)}" readonly disabled /></div>
+              <div><label class="field-label">접수일자</label><input class="${roInput}" type="text" value="${show(req.receiptDate)}" readonly disabled /></div>
+              <div><label class="field-label">화주명</label><input class="${roInput}" type="text" value="${show(req.shipperName)}" readonly disabled /></div>
+              <div><label class="field-label">화주 담당자</label><input class="${roInput}" type="text" value="${show(req.shipperContact)}" readonly disabled /></div>
+              <div><label class="field-label">화주 연락처</label><input class="${roInput}" type="text" value="${show(shipperTel)}" readonly disabled /></div>
+              <div><label class="field-label">화주 이메일</label><input class="${roInput}" type="text" value="${show(req.shipperEmail)}" readonly disabled /></div>
+            </div>
+          </section>
+
+          <section class="border border-slate-300 bg-white p-5 min-h-[520px]">
+            <h5 class="text-sm font-black text-slate-950 mb-4 border-l-4 border-slate-700 pl-3">2&nbsp;&nbsp;운송/B/L 정보</h5>
+            <div class="space-y-4">
+              <div><label class="field-label">거래자명</label><input class="${roInput}" type="text" value="${show(req.consigneeName)}" readonly disabled /></div>
+              <div><label class="field-label">거래자 국가</label><input class="${roInput}" type="text" value="${show(req.consigneeCountry)}" readonly disabled /></div>
+              <div><label class="field-label">선사</label><input class="${roInput}" type="text" value="${show(req.carrierName || req.shippingCompany || '')}" readonly disabled /></div>
+              <div><label class="field-label">운송수단</label><input class="${roInput}" type="text" value="${show(req.transportMode)}" readonly disabled /></div>
+              <div><label class="field-label">운송형태</label><input class="${roInput}" type="text" value="${show(req.transportType)}" readonly disabled /></div>
+              <div><label class="field-label">환적여부</label><input class="${roInput}" type="text" value="${show(req.transshipYn || req.transshipmentYn || '')}" readonly disabled /></div>
+              <div><label class="field-label">출발항</label><input class="${roInput}" type="text" value="${show(req.origin)}" readonly disabled /></div>
+              <div><label class="field-label">도착항</label><input class="${roInput}" type="text" value="${show(req.destination)}" readonly disabled /></div>
+              <div><label class="field-label">B/L 구분</label><input class="${roInput}" type="text" value="${show(req.blType)}" readonly disabled /></div>
+            </div>
+          </section>
+
+          <section class="border border-slate-300 bg-white p-5 min-h-[520px]">
+            <h5 class="text-sm font-black text-slate-950 mb-4 border-l-4 border-slate-700 pl-3">3&nbsp;&nbsp;항목/첨부/요청</h5>
+            <div class="space-y-4">
+              <div><label class="field-label">보세구역</label><input class="${roInput}" type="text" value="${show(bonded)}" readonly disabled /></div>
+              <div><label class="field-label">수출신고번호</label><input class="${roInput}" type="text" value="${show(exportDeclNo)}" readonly disabled /></div>
+              <div><label class="field-label">컨테이너 규격</label><input class="${roInput}" type="text" value="${show(containerSpec)}" readonly disabled /></div>
+              <div><label class="field-label">화물품목구분</label><input class="${roInput}" type="text" value="${show(itemCategory)}" readonly disabled /></div>
+              <div><label class="field-label">Master B/L</label><input class="${roInput}" type="text" value="${show(masterBl)}" readonly disabled /></div>
+              <div><label class="field-label">HOUSE B/L</label><input class="${roInput}" type="text" value="${show(houseBl)}" readonly disabled /></div>
+              <div><label class="field-label">송장</label><input class="${roInput}" type="text" value="${show(req.invoiceFile)}" readonly disabled /></div>
+              <div><label class="field-label">포장명세서</label><input class="${roInput}" type="text" value="${show(req.packingListFile)}" readonly disabled /></div>
+              <div><label class="field-label">요청사항</label><textarea class="${roArea} h-20" readonly disabled>${show(req.requestNote)}</textarea></div>
+            </div>
+          </section>
+        </div>
+
+        ${req.receiptStatus === '접수대기' ? `
+        <div class="flex justify-end gap-2 pt-5 mt-5 border-t border-slate-200">
+          <button class="request-reject-btn px-4 py-2 bg-red-700 text-white text-xs font-bold hover:bg-red-800" data-request-type="수출" data-request-no="${show(req.requestNo)}">반려</button>
+          <button type="button" class="export-request-accept-btn px-4 py-2 bg-primary text-on-primary text-xs font-bold hover:bg-primary-dim" data-request-no="${show(req.requestNo)}">수락</button>
+        </div>
+        ` : req.receiptStatus === '접수반려' ? `
+        <div class="pt-5 mt-5 border-t border-slate-200">
+          <h5 class="text-[11px] font-black uppercase tracking-widest mb-3 border-l-4 border-red-700 pl-3 text-red-700">반려 사유</h5>
+          <textarea class="${roArea} h-28" readonly disabled>${show(req.rejectReason || '반려 사유가 등록되어 있습니다.')}</textarea>
+        </div>
+        ` : `
+        <div class="flex justify-end gap-2 pt-5 mt-5 border-t border-slate-200">
+          <span class="info-chip">접수완료 건입니다. D/O 처리상태: 전달완료</span>
+        </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+window.__transportExportBuildRequestReviewPanel = buildExportRequestReviewPanel;
+
+const EXPORT_REQUEST_GROUP_KEY = 'export';
+const EXPORT_REQUEST_ITEM_ID = 'TACS-FW-001';
+
+function getExportRequestDetailBody() {
+  if (typeof detailBody !== 'undefined' && detailBody) return detailBody;
+  return document.getElementById('detail-body') || document.body;
+}
+
+function isExportRequestListPage(groupKey, itemId) {
+  const exportGroup = !groupKey || groupKey === EXPORT_REQUEST_GROUP_KEY || groupKey === 'EXPORT';
+  return exportGroup && itemId === EXPORT_REQUEST_ITEM_ID;
+}
+
+function getExportRequestMenuItem() {
+  const menu = Array.isArray(window.menuData)
+    ? window.menuData
+    : (typeof menuData !== 'undefined' && Array.isArray(menuData) ? menuData : []);
+  const group = menu.find(g => g && g.key === EXPORT_REQUEST_GROUP_KEY);
+  const item = group && Array.isArray(group.items)
+    ? group.items.find(i => i && i.id === EXPORT_REQUEST_ITEM_ID)
+    : null;
+  return item || { id: EXPORT_REQUEST_ITEM_ID, title: '운송의뢰' };
+}
+
+function getExportStatusOverride(requestNo) {
+  let overrides = null;
+  try {
+    if (typeof exportRequestStatusOverrides !== 'undefined') overrides = exportRequestStatusOverrides;
+  } catch (e) {}
+  if (!overrides && window.exportRequestStatusOverrides) overrides = window.exportRequestStatusOverrides;
+  return overrides && requestNo ? overrides[requestNo] : '';
+}
+
+function setSelectedExportRequestSafely(data) {
+  window.selectedExportRequest = data;
+  try {
+    if (typeof selectedExportRequest !== 'undefined') selectedExportRequest = data;
+  } catch (e) {}
+}
+
+function normalizeExportRequestListLikeImport(root) {
+  const scope = root || getExportRequestDetailBody();
+  if (!scope) return;
+
+  scope.querySelectorAll('.export-request-detail-btn').forEach(btn => {
+    btn.className = 'export-request-detail-btn px-3 py-1 bg-slate-800 text-white text-xs font-bold';
+    btn.type = 'button';
+    if (!btn.textContent || !btn.textContent.trim()) btn.textContent = '상세';
+  });
+
+  scope.querySelectorAll('.export-request-reject-reason-btn').forEach(btn => {
+    btn.className = 'export-request-reject-reason-btn px-3 py-1 border border-red-200 bg-white text-red-700 text-xs font-bold';
+    btn.type = 'button';
+    if (!btn.textContent || !btn.textContent.trim()) btn.textContent = '사유';
+  });
+
+  scope.querySelectorAll('table thead').forEach(thead => {
+    thead.classList.add('bg-slate-50', 'text-xs', 'font-bold', 'text-slate-500', 'uppercase', 'tracking-wide');
+  });
+  scope.querySelectorAll('table tbody').forEach(tbody => {
+    tbody.classList.add('text-sm', 'text-slate-700');
+  });
+}
+
+function readExportRequestFromButton(btn) {
+  const requestNo = btn.dataset.requestNo || '';
+  return {
+    requestNo,
+    receiptDate: btn.dataset.receiptDate || '',
+    shipperName: btn.dataset.shipperName || '',
+    shipperContact: btn.dataset.shipperContact || '',
+    shipperPhone: btn.dataset.shipperPhone || '',
+    shipperEmail: btn.dataset.shipperEmail || '',
+    consigneeName: btn.dataset.consigneeName || '',
+    consigneeCountry: btn.dataset.consigneeCountry || '',
+    consigneeAddress: btn.dataset.consigneeAddress || '',
+    consigneePhone: btn.dataset.consigneePhone || '',
+    origin: btn.dataset.origin || '',
+    destination: btn.dataset.destination || '',
+    transportMode: btn.dataset.transportMode || '',
+    transportType: btn.dataset.transportType || '',
+    tradeTerm: btn.dataset.tradeTerm || '',
+    itemCategory: btn.dataset.itemCategory || '',
+    bondedWarehouse: btn.dataset.bondedWarehouse || '',
+    exportDeclNo: btn.dataset.exportDeclNo || '',
+    containerSpec: btn.dataset.containerSpec || '',
+    blType: btn.dataset.blType || '',
+    mblNo: btn.dataset.mblNo || btn.dataset.masterBlNo || '',
+    hblNo: btn.dataset.hblNo || btn.dataset.houseBlNo || '',
+    requestNote: btn.dataset.requestNote || '',
+    requestFile: btn.dataset.requestFile || '',
+    invoiceFile: btn.dataset.invoiceFile || '',
+    packingListFile: btn.dataset.packingListFile || '',
+    receiptStatus: getExportStatusOverride(requestNo) || btn.dataset.receiptStatus || '',
+    rejectReason: btn.dataset.rejectReason || ''
+  };
+}
+
+function handleExportRequestListClick(event) {
+  const root = getExportRequestDetailBody();
+  if (!root) return;
+
+  const detailBtn = event.target && event.target.closest ? event.target.closest('.export-request-detail-btn') : null;
+  if (detailBtn && root.contains(detailBtn)) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+
+    setSelectedExportRequestSafely(readExportRequestFromButton(detailBtn));
+    if (typeof window.renderExportRequestDetailPage === 'function') {
+      window.renderExportRequestDetailPage();
+    } else if (typeof openDetail === 'function') {
+      openDetail(EXPORT_REQUEST_GROUP_KEY, 'TACS-FW-002');
+    }
+    return;
+  }
+
+  const rejectBtn = event.target && event.target.closest ? event.target.closest('.export-request-reject-reason-btn') : null;
+  if (rejectBtn && root.contains(rejectBtn)) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+    openRejectReasonViewModal(rejectBtn.dataset.requestNo, rejectBtn.dataset.shipperName, rejectBtn.dataset.rejectReason);
+  }
+}
+
+function bindRequestListActions(groupKey, itemId) {
+  if (!isExportRequestListPage(groupKey, itemId)) return;
+
+  const root = getExportRequestDetailBody();
+  normalizeExportRequestListLikeImport(root);
+
+  if (root && root.dataset.exportRequestListCaptureBound !== 'true') {
+    root.dataset.exportRequestListCaptureBound = 'true';
+    root.addEventListener('click', handleExportRequestListClick, true);
+  }
+}
+
+window.__transportExportBindRequestListActions = bindRequestListActions;
+window.bindRequestListActions = bindRequestListActions;
+
+function buildExportRequestFallbackListPanel() {
+  return `
+    <div class="section-card">
+      <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+        <h4 class="text-sm font-bold text-slate-900">운송의뢰</h4>
+        <p class="text-xs text-slate-500 mt-1">수출 운송의뢰 접수 상태를 확인합니다.</p>
+      </div>
+      <div class="p-6">
+        <div class="overflow-hidden border border-slate-200">
+          <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wide">
+              <tr>
+                <th class="px-4 py-3 text-left">의뢰번호</th>
+                <th class="px-4 py-3 text-left">화주명</th>
+                <th class="px-4 py-3 text-left">도착항</th>
+                <th class="px-4 py-3 text-left">접수상태</th>
+                <th class="px-4 py-3 text-left">등록일시</th>
+                <th class="px-4 py-3 text-left">관리</th>
+              </tr>
+            </thead>
+            <tbody class="text-sm text-slate-700">
+              <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-slate-500">조회된 수출 운송의뢰가 없습니다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderExportRequestListDirect(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+  }
+
+  function renderWithFinalModule() {
+    if (typeof window.renderExportRequestPage === 'function') {
+      window.__TACS_EXPORT_REQUEST_LEGACY_BLOCKED = true;
+      window.renderExportRequestPage();
+      return true;
+    }
+    return false;
+  }
+
+  if (renderWithFinalModule()) return false;
+
+  window.__TACS_EXPORT_PENDING_REQUEST_LIST = true;
+  const tryLater = function () {
+    if (!window.__TACS_EXPORT_PENDING_REQUEST_LIST) return;
+    if (renderWithFinalModule()) window.__TACS_EXPORT_PENDING_REQUEST_LIST = false;
+  };
+
+  document.addEventListener('tacs:export-split-ready', tryLater, { once: true });
+  [0, 30, 80, 160, 320, 700].forEach(function (delay) { setTimeout(tryLater, delay); });
+  return false;
+}
+
+
+window.__transportExportRenderRequestListDirect = renderExportRequestListDirect;
+
+(function installExportRequestListOnlyRouter() {
+  if (window.__exportRequestListOnlyRouterInstalled === true) return;
+  window.__exportRequestListOnlyRouterInstalled = true;
+
+  function isExportRequestTrigger(target) {
+    if (!target || !target.closest) return false;
+    const trigger = target.closest('a, button, [role="button"], [data-item-id], [data-item], [data-page], [data-id], [data-menu-id], [data-menu-url], .menu-item, .nav-item, .sidebar-item');
+    if (!trigger) return false;
+
+    const attrs = [
+      trigger.dataset ? trigger.dataset.group : '',
+      trigger.dataset ? trigger.dataset.itemId : '',
+      trigger.dataset ? trigger.dataset.item : '',
+      trigger.dataset ? trigger.dataset.page : '',
+      trigger.dataset ? trigger.dataset.id : '',
+      trigger.dataset ? trigger.dataset.menuId : '',
+      trigger.dataset ? trigger.dataset.menuUrl : '',
+      trigger.getAttribute('href') || '',
+      trigger.getAttribute('onclick') || ''
+    ].join(' ');
+    const text = (trigger.textContent || '').replace(/\s+/g, '');
+    const inExportGroup = attrs.indexOf(EXPORT_REQUEST_GROUP_KEY) > -1 || !!trigger.closest('[data-group="export"]');
+    const hasRequestId = attrs.indexOf(EXPORT_REQUEST_ITEM_ID) > -1;
+    const isExportUrl = attrs.indexOf('/transport/export.do') > -1;
+    const isRequestText = text.indexOf('운송의뢰') > -1;
+
+    return hasRequestId || (inExportGroup && isRequestText) || (isExportUrl && isRequestText);
+  }
+
+  function installOpenDetailPatch() {
+    const fn = window.openDetail || (typeof openDetail === 'function' ? openDetail : null);
+    if (typeof fn !== 'function' || fn.__exportRequestListOnlyPatched === true) return;
+
+    const original = fn;
+    const patched = function(groupKey, itemId) {
+      if (isExportRequestListPage(groupKey, itemId)) {
+        return renderExportRequestListDirect();
+      }
+      return original.apply(this, arguments);
+    };
+    patched.__exportRequestListOnlyPatched = true;
+    patched.__originalOpenDetail = original;
+    window.openDetail = patched;
+    try { openDetail = patched; } catch (e) {}
+  }
+
+  document.addEventListener('click', function(event) {
+    if (isExportRequestTrigger(event.target)) {
+      renderExportRequestListDirect(event);
+    }
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function() {
+    installOpenDetailPatch();
+
+    const params = new URLSearchParams(window.location.search || '');
+    const page = params.get('page');
+    const tab = params.get('tab');
+    const isExportPath = window.location.pathname.indexOf('/transport/export.do') > -1;
+    const shouldRenderRequest = isExportPath && (
+      page === EXPORT_REQUEST_ITEM_ID ||
+      tab === 'request' ||
+      tab === 'req' ||
+      (!page && !tab)
+    );
+
+    if (shouldRenderRequest) {
+      setTimeout(function() { renderExportRequestListDirect(); }, 0);
+    }
+  });
+
+  installOpenDetailPatch();
+  [0, 50, 150, 400, 900, 1500].forEach(delay => setTimeout(installOpenDetailPatch, delay));
+})();
+
+function openRejectReasonViewModal(requestNo, shipperName, reason) {
+  const modal = document.getElementById('rejectReasonViewModal');
+  const requestInput = document.getElementById('rejectReasonRequestNo');
+  const shipperInput = document.getElementById('rejectReasonShipper');
+  const reasonText = document.getElementById('rejectReasonText');
+  if (!modal) return;
+  if (requestInput) requestInput.value = requestNo || '';
+  if (shipperInput) shipperInput.value = shipperName || '';
+  if (reasonText) reasonText.value = reason || '반려 사유가 등록되어 있습니다.';
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeRejectReasonViewModal() {
+  const modal = document.getElementById('rejectReasonViewModal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+document.addEventListener('click', function(e) {
+  if (e.target && (e.target.id === 'rejectReasonViewClose' || e.target.id === 'rejectReasonViewCancel')) {
+    closeRejectReasonViewModal();
+  }
+  if (e.target && e.target.id === 'rejectReasonViewModal') {
+    closeRejectReasonViewModal();
+  }
+});
+
+function resolveActionButtonLabel(item, fallbackLabel) {
+  const title = item?.title || '';
+  const exactMap = {
+    '선적배차처리': '처리',
+    '화물 검수 체크리스트': '처리',
+    '보세구역 반입 처리': '처리',
+    '선적지시서 작성 및 제출': '처리',
+    '적하목록 작성 및 제출': '처리',
+    '도착통지서 발송': '처리',
+    '적하목록 작성 및 제출': '처리',
+    'B/L 정정 신청': '처리',
+    '보세구역 입고관리': '처리',
+    '통관용 서류 전달': '처리',
+    'Free Time 및 추가비용 관리': '처리',
+    '선적 서류 보완요청': '보완'
+  };
+  return exactMap[title] || fallbackLabel;
+}
+
+(function installTacsExportRequestSingleRenderer() {
+  'use strict';
+
+  var INSTALL_KEY = '__TACS_EXPORT_REQUEST_SINGLE_RENDERER_20260601_1600__';
+  if (window[INSTALL_KEY]) return;
+  window[INSTALL_KEY] = true;
+  window.__TACS_EXPORT_REQUEST_LEGACY_BLOCKED = true;
+  window.__TACS_EXPORT_SINGLE_REQUEST_SCREEN = true;
+
+  var GROUP_KEY = 'export';
+  var ITEM_ID = 'TACS-FW-001';
+  var DETAIL_ITEM_ID = 'TACS-FW-002';
+  var renderLock = false;
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function pick(row, keys) {
+    if (!row) return '';
+    for (var i = 0; i < keys.length; i += 1) {
+      var key = keys[i];
+      if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key];
+    }
+    return '';
+  }
+
+  function labelStatus(code, fallback) {
+    var value = String(code || fallback || '');
+    var map = {
+      TRC_WAIT: '접수대기',
+      TRC_DONE: '접수완료',
+      TRC_REJECT: '접수반려',
+      TRC_END: '완료대기',
+      TRC_COMPLETE: '최종완료',
+      REQUESTED: '접수대기',
+      ACCEPTED: '접수완료',
+      REJECTED: '접수반려',
+      WAIT: '입고대기',
+      SENT: '입고요청완료',
+      REQ_SENT: '보완제출완료',
+      REQ_FIX: '보완요청',
+      IN_DONE: '입고완료',
+      REJECT: '반려',
+      ISSUED: '발급완료',
+      DELIVERED: '전달완료',
+      READY: '발급대기'
+    };
+    return map[value] || fallback || value || '-';
+  }
+
+  function normalizeRow(row) {
+    var requestNo = pick(row, ['requestNo', 'trcNo', 'TRC_NO', 'trc_no']);
+    var ownerNm = pick(row, ['ownerNm', 'shipperName', 'owner', 'owrNm']);
+    var buyerNm = pick(row, ['buyerNm', 'consigneeName', 'traderNm', 'trcTrdrNm']);
+    var mblNo = pick(row, ['mblNo', 'masterBlNo', 'masterBl', 'biMblNo']);
+    var hblNo = pick(row, ['hblNo', 'houseBlNo', 'houseBl', 'biHblNo']);
+    var blNo = pick(row, ['blNo', 'BL_NO']) || mblNo || hblNo;
+    var statusCd = pick(row, ['statusCd', 'receiptStatusCd', 'requestStatusCd', 'trcStatusCd']);
+    var statusNm = labelStatus(statusCd, pick(row, ['requestDisplayStatusNm', 'statusNm', 'receiptStatusNm', 'receiptStatus']));
+    var whCd = pick(row, ['warehouseInStatusCd', 'warehouseReplyStatusCd', 'inboundStatusCd']);
+    var whNm = labelStatus(whCd, pick(row, ['warehouseInStatusNm', 'warehouseReplyStatusNm', 'inboundStatusNm']));
+    var blCd = pick(row, ['blStatusCd', 'blIssueStatusCd']);
+    var blIssued = Boolean(mblNo || hblNo || blNo) || /ISSU|DELIVER|발급|전달/.test(String(blCd || ''));
+
+    return Object.assign({}, row, {
+      _requestNo: requestNo,
+      _ownerNm: ownerNm || '-',
+      _buyerNm: buyerNm || '-',
+      _mblNo: mblNo || '',
+      _hblNo: hblNo || '',
+      _blNo: blNo || '',
+      _arrivalPort: pick(row, ['arvlPortNm', 'destination', 'arrivalPortNm', 'destPortNm', 'arvlPortCd']) || '-',
+      _statusCd: statusCd,
+      _statusNm: statusNm || '-',
+      _warehouseCd: whCd,
+      _warehouseNm: whNm,
+      _blStatusCd: blCd,
+      _blIssued: blIssued,
+      _requestDt: pick(row, ['requestDt', 'receiptDate', 'rqstDt', 'registDt', 'doReceiveDt']) || '-',
+      _shipperContact: pick(row, ['ownerPicNm', 'shipperContact', 'ownerContact']),
+      _shipperPhone: pick(row, ['ownerTelno', 'shipperPhone', 'shipperContact']),
+      _shipperEmail: pick(row, ['ownerEmail', 'shipperEmail']),
+      _buyerCountry: pick(row, ['buyerCountryCd', 'consigneeCountry']),
+      _origin: pick(row, ['deptPortNm', 'origin', 'deptPortCd']),
+      _destination: pick(row, ['arvlPortNm', 'destination', 'arvlPortCd']),
+      _transportMode: pick(row, ['transportMeanNm', 'transportMode', 'transportMeanCd']),
+      _transportType: pick(row, ['transportTypeCd', 'transportType']),
+      _itemCategory: pick(row, ['itemCategory', 'goodsName', 'goodsNm']),
+      _bondedWarehouse: pick(row, ['warehouseZoneNm', 'bondedWarehouse', 'bondedZoneNo']),
+      _exportDeclNo: pick(row, ['exportDeclNo', 'declNo', 'reportNo']),
+      _requestNote: pick(row, ['requestNote', 'requestCn', 'requestContent']),
+      _invoiceFile: pick(row, ['invoiceFile', 'invoiceFileNm']),
+      _packingListFile: pick(row, ['packingListFile', 'packingListFileNm']),
+      _rejectReason: pick(row, ['rejectReason', 'rejectMemo', 'trcRjctRsn'])
+    });
+  }
+
+  function mergeRow(target, source) {
+    Object.keys(source).forEach(function (key) {
+      if ((target[key] === undefined || target[key] === null || target[key] === '' || target[key] === '-') && source[key]) {
+        target[key] = source[key];
+      }
+    });
+    if (!target._mblNo && source._mblNo) target._mblNo = source._mblNo;
+    if (!target._hblNo && source._hblNo) target._hblNo = source._hblNo;
+    if (!target._blNo && source._blNo) target._blNo = source._blNo;
+    if (!target._warehouseCd && source._warehouseCd) target._warehouseCd = source._warehouseCd;
+    if (!target._warehouseNm && source._warehouseNm) target._warehouseNm = source._warehouseNm;
+    if (!target._blIssued && source._blIssued) target._blIssued = true;
+  }
+
+  function getRows() {
+    var raw = window.TRANSPORT_EXPORT_REQUESTS || window.exportTransportRequests || window.exportRequestList || window.transportExportRequestList || [];
+    if (!Array.isArray(raw)) raw = [];
+    var byKey = Object.create(null);
+    var rows = [];
+    raw.forEach(function (row) {
+      var normalized = normalizeRow(row);
+      var key = normalized._requestNo || JSON.stringify(normalized);
+      if (!byKey[key]) {
+        byKey[key] = normalized;
+        rows.push(normalized);
+      } else {
+        mergeRow(byKey[key], normalized);
+      }
+    });
+    return rows;
+  }
+
+  function getRoot() {
+    return document.getElementById('detail-body') ||
+      document.getElementById('transport-detail-body') ||
+      document.querySelector('[data-transport-detail-body]') ||
+      document.querySelector('[data-main-content]') ||
+      document.querySelector('main') ||
+      document.body;
+  }
+
+  function ensureStyle() {
+    if (document.getElementById('tacs-export-request-single-style')) return;
+    var style = document.createElement('style');
+    style.id = 'tacs-export-request-single-style';
+    style.textContent = '' +
+      '.tacs-export-single-page{padding:24px 32px;background:#f4f7fb;min-height:calc(100vh - 80px);box-sizing:border-box;color:#0f172a;font-family:inherit;}' +
+      '.tacs-export-single-card{background:#fff;border:1px solid #cbd7e6;border-radius:0;box-shadow:none;}' +
+      '.tacs-export-single-head{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #cbd7e6;}' +
+      '.tacs-export-single-title{margin:0;font-size:14px;font-weight:900;color:#0f172a;}' +
+      '.tacs-export-single-count{font-size:12px;font-weight:800;color:#475569;background:#f1f5f9;border:1px solid #dbe5f1;padding:5px 10px;}' +
+      '.tacs-export-single-search{padding:24px;border-bottom:0;}' +
+      '.tacs-export-single-grid{display:grid;grid-template-columns:1.05fr 1.05fr 1fr 1fr 1fr 72px;gap:10px;align-items:end;}' +
+      '.tacs-export-single-field{display:block;min-width:0;}' +
+      '.tacs-export-single-label{display:block;margin:0 0 6px;font-size:12px;font-weight:900;color:#0f172a;}' +
+      '.tacs-export-single-input,.tacs-export-single-select{width:100%;height:40px;border:1px solid #c8d4e3;border-radius:0;background:#fff;padding:0 12px;font-size:13px;font-weight:700;color:#0f172a;outline:none;box-sizing:border-box;}' +
+      '.tacs-export-single-input::placeholder{color:#64748b;font-weight:700;}' +
+      '.tacs-export-single-input:focus,.tacs-export-single-select:focus{border-color:#334155;box-shadow:0 0 0 2px rgba(51,65,85,.08);}' +
+      '.tacs-export-single-search-btn{height:40px;width:72px;border:0;border-radius:0;background:#34435a;color:#fff;font-size:12px;font-weight:900;cursor:pointer;}' +
+      '.tacs-export-single-search-btn:hover{background:#111827;}' +
+      '.tacs-export-single-table-wrap{padding:0 24px 24px;}' +
+      '.tacs-export-single-table-box{border:1px solid #d7e1f0;background:#fff;overflow:hidden;}' +
+      '.tacs-export-single-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;}' +
+      '.tacs-export-single-table th{height:42px;background:#f8fafc;border-right:1px solid #e1e8f2;border-bottom:1px solid #d7e1f0;text-align:center;font-weight:900;color:#0f172a;}' +
+      '.tacs-export-single-table td{height:60px;border-right:1px solid #e1e8f2;border-bottom:1px solid #e1e8f2;text-align:center;font-weight:800;color:#0f172a;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+      '.tacs-export-single-table th:last-child,.tacs-export-single-table td:last-child{border-right:0;}' +
+      '.tacs-export-single-table tbody tr:last-child td{border-bottom:0;}' +
+      '.tacs-export-single-chip{display:inline-flex;align-items:center;justify-content:center;min-width:58px;height:26px;padding:0 8px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;box-sizing:border-box;}' +
+      '.tacs-export-single-chip.done{border-color:#bbf7d0;background:#f0fdf4;color:#15803d;}' +
+      '.tacs-export-single-chip.reject{border-color:#fecaca;background:#fef2f2;color:#b91c1c;}' +
+      '.tacs-export-single-chip.wait{border-color:#bfdbfe;background:#eff6ff;color:#1d4ed8;}' +
+      '.tacs-export-single-detail-btn{width:72px;height:40px;border:1px solid #94a3b8;background:#fff;color:#0f172a;font-size:12px;font-weight:900;cursor:pointer;}' +
+      '.tacs-export-single-detail-btn:hover{background:#34435a;color:#fff;border-color:#34435a;}' +
+      '.tacs-export-single-empty{height:90px!important;color:#64748b!important;font-weight:800!important;}' +
+      '@media (max-width:1280px){.tacs-export-single-grid{grid-template-columns:1fr 1fr 1fr}.tacs-export-single-search-btn{width:100%;}.tacs-export-single-table{min-width:1100px}.tacs-export-single-table-box{overflow:auto}}' +
+      '@media (max-width:768px){.tacs-export-single-page{padding:16px}.tacs-export-single-grid{grid-template-columns:1fr}.tacs-export-single-head{height:auto;padding:16px}.tacs-export-single-search{padding:16px}.tacs-export-single-table-wrap{padding:0 16px 16px}}';
+    document.head.appendChild(style);
+  }
+
+  function chip(text) {
+    var cls = 'tacs-export-single-chip';
+    var s = String(text || '');
+    if (/반려|REJECT/.test(s)) cls += ' reject';
+    else if (/완료|DONE|발급|전달/.test(s)) cls += ' done';
+    else if (/대기|WAIT|미발급/.test(s)) cls += ' wait';
+    return '<span class="' + cls + '">' + esc(text || '-') + '</span>';
+  }
+
+  function option(value, text) {
+    return '<option value="' + esc(value) + '">' + esc(text) + '</option>';
+  }
+
+  function pageHtml(count) {
+    return '' +
+      '<div class="tacs-export-single-page" data-exp-request-page data-exp-single-current="true">' +
+      '  <section class="tacs-export-single-card">' +
+      '    <div class="tacs-export-single-head">' +
+      '      <h2 class="tacs-export-single-title">운송의뢰</h2>' +
+      '      <span class="tacs-export-single-count">총 ' + esc(count) + '건</span>' +
+      '    </div>' +
+      '    <div class="tacs-export-single-search">' +
+      '      <div class="tacs-export-single-grid">' +
+      '        <label class="tacs-export-single-field"><span class="tacs-export-single-label">의뢰번호</span><input type="text" class="tacs-export-single-input" data-exp-filter-q placeholder="EXP 의뢰번호 검색"></label>' +
+      '        <label class="tacs-export-single-field"><span class="tacs-export-single-label">MASTER B/L</span><input type="text" class="tacs-export-single-input" data-exp-filter-bl placeholder="Master B/L 번호 검색"></label>' +
+      '        <label class="tacs-export-single-field"><span class="tacs-export-single-label">접수상태</span><select class="tacs-export-single-select" data-exp-filter-status>' + option('', '전체') + option('TRC_WAIT', '접수대기') + option('TRC_DONE', '접수완료') + option('TRC_REJECT', '접수반려') + '</select></label>' +
+      '        <label class="tacs-export-single-field"><span class="tacs-export-single-label">보세/선적상태</span><select class="tacs-export-single-select" data-exp-filter-wh>' + option('', '전체') + option('WAIT', '입고대기') + option('SENT', '입고요청완료') + option('REQ_SENT', '보완제출완료') + option('IN_DONE', '입고완료') + option('REJECT', '반려') + '</select></label>' +
+      '        <label class="tacs-export-single-field"><span class="tacs-export-single-label">B/L 발급</span><select class="tacs-export-single-select" data-exp-filter-bl-status>' + option('', '전체') + option('NOT_ISSUED', '미발급') + option('ISSUED', '발급완료') + '</select></label>' +
+      '        <button type="button" class="tacs-export-single-search-btn" data-exp-search>조회</button>' +
+      '      </div>' +
+      '    </div>' +
+      '    <div class="tacs-export-single-table-wrap">' +
+      '      <div class="tacs-export-single-table-box">' +
+      '        <table class="tacs-export-single-table">' +
+      '          <colgroup><col style="width:17%"><col style="width:11%"><col style="width:12%"><col style="width:18%"><col style="width:9%"><col style="width:11%"><col style="width:14%"><col style="width:8%"></colgroup>' +
+      '          <thead><tr><th>의뢰번호</th><th>화주명</th><th>바이어명</th><th>MASTER B/L</th><th>도착항</th><th>진행상태</th><th>등록일시</th><th>처리</th></tr></thead>' +
+      '          <tbody data-exp-table-body></tbody>' +
+      '        </table>' +
+      '      </div>' +
+      '    </div>' +
+      '  </section>' +
+      '</div>';
+  }
+
+  function readFilters(root) {
+    return {
+      q: ((root.querySelector('[data-exp-filter-q]') || {}).value || '').trim().toLowerCase(),
+      bl: ((root.querySelector('[data-exp-filter-bl]') || {}).value || '').trim().toLowerCase(),
+      status: ((root.querySelector('[data-exp-filter-status]') || {}).value || '').trim(),
+      wh: ((root.querySelector('[data-exp-filter-wh]') || {}).value || '').trim(),
+      blStatus: ((root.querySelector('[data-exp-filter-bl-status]') || {}).value || '').trim()
+    };
+  }
+
+  function filterRows(rows, filters) {
+    return rows.filter(function (row) {
+      if (filters.q) {
+        var text = [row._requestNo, row._ownerNm, row._buyerNm].join(' ').toLowerCase();
+        if (text.indexOf(filters.q) < 0) return false;
+      }
+      if (filters.bl) {
+        var blText = [row._mblNo, row._hblNo, row._blNo].join(' ').toLowerCase();
+        if (blText.indexOf(filters.bl) < 0) return false;
+      }
+      if (filters.status && [row._statusCd, row._statusNm].join(' ').indexOf(filters.status) < 0) return false;
+      if (filters.wh && [row._warehouseCd, row._warehouseNm].join(' ').indexOf(filters.wh) < 0) return false;
+      if (filters.blStatus === 'ISSUED' && !row._blIssued) return false;
+      if (filters.blStatus === 'NOT_ISSUED' && row._blIssued) return false;
+      return true;
+    });
+  }
+
+  function dataAttrs(row) {
+    return [
+      ['requestNo', row._requestNo],
+      ['receiptDate', row._requestDt],
+      ['shipperName', row._ownerNm],
+      ['shipperContact', row._shipperContact],
+      ['shipperPhone', row._shipperPhone],
+      ['shipperEmail', row._shipperEmail],
+      ['consigneeName', row._buyerNm],
+      ['consigneeCountry', row._buyerCountry],
+      ['origin', row._origin],
+      ['destination', row._destination],
+      ['transportMode', row._transportMode],
+      ['transportType', row._transportType],
+      ['itemCategory', row._itemCategory],
+      ['bondedWarehouse', row._bondedWarehouse],
+      ['exportDeclNo', row._exportDeclNo],
+      ['mblNo', row._mblNo],
+      ['hblNo', row._hblNo],
+      ['requestNote', row._requestNote],
+      ['invoiceFile', row._invoiceFile],
+      ['packingListFile', row._packingListFile],
+      ['receiptStatus', row._statusNm],
+      ['rejectReason', row._rejectReason]
+    ].map(function (pair) {
+      return ' data-' + pair[0].replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase(); }) + '="' + esc(pair[1]) + '"';
+    }).join('');
+  }
+
+  function renderRows(root, rows) {
+    var body = root.querySelector('[data-exp-table-body]');
+    if (!body) return;
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="8" class="tacs-export-single-empty">조회된 수출 운송의뢰가 없습니다.</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(function (row, index) {
+      var bl = row._mblNo || row._blNo || '-';
+      return '' +
+        '<tr>' +
+        '<td title="' + esc(row._requestNo) + '">' + esc(row._requestNo || '-') + '</td>' +
+        '<td title="' + esc(row._ownerNm) + '">' + esc(row._ownerNm || '-') + '</td>' +
+        '<td title="' + esc(row._buyerNm) + '">' + esc(row._buyerNm || '-') + '</td>' +
+        '<td title="' + esc(bl) + '">' + esc(bl) + '</td>' +
+        '<td title="' + esc(row._arrivalPort) + '">' + esc(row._arrivalPort || '-') + '</td>' +
+        '<td>' + chip(row._statusNm) + '</td>' +
+        '<td title="' + esc(row._requestDt) + '">' + esc(row._requestDt || '-') + '</td>' +
+        '<td><button type="button" class="export-request-detail-btn tacs-export-single-detail-btn" data-exp-index="' + index + '"' + dataAttrs(row) + '>상세</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function setSelected(row) {
+    var detail = {
+      requestNo: row._requestNo,
+      receiptDate: row._requestDt,
+      shipperName: row._ownerNm,
+      shipperContact: row._shipperContact,
+      shipperPhone: row._shipperPhone,
+      shipperEmail: row._shipperEmail,
+      consigneeName: row._buyerNm,
+      consigneeCountry: row._buyerCountry,
+      origin: row._origin,
+      destination: row._destination,
+      transportMode: row._transportMode,
+      transportType: row._transportType,
+      itemCategory: row._itemCategory,
+      bondedWarehouse: row._bondedWarehouse,
+      exportDeclNo: row._exportDeclNo,
+      mblNo: row._mblNo,
+      hblNo: row._hblNo,
+      requestNote: row._requestNote,
+      invoiceFile: row._invoiceFile,
+      packingListFile: row._packingListFile,
+      receiptStatus: row._statusNm,
+      rejectReason: row._rejectReason
+    };
+    window.selectedExportRequest = detail;
+    try { selectedExportRequest = detail; } catch (e) {}
+    window.__transportExportSelectedRequest = row;
+  }
+
+  function renderDetail(row) {
+    setSelected(row);
+    if (typeof window.renderExportRequestDetailPage === 'function') return window.renderExportRequestDetailPage(row);
+    var root = getRoot();
+    if (typeof window.__transportExportBuildRequestReviewPanel === 'function') {
+      root.innerHTML = '<div class="tacs-export-single-page"><button type="button" class="tacs-export-single-search-btn" style="width:96px;margin-bottom:12px" data-exp-back-list>목록</button>' + window.__transportExportBuildRequestReviewPanel() + '</div>';
+      var back = root.querySelector('[data-exp-back-list]');
+      if (back) back.addEventListener('click', renderExportRequestPage);
+    }
+  }
+
+  function removeOtherRequestPages(root) {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-exp-request-page], .tacs-export-page'), function (el) {
+      if (root && root.contains(el)) return;
+      if (el.parentNode) el.parentNode.removeChild(el);
+    });
+  }
+
+  function renderExportRequestPage() {
+    if (renderLock) return false;
+    renderLock = true;
+    try {
+      ensureStyle();
+      var root = getRoot();
+      removeOtherRequestPages(root);
+      var rows = getRows();
+      root.innerHTML = pageHtml(rows.length);
+      var currentRows = rows.slice();
+      var apply = function () {
+        currentRows = filterRows(rows, readFilters(root));
+        renderRows(root, currentRows);
+      };
+      Array.prototype.forEach.call(root.querySelectorAll('[data-exp-filter-q],[data-exp-filter-bl],[data-exp-filter-status],[data-exp-filter-wh],[data-exp-filter-bl-status]'), function (field) {
+        field.addEventListener('change', apply);
+        field.addEventListener('keydown', function (event) { if (event.key === 'Enter') apply(); });
+      });
+      var searchBtn = root.querySelector('[data-exp-search]');
+      if (searchBtn) searchBtn.addEventListener('click', apply);
+      root.addEventListener('click', function (event) {
+        var btn = event.target && event.target.closest ? event.target.closest('[data-exp-index]') : null;
+        if (!btn || !root.contains(btn)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+        var row = currentRows[Number(btn.getAttribute('data-exp-index'))];
+        if (row) renderDetail(row);
+      }, true);
+      apply();
+      return false;
+    } finally {
+      setTimeout(function () { renderLock = false; }, 0);
+    }
+  }
+
+  function isRequestTarget(groupKey, itemId) {
+    var g = !groupKey || groupKey === GROUP_KEY || groupKey === 'EXPORT';
+    return g && itemId === ITEM_ID;
+  }
+
+  function patchMenuData() {
+    window.renderExportRequestPage = renderExportRequestPage;
+    window.renderExportRequestListPage = renderExportRequestPage;
+    window.__transportExportRenderRequestPageImportStyle = renderExportRequestPage;
+    window.__transportExportRenderRequestListDirect = function (event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+      }
+      return renderExportRequestPage();
+    };
+
+    var menu = Array.isArray(window.menuData) ? window.menuData : [];
+    menu.forEach(function (group) {
+      if (!group || !Array.isArray(group.items)) return;
+      group.items.forEach(function (item) {
+        if (!item) return;
+        if (item.id === ITEM_ID || item.page === ITEM_ID || item.key === 'export-request' || item.title === '운송의뢰') {
+          item.content = renderExportRequestPage;
+          item.render = renderExportRequestPage;
+          item.url = (window.contextPath || '') + '/transport/export.do?tab=request';
+        }
+      });
+    });
+  }
+
+  function patchOpenDetail() {
+    var fn = window.openDetail || (typeof openDetail === 'function' ? openDetail : null);
+    if (typeof fn !== 'function') return;
+    if (fn.__tacsExportSinglePatched) return;
+    var original = fn;
+    var patched = function (groupKey, itemId) {
+      if (isRequestTarget(groupKey, itemId)) return renderExportRequestPage();
+      return original.apply(this, arguments);
+    };
+    patched.__tacsExportSinglePatched = true;
+    patched.__originalOpenDetail = original;
+    window.openDetail = patched;
+    try { openDetail = patched; } catch (e) {}
+  }
+
+  function isClickForRequest(target) {
+    if (!target || !target.closest) return false;
+    var trigger = target.closest('a,button,[role="button"],[data-item-id],[data-page],[data-url],[data-menu-url],.menu-item,.sub-item,.sidebar-item');
+    if (!trigger) return false;
+    var attrs = [
+      trigger.getAttribute('data-group') || '',
+      trigger.getAttribute('data-item-id') || '',
+      trigger.getAttribute('data-page') || '',
+      trigger.getAttribute('data-url') || '',
+      trigger.getAttribute('data-menu-url') || '',
+      trigger.getAttribute('href') || '',
+      trigger.getAttribute('onclick') || ''
+    ].join(' ');
+    var text = (trigger.textContent || '').replace(/\s+/g, '');
+    return attrs.indexOf(ITEM_ID) > -1 || attrs.indexOf('/transport/export.do?tab=request') > -1 || (attrs.indexOf(GROUP_KEY) > -1 && text.indexOf('운송의뢰') > -1);
+  }
+
+  document.addEventListener('click', function (event) {
+    if (!isClickForRequest(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+    if (window.history && window.history.replaceState) {
+      try { window.history.replaceState(null, '', (window.contextPath || '') + '/transport/export.do?tab=request'); } catch (e) {}
+    }
+    renderExportRequestPage();
+  }, true);
+
+  function bootIfRequestPage() {
+    patchMenuData();
+    patchOpenDetail();
+    var params = new URLSearchParams(window.location.search || '');
+    var path = window.location.pathname || '';
+    var page = params.get('page');
+    var tab = params.get('tab');
+    if (path.indexOf('/transport/export.do') > -1 && (page === ITEM_ID || tab === 'request' || tab === 'req' || (!page && !tab))) {
+      renderExportRequestPage();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () { setTimeout(bootIfRequestPage, 0); });
+  document.addEventListener('tacs:export-split-ready', function () { setTimeout(bootIfRequestPage, 0); });
+
+  patchMenuData();
+  patchOpenDetail();
+  [0, 30, 100, 250, 600, 1200].forEach(function (delay) {
+    setTimeout(function () {
+      patchMenuData();
+      patchOpenDetail();
+      bootIfRequestPage();
+    }, delay);
+  });
+})();
+

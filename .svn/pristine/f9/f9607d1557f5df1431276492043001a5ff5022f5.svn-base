@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.tacs.transport.importp.mapper.ImportTransportMapper">
+  <!-- 수입운송 도착추적 탭에서 도착알림과 운송상태를 관리한다. -->
+  <select id="retriveImpArrivalTrackingList" resultType="kr.or.tacs.vo.transport.TransportRequestVO">
+        SELECT
+        IAN.IAN_NO AS reqNo
+        , T.TRC_NO AS trcNo
+        , T.TRC_OWR_ID AS ownerId
+        , NVL(O.OWR_NM, T.TRC_OWR_ID) AS ownerNm
+        , NVL(O.OWR_NM, T.TRC_OWR_ID) AS owrNm
+
+        , NVL(M.ICM_MBL_NO, BI.BI_MBL_NO) AS mblNo
+        , NVL(M.ICM_HBL_NO, BI.BI_HBL_NO) AS hblNo
+        , NVL(M.ICM_HBL_NO, BI.BI_HBL_NO) AS blNo
+        , (
+        SELECT MAX(W.WIR_CARGO_MGMT_NO)
+        FROM WH_IN_RPT W
+        WHERE W.WIR_IO_SE_CD = 'IMPORT'
+        AND W.WIR_GG_NO = T.TRC_TFG_NO
+        ) AS cargoMgmtNo
+
+        , NULL AS carrierNm
+
+        , T.TRC_DEPT_PORT_CD AS deptPortCd
+        , CASE T.TRC_DEPT_PORT_CD
+        WHEN 'OSAKA' THEN 'OSAKA'
+        WHEN 'BUSAN' THEN 'BUSAN'
+        WHEN 'KRPUS' THEN 'BUSAN'
+        ELSE T.TRC_DEPT_PORT_CD
+        END AS deptPortNm
+
+        , T.TRC_ARVL_PORT_CD AS arvlPortCd
+        , CASE T.TRC_ARVL_PORT_CD
+        WHEN 'BUSAN' THEN 'BUSAN'
+        WHEN 'KRPUS' THEN 'BUSAN'
+        WHEN 'OSAKA' THEN 'OSAKA'
+        ELSE T.TRC_ARVL_PORT_CD
+        END AS arvlPortNm
+
+        , T.TRC_NO AS importRequestNo
+        , IAN.IAN_NO AS arrivalNoticeNo
+        , NULL AS customsRequestNo
+        , TO_CHAR(NVL(IAN.IAN_ARRV_DT, NVL(IAN.IAN_REGIST_DT, NVL(T.TRC_RCEPT_DT, T.TRC_RQST_DT)) + 1), 'YYYY-MM-DD') AS eta
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS arrivalScheduledDate
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS arrvDt
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS arrvSchdYmd
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS ianArrvDt
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS ianArrvSchdYmd
+        , NVL(IAN.IAN_CURR_LOC, '-') AS currentLoc
+
+        , NVL(IAN.IAN_ARRV_STATUS_CD, 'TRC_ARR_PENDING') AS arrivalStatus
+        , CASE NVL(IAN.IAN_ARRV_STATUS_CD, 'TRC_ARR_PENDING')
+        WHEN 'TRC_ARR_ARRIVED' THEN 'ARRIVED'
+        WHEN 'ARRIVED' THEN 'ARRIVED'
+        WHEN 'TRC_ARR_IN_TRANSIT' THEN 'IN_TRANSIT'
+        WHEN 'IN_TRANSIT' THEN 'IN_TRANSIT'
+        WHEN 'SAILING' THEN 'SAILING'
+        WHEN 'TRC_ARR_DELAYED' THEN 'DELAYED'
+        WHEN 'DELAYED' THEN 'DELAYED'
+        WHEN 'TRC_ARR_PENDING' THEN 'PENDING'
+        WHEN 'PENDING' THEN 'PENDING'
+        WHEN 'BEFORE_ARRIVAL' THEN 'PENDING'
+        ELSE NVL(IAN.IAN_ARRV_STATUS_CD, 'PENDING')
+        END AS arrivalStatusNm
+
+        , NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT') AS noticeStatus
+        , NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT') AS arrivalNoticeStatusCd
+        , NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT') AS sendStatusCd
+        , CASE NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT')
+        WHEN 'TRC_NTC_SENT' THEN 'SENT'
+        WHEN 'SENT' THEN 'SENT'
+        ELSE 'NOT_SENT'
+        END AS noticeStatusNm
+        , CASE NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT')
+        WHEN 'TRC_NTC_SENT' THEN 'SENT'
+        WHEN 'SENT' THEN 'SENT'
+        ELSE 'NOT_SENT'
+        END AS arrivalNoticeStatusNm
+        , IAN.IAN_SEND_DT AS noticeSendDt
+        , IAN.IAN_NO AS arrivalNoticeReqNo
+
+        , T.TRC_STATUS_CD AS statusCd
+        , CASE T.TRC_STATUS_CD
+        WHEN 'TRC_WAIT' THEN 'TRC_WAIT'
+        WHEN 'TRC_DONE' THEN 'TRC_DONE'
+        WHEN 'TRC_REJECT' THEN 'TRC_REJECT'
+        ELSE T.TRC_STATUS_CD
+        END AS statusNm
+
+        FROM TRAN_RCP T
+
+        LEFT JOIN BL_ISSU BI
+        ON BI.BI_TRE_ID = T.TRC_NO
+
+        LEFT JOIN (
+        SELECT *
+        FROM (
+        SELECT
+        M0.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY M0.ICM_GG_NO
+        ORDER BY M0.ICM_SBMSN_DT DESC NULLS LAST, M0.ICM_NO DESC
+        ) AS RN
+        FROM IMP_CARGO_MANIFEST M0
+        )
+        WHERE RN = 1
+        ) M
+        ON M.ICM_GG_NO = T.TRC_TFG_NO
+
+        LEFT JOIN (
+        SELECT *
+        FROM (
+        SELECT
+        IAN0.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY IAN0.IAN_TRC_NO
+        ORDER BY
+        CASE WHEN IAN0.IAN_SEND_STTS_CD IN ('TRC_NTC_SENT', 'SENT') THEN 0 ELSE 1 END,
+        IAN0.IAN_SEND_DT DESC NULLS LAST,
+        IAN0.IAN_REGIST_DT DESC NULLS LAST,
+        IAN0.IAN_NO DESC
+        ) AS RN
+        FROM IMP_ARRV_NTC IAN0
+        )
+        WHERE RN = 1
+        ) IAN
+        ON IAN.IAN_TRC_NO = T.TRC_NO
+
+        LEFT JOIN OWNER O
+        ON O.OWR_ID = T.TRC_OWR_ID
+
+        WHERE T.TRC_SE_CD = 'IMPORT'
+        <if test="tmId != null and tmId != ''">
+            AND T.TRC_TM_NO = (
+            SELECT TM.TM_NO
+            FROM TRANSPORT_MANAGER TM
+            WHERE TM.TM_ID = #{tmId}
+            )
+        </if>
+        AND T.TRC_STATUS_CD IN ('TRC_DONE', 'TRC_END', 'TRC_COMPLETE')
+        ORDER BY T.TRC_RCEPT_DT DESC NULLS LAST, T.TRC_NO DESC
+    </select>
+  <select id="selectImpArrivalNoticeTargetNo" resultType="string">
+        
+        SELECT MAX(T.TRC_NO) KEEP (
+        DENSE_RANK FIRST ORDER BY
+        CASE
+        WHEN T.TRC_NO = #{reqNo} THEN 1
+        WHEN REGEXP_REPLACE(
+        T.TRC_NO,
+        '^TRC-(IMP)-([0-9]{4})([0-9]{2})([0-9]{2})-([0-9]+)$',
+        '\1-\2\3\4-\5'
+        ) = #{reqNo} THEN 2
+        ELSE 9
+        END
+        )
+        FROM TRAN_RCP T
+        LEFT JOIN (
+        SELECT *
+        FROM (
+        SELECT
+        IAN0.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY IAN0.IAN_TRC_NO
+        ORDER BY
+        CASE WHEN IAN0.IAN_SEND_STTS_CD IN ('TRC_NTC_SENT', 'SENT') THEN 0 ELSE 1 END,
+        IAN0.IAN_SEND_DT DESC NULLS LAST,
+        IAN0.IAN_REGIST_DT DESC NULLS LAST,
+        IAN0.IAN_NO DESC
+        ) AS RN
+        FROM IMP_ARRV_NTC IAN0
+        )
+        WHERE RN = 1
+        ) IAN
+        ON IAN.IAN_TRC_NO = T.TRC_NO
+        LEFT JOIN WH_IN_RPT W
+        ON W.WIR_IO_SE_CD = 'IMPORT'
+        AND W.WIR_GG_NO = T.TRC_TFG_NO
+        LEFT JOIN IMP_CARGO_MANIFEST M
+        ON M.ICM_GG_NO = T.TRC_TFG_NO
+        LEFT JOIN BL_ISSU BI
+        ON BI.BI_TRE_ID = T.TRC_NO
+        WHERE T.TRC_SE_CD = 'IMPORT'
+        AND (
+        T.TRC_NO = #{reqNo}
+        OR IAN.IAN_NO = #{reqNo}
+        OR IAN.IAN_TRC_NO = #{reqNo}
+        OR IAN.IAN_OWR_ID = #{reqNo}
+        OR W.WIR_NO = #{reqNo}
+        OR TO_CHAR(M.ICM_NO) = #{reqNo}
+        OR M.ICM_MBL_NO = #{reqNo}
+        OR M.ICM_HBL_NO = #{reqNo}
+        OR BI.BI_MBL_NO = #{reqNo}
+        OR BI.BI_HBL_NO = #{reqNo}
+        OR T.TRC_TFG_NO = TO_NUMBER(#{reqNo} DEFAULT NULL ON CONVERSION ERROR)
+        OR M.ICM_GG_NO = TO_NUMBER(#{reqNo} DEFAULT NULL ON CONVERSION ERROR)
+        OR REGEXP_REPLACE(
+        T.TRC_NO,
+        '^TRC-(IMP)-([0-9]{4})([0-9]{2})([0-9]{2})-([0-9]+)$',
+        '\1-\2\3\4-\5'
+        ) = #{reqNo}
+        )
+    </select>
+  <update id="updateImpArrivalNoticeSent">
+        
+        BEGIN
+        UPDATE IMP_ARRV_NTC IAN
+        SET IAN.IAN_SEND_STTS_CD = 'TRC_NTC_SENT'
+        , IAN.IAN_SEND_DT = NVL(IAN.IAN_SEND_DT, SYSDATE)
+        , IAN.IAN_CURR_LOC = NVL(IAN.IAN_CURR_LOC, (
+        SELECT MAX(COALESCE(T2.TRC_ARVL_PORT_CD, T2.TRC_PORT_CD, 'KRINC'))
+        FROM TRAN_RCP T2
+        LEFT JOIN WH_IN_RPT W2
+        ON W2.WIR_IO_SE_CD = 'IMPORT'
+        AND W2.WIR_GG_NO = T2.TRC_TFG_NO
+        LEFT JOIN BL_ISSU BI2
+        ON BI2.BI_TRE_ID = T2.TRC_NO
+        LEFT JOIN IMP_CARGO_MANIFEST M2
+        ON M2.ICM_GG_NO = T2.TRC_TFG_NO
+        WHERE T2.TRC_SE_CD = 'IMPORT'
+        AND T2.TRC_STATUS_CD = 'TRC_DONE'
+        AND (
+        T2.TRC_NO = #{reqNo}
+        OR W2.WIR_NO = #{reqNo}
+        OR BI2.BI_MBL_NO = #{reqNo}
+        OR BI2.BI_HBL_NO = #{reqNo}
+        OR M2.ICM_MBL_NO = #{reqNo}
+        OR M2.ICM_HBL_NO = #{reqNo}
+        OR TO_CHAR(M2.ICM_NO) = #{reqNo}
+        OR T2.TRC_TFG_NO = TO_NUMBER(#{reqNo} DEFAULT NULL ON CONVERSION ERROR)
+        OR M2.ICM_GG_NO = TO_NUMBER(#{reqNo} DEFAULT NULL ON CONVERSION ERROR)
+        OR REGEXP_REPLACE(
+        T2.TRC_NO,
+        '^TRC-(IMP)-([0-9]{4})([0-9]{2})([0-9]{2})-([0-9]+)$',
+        '\1-\2\3\4-\5'
+        ) = #{reqNo}
+        )
+        ))
+        , IAN.IAN_ARRV_DT = NVL(IAN.IAN_ARRV_DT, TRUNC(SYSDATE) + 1)
+        , IAN.IAN_ARRV_STATUS_CD = NVL(IAN.IAN_ARRV_STATUS_CD, 'TRC_ARR_PENDING')
+        , IAN.IAN_OWR_ID = NVL(IAN.IAN_OWR_ID, (
+        SELECT MAX(T3.TRC_OWR_ID)
+        FROM TRAN_RCP T3
+        WHERE T3.TRC_NO = IAN.IAN_TRC_NO
+        ))
+        WHERE IAN.IAN_TRC_NO IN (
+        SELECT T.TRC_NO
+        FROM TRAN_RCP T
+        LEFT JOIN WH_IN_RPT W
+        ON W.WIR_IO_SE_CD = 'IMPORT'
+        AND W.WIR_GG_NO = T.TRC_TFG_NO
+        LEFT JOIN BL_ISSU BI
+        ON BI.BI_TRE_ID = T.TRC_NO
+        LEFT JOIN IMP_CARGO_MANIFEST M
+        ON M.ICM_GG_NO = T.TRC_TFG_NO
+        WHERE T.TRC_SE_CD = 'IMPORT'
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        AND (
+        T.TRC_NO = #{reqNo}
+        OR W.WIR_NO = #{reqNo}
+        OR BI.BI_MBL_NO = #{reqNo}
+        OR BI.BI_HBL_NO = #{reqNo}
+        OR M.ICM_MBL_NO = #{reqNo}
+        OR M.ICM_HBL_NO = #{reqNo}
+        OR TO_CHAR(M.ICM_NO) = #{reqNo}
+        OR T.TRC_TFG_NO = TO_NUMBER(#{reqNo} DEFAULT NULL ON CONVERSION ERROR)
+        OR M.ICM_GG_NO = TO_NUMBER(#{reqNo} DEFAULT NULL ON CONVERSION ERROR)
+        OR REGEXP_REPLACE(
+        T.TRC_NO,
+        '^TRC-(IMP)-([0-9]{4})([0-9]{2})([0-9]{2})-([0-9]+)$',
+        '\1-\2\3\4-\5'
+        ) = #{reqNo}
+        )
+        );
+
+        IF SQL%ROWCOUNT = 0 THEN
+        INSERT INTO IMP_ARRV_NTC (
+        IAN_NO,
+        IAN_TRC_NO,
+        IAN_OWR_ID,
+        IAN_REGIST_DT,
+        IAN_CURR_LOC,
+        IAN_ARRV_DT,
+        IAN_ARRV_STATUS_CD,
+        IAN_SEND_STTS_CD,
+        IAN_SEND_DT
+        )
+        SELECT
+        CASE
+        WHEN REGEXP_LIKE(T.TRC_NO, '^TRC-IMP-[0-9]{8}-[0-9]+$')
+        THEN 'IAN-' || REGEXP_REPLACE(T.TRC_NO, '^TRC-', '')
+        ELSE 'IAN-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' || LPAD(
+        NVL((
+        SELECT MAX(TO_NUMBER(REGEXP_SUBSTR(IAN2.IAN_NO, '[0-9]+$')))
+        FROM IMP_ARRV_NTC IAN2
+        WHERE REGEXP_LIKE(IAN2.IAN_NO, '^IAN-[0-9]{8}-[0-9]+$')
+        ), 0) + 1,
+        4,
+        '0'
+        )
+        END,
+        T.TRC_NO,
+        T.TRC_OWR_ID,
+        SYSDATE,
+        COALESCE(T.TRC_ARVL_PORT_CD, T.TRC_PORT_CD, 'KRINC'),
+        TRUNC(SYSDATE) + 1,
+        'TRC_ARR_PENDING',
+        'TRC_NTC_SENT',
+        SYSDATE
+        FROM TRAN_RCP T
+        LEFT JOIN WH_IN_RPT W
+        ON W.WIR_IO_SE_CD = 'IMPORT'
+        AND W.WIR_GG_NO = T.TRC_TFG_NO
+        LEFT JOIN BL_ISSU BI
+        ON BI.BI_TRE_ID = T.TRC_NO
+        LEFT JOIN IMP_CARGO_MANIFEST M
+        ON M.ICM_GG_NO = T.TRC_TFG_NO
+        WHERE T.TRC_SE_CD = 'IMPORT'
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        AND (
+        T.TRC_NO = #{reqNo}
+        OR W.WIR_NO = #{reqNo}
+        OR BI.BI_MBL_NO = #{reqNo}
+        OR BI.BI_HBL_NO = #{reqNo}
+        OR M.ICM_MBL_NO = #{reqNo}
+        OR M.ICM_HBL_NO = #{reqNo}
+        OR TO_CHAR(M.ICM_NO) = #{reqNo}
+        OR T.TRC_TFG_NO = TO_NUMBER(#{reqNo} DEFAULT NULL ON CONVERSION ERROR)
+        OR M.ICM_GG_NO = TO_NUMBER(#{reqNo} DEFAULT NULL ON CONVERSION ERROR)
+        OR REGEXP_REPLACE(
+        T.TRC_NO,
+        '^TRC-(IMP)-([0-9]{4})([0-9]{2})([0-9]{2})-([0-9]+)$',
+        '\1-\2\3\4-\5'
+        ) = #{reqNo}
+        )
+        AND NOT EXISTS (
+        SELECT 1
+        FROM IMP_ARRV_NTC IAN
+        WHERE IAN.IAN_TRC_NO = T.TRC_NO
+        );
+        END IF;
+        END;
+    </update>
+  <select id="selectImpArrivalNoticeNo" resultType="string">
+        
+        SELECT MAX(IAN.IAN_NO)
+        FROM IMP_ARRV_NTC IAN
+        WHERE IAN.IAN_NO = #{reqNo}
+        OR IAN.IAN_TRC_NO = #{reqNo}
+        OR EXISTS (
+        SELECT 1
+        FROM TRAN_RCP T
+        LEFT JOIN WH_IN_RPT W
+        ON W.WIR_IO_SE_CD = 'IMPORT'
+        AND W.WIR_GG_NO = T.TRC_TFG_NO
+        LEFT JOIN IMP_CARGO_MANIFEST M
+        ON M.ICM_GG_NO = T.TRC_TFG_NO
+        LEFT JOIN BL_ISSU BI
+        ON BI.BI_TRE_ID = T.TRC_NO
+        WHERE T.TRC_SE_CD = 'IMPORT'
+        AND (
+        T.TRC_NO = #{reqNo}
+        OR W.WIR_NO = #{reqNo}
+        OR TO_CHAR(M.ICM_NO) = #{reqNo}
+        OR M.ICM_MBL_NO = #{reqNo}
+        OR M.ICM_HBL_NO = #{reqNo}
+        OR BI.BI_MBL_NO = #{reqNo}
+        OR BI.BI_HBL_NO = #{reqNo}
+        OR T.TRC_TFG_NO = TO_NUMBER(#{reqNo} DEFAULT NULL ON CONVERSION ERROR)
+        OR M.ICM_GG_NO = TO_NUMBER(#{reqNo} DEFAULT NULL ON CONVERSION ERROR)
+        OR REGEXP_REPLACE(
+        T.TRC_NO,
+        '^TRC-(IMP)-([0-9]{4})([0-9]{2})([0-9]{2})-([0-9]+)$',
+        '\1-\2\3\4-\5'
+        ) = #{reqNo}
+        )
+        AND IAN.IAN_TRC_NO = T.TRC_NO
+        )
+    </select>
+</mapper>

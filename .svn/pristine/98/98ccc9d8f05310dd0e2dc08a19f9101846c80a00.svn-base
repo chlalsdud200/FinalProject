@@ -1,0 +1,486 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ include file="/WEB-INF/views/fieldofficer/common/taglibs.jsp" %>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="activeMenu" value="receipt" />
+<c:set var="activeSub" value="" />
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <%@ include file="/WEB-INF/views/fieldofficer/header/head.jsp" %>
+    <link rel="stylesheet" href="${ctx}/resources/css/fieldofficer/inspectionRequest.css">
+</head>
+<body>
+<div class="app" id="app">
+    <%@ include file="/WEB-INF/views/fieldofficer/header/sidebar.jsp" %>
+
+    <div class="main-wrap">
+        <%@ include file="/WEB-INF/views/fieldofficer/header/header.jsp" %>
+
+        <div class="content">
+            <div class="page active" id="pg-receipt">
+
+                <div class="breadcrumb">
+                    <span onclick="go('dash')">Home</span>
+                    <span class="sep">›</span>
+                    <span onclick="location.href='${ctx}/fieldofficer/inspectionRequest.do'">검역 요청 조회</span>
+                    <span class="sep">›</span>
+                    <span>검역 요청 상세</span>
+                </div>
+
+                <c:choose>
+                    <c:when test="${empty inspectionDetail}">
+                        <div class="sub-page" id="receipt-detail-view">
+                            <h2>
+                                <span class="material-symbols-outlined">error</span>
+                                검역 요청 상세
+                            </h2>
+
+                            <div class="alert-bar info">
+                                <span class="material-symbols-outlined" style="font-size:18px">info</span>
+                                조회된 검역 요청 상세 정보가 없습니다.
+                            </div>
+
+                            <div class="btn-row">
+                                <button class="btn btn-primary"
+                                        type="button"
+                                        onclick="location.href='${ctx}/fieldofficer/inspectionRequest.do'">
+                                    <span class="material-symbols-outlined" style="font-size:14px">arrow_back</span>
+                                    목록
+                                </button>
+                            </div>
+                        </div>
+                    </c:when>
+
+                    <c:otherwise>
+                        <div class="sub-page" id="receipt-detail-view">
+
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                                <h2 style="margin-bottom:0">
+                                    <span class="material-symbols-outlined">description</span>
+                                    검역 요청 상세
+                                </h2>
+                            </div>
+
+                            <div class="detail-summary">
+                                <div class="detail-summary-item">
+                                    <div class="label">검역요청번호</div>
+                                    <div class="value">${inspectionDetail.iirReqNo}</div>
+                                </div>
+
+                                <div class="detail-summary-item">
+                                    <div class="label">수입통관의뢰번호</div>
+                                    <div class="value">${inspectionDetail.iirAplyNo}</div>
+                                </div>
+
+                                <div class="detail-summary-item">
+                                    <div class="label">대표품목명</div>
+                                    <div class="value">${inspectionDetail.iirMainGoodsNm}</div>
+                                </div>
+
+                                <div class="detail-summary-item">
+                                    <div class="label">요청상태</div>
+                                    <div class="value">${inspectionDetail.iirStatusCd}</div>
+                                </div>
+                            </div>
+
+                            <div class="sub-tabs" id="tabs-rcd">
+                                <button class="sub-tab active" type="button">기본정보</button>
+                            </div>
+
+                            <div id="rcd-basic">
+
+                                <h4>요청 정보</h4>
+                                <div class="form-grid">
+                                    <div class="form-item">
+                                        <label>검역요청번호</label>
+                                        <input type="text" value="${inspectionDetail.iirReqNo}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>수입통관의뢰번호</label>
+                                        <input type="text" value="${inspectionDetail.iirAplyNo}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>파일그룹번호</label>
+                                        <input type="text" value="${inspectionDetail.iirTfgNo}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>담당 검역공무원 ID</label>
+                                        <input type="text" value="${inspectionDetail.iirQrtnOfficerId}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>관할 지역 코드</label>
+                                        <input type="text" value="${inspectionDetail.iirJrsdRgnAgCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>검역기관 코드</label>
+                                        <input type="text" value="${inspectionDetail.iirQrtnInstCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>요청상태</label>
+                                        <input type="text" value="${inspectionDetail.iirStatusCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>검역 요청일시</label>
+                                        <input type="text" value="${inspectionDetail.iirDt}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>배정일시</label>
+                                        <input type="text" value="${inspectionDetail.iirAssignDt}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>회신기한</label>
+                                        <input type="text" value="${inspectionDetail.iirRplyDdlineDt}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>완료일시</label>
+                                        <input type="text" value="${inspectionDetail.iirCmplDt}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>최근 수정일시</label>
+                                        <input type="text" value="${inspectionDetail.iirUpdtDt}" readonly>
+                                    </div>
+
+                                    <div class="form-item full">
+                                        <label>검역 요청 사유</label>
+                                        <textarea rows="3" readonly>${inspectionDetail.iirRsnCn}</textarea>
+                                    </div>
+                                </div>
+
+                                <h4>수출자 정보</h4>
+                                <div class="form-grid">
+                                    <div class="form-item">
+                                        <label>수출자/공급자명</label>
+                                        <input type="text" value="${inspectionDetail.iirExporterNm}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>수출자 회사명</label>
+                                        <input type="text" value="${inspectionDetail.iirExporterCompanyNm}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>수출국</label>
+                                        <input type="text" value="${inspectionDetail.iirExportCountryCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item full">
+                                        <label>수출자 주소</label>
+                                        <input type="text" value="${inspectionDetail.iirExporterAdres}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>식물검역증명서 번호</label>
+                                        <input type="text" value="${inspectionDetail.iirPhytoCertNo}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>식물검역증명서 발급일</label>
+                                        <input type="text" value="${inspectionDetail.iirPhytoCertIssueDt}" readonly>
+                                    </div>
+                                </div>
+
+                                <h4>운송 및 입항 정보</h4>
+                                <div class="form-grid">
+                                    <div class="form-item">
+                                        <label>운송수단 구분</label>
+                                        <input type="text" value="${inspectionDetail.iirTransportTypeCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>운송수단명</label>
+                                        <input type="text" value="${inspectionDetail.iirTransportNm}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>선적항</label>
+                                        <input type="text" value="${inspectionDetail.iirLoadPortCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>선적일</label>
+                                        <input type="text" value="${inspectionDetail.iirShipDt}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>도착항</label>
+                                        <input type="text" value="${inspectionDetail.iirArrvPortCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>도착일</label>
+                                        <input type="text" value="${inspectionDetail.iirArrvDt}" readonly>
+                                    </div>
+                                </div>
+
+                                <h4>대표 품목 및 포장 정보</h4>
+                                <div class="form-grid">
+                                    <div class="form-item">
+                                        <label>대표 검역대상 물품명</label>
+                                        <input type="text" value="${inspectionDetail.iirMainGoodsNm}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>대표 HS Code</label>
+                                        <input type="text" value="${inspectionDetail.iirMainHsCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>전체 포장 개수</label>
+                                        <input type="text" value="${inspectionDetail.iirTotalPkgCnt}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>포장 단위</label>
+                                        <input type="text" value="${inspectionDetail.iirPkgUnitCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>전체 총중량</label>
+                                        <input type="text" value="${inspectionDetail.iirTotalWeight}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>포장재질</label>
+                                        <input type="text" value="${inspectionDetail.iirPkgMaterial}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>목재포장재 사용 여부</label>
+                                        <input type="text" value="${inspectionDetail.iirWoodPkgYn}" readonly>
+                                    </div>
+
+                                    <div class="form-item" style="grid-column:span 2;">
+                                        <label>목재포장재 표시/인증번호</label>
+                                        <input type="text" value="${inspectionDetail.iirWoodPkgMarkNo}" readonly>
+                                    </div>
+                                </div>
+
+                                <h4>검역 위치 정보</h4>
+                                <div class="form-grid">
+                                    <div class="form-item">
+                                        <label>검역위치번호</label>
+                                        <input type="text" value="${inspectionDetail.iilNo}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>검역요청번호</label>
+                                        <input type="text" value="${inspectionDetail.iilReqNo}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+									    <label>검역장소유형</label>
+									
+									    <c:set var="iilTyNm" value="${inspectionDetail.iilTyCd}" />
+									
+									    <c:choose>
+									        <c:when test="${inspectionDetail.iilTyCd eq 'BONDED_WH'}">
+									            <c:set var="iilTyNm" value="보세창고" />
+									        </c:when>
+									        <c:when test="${inspectionDetail.iilTyCd eq 'YARD'}">
+									            <c:set var="iilTyNm" value="야적장" />
+									        </c:when>
+									        <c:when test="${inspectionDetail.iilTyCd eq 'CONTAINER'}">
+									            <c:set var="iilTyNm" value="컨테이너" />
+									        </c:when>
+									        <c:when test="${inspectionDetail.iilTyCd eq 'INS_PLACE'}">
+									            <c:set var="iilTyNm" value="검사장" />
+									        </c:when>
+									        <c:when test="${inspectionDetail.iilTyCd eq 'ETC'}">
+									            <c:set var="iilTyNm" value="기타" />
+									        </c:when>
+									    </c:choose>
+									
+									    <input type="text" value="${iilTyNm}" readonly>
+									</div>
+
+                                    <div class="form-item">
+                                        <label>검역장소명</label>
+                                        <input type="text" value="${inspectionDetail.iilNm}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>검역예정일시</label>
+                                        <input type="text" value="${inspectionDetail.iilPlanDt}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>우편번호</label>
+                                        <input type="text" value="${inspectionDetail.iilZip}" readonly>
+                                    </div>
+
+                                    <div class="form-item" style="grid-column:span 2;">
+                                        <label>기본주소</label>
+                                        <input type="text" value="${inspectionDetail.iilAdres}" readonly>
+                                    </div>
+
+                                    <div class="form-item ">
+                                        <label>상세주소</label>
+                                        <input type="text" value="${inspectionDetail.iilDetailAdres}" readonly>
+                                    </div>
+                                </div>
+                                
+                                <h4>첨부서류</h4>
+
+								<div class="receipt-item-table-wrap">
+								    <table class="data-table receipt-item-table">
+								        <thead>
+								            <tr>
+								                <th style="width:70px;">번호</th>
+								                <th>파일명</th>
+								                <th style="width:120px;">파일크기</th>
+								                <th style="width:160px;">등록일시</th>
+								                <th style="width:120px;">다운로드</th>
+								            </tr>
+								        </thead>
+								
+								        <tbody>
+								            <c:choose>
+								                <c:when test="${empty inspectionFileList}">
+								                    <tr>
+								                        <td colspan="5" style="text-align:center; padding:24px; color:#697d8f;">
+								                            등록된 첨부서류가 없습니다.
+								                        </td>
+								                    </tr>
+								                </c:when>
+								
+								                <c:otherwise>
+								                    <c:forEach var="file" items="${inspectionFileList}" varStatus="st">
+								                        <tr>
+								                            <td>${st.count}</td>
+								
+								                            <td style="text-align:left;">
+								                                <span class="material-symbols-outlined"
+								                                      style="font-size:16px; vertical-align:middle; margin-right:4px;">
+								                                    attach_file
+								                                </span>
+								                                ${file.dfiOrgNm}
+								                            </td>
+								
+								                            <td>${file.fileSizeText}</td>
+								                            <td>${file.dfiRegistDt}</td>
+								
+								                            <td>
+								                                <button type="button"
+								                                        class="btn btn-outline"
+								                                        onclick="location.href='${ctx}/common/file/download.do?fileNo=${file.dfiFileNo}'">
+								                                    다운로드
+								                                </button>
+								                            </td>
+								                        </tr>
+								                    </c:forEach>
+								                </c:otherwise>
+								            </c:choose>
+								        </tbody>
+								    </table>
+								</div>
+
+                                <h4>검역대상 품목 목록</h4>
+                                <div class="receipt-item-table-wrap">
+                                    <table class="data-table receipt-item-table">
+                                        <thead>
+                                            <tr>
+                                                <th>순번</th>
+                                                <th>HS코드</th>
+                                                <th>품명</th>
+                                                <th>학명</th>
+                                                <th>용도</th>
+                                                <th>수량</th>
+                                                <th>순중량</th>
+                                                <th>포장개수</th>
+                                                <th>원산지</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <c:choose>
+                                                <c:when test="${empty inspectionItemList}">
+                                                    <tr>
+                                                        <td colspan="9" style="text-align:center; padding:24px; color:#697d8f;">
+                                                            등록된 검역대상 품목이 없습니다.
+                                                        </td>
+                                                    </tr>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <c:forEach var="item" items="${inspectionItemList}">
+                                                        <tr>
+                                                            <td>${item.iiriSn}</td>
+                                                            <td>${item.iiriHsCd}</td>
+                                                            <td>${item.iiriGoodsNm}</td>
+                                                            <td>${item.iiriScientificNm}</td>
+                                                            <td>${item.iiriUseCd}</td>
+                                                            <td>${item.iiriQty} ${item.iiriQtyUnitCd}</td>
+                                                            <td>${item.iiriNetWeight}</td>
+                                                            <td>${item.iiriPkgCnt}</td>
+                                                            <td>${item.iiriOriginCountryCd}</td>
+                                                        </tr>
+                                                    </c:forEach>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <h4>검역 결과 정보</h4>
+                                <div class="form-grid">
+                                    <div class="form-item">
+                                        <label>검역 결과번호</label>
+                                        <input type="text" value="${inspectionDetail.iirNo}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>결과 진행상태</label>
+                                        <input type="text" value="${inspectionDetail.iirResultStatusCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>판정결과</label>
+                                        <input type="text" value="${inspectionDetail.iirResultCd}" readonly>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <label>결과등록일시</label>
+                                        <input type="text" value="${inspectionDetail.iirResultDt}" readonly>
+                                    </div>
+
+                                    <div class="form-item full">
+                                        <label>검역 결과 내용</label>
+                                        <textarea rows="3" readonly>${inspectionDetail.iirResultCn}</textarea>
+                                    </div>
+                                </div>
+
+                                <div class="btn-row">
+                                    <button class="btn btn-primary"
+                                            type="button"
+                                            onclick="location.href='${ctx}/fieldofficer/inspectionRequest.do'">
+                                        <span class="material-symbols-outlined" style="font-size:14px">arrow_back</span>
+                                        목록
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </c:otherwise>
+                </c:choose>
+
+            </div>
+        </div>
+
+        <%@ include file="/WEB-INF/views/fieldofficer/footer/footer.jsp" %>
+    </div>
+</div>
+
+<%@ include file="/WEB-INF/views/fieldofficer/footer/modals.jsp" %>
+<%@ include file="/WEB-INF/views/fieldofficer/footer/scripts.jsp" %>
+</body>
+</html>

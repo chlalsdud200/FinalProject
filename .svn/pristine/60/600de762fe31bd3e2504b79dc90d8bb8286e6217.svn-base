@@ -1,0 +1,61 @@
+package kr.or.tacs.systemadmin.stats.service;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import kr.or.tacs.systemadmin.stats.mapper.IAdminStatsMapper;
+import kr.or.tacs.vo.systemadmin.stats.AdminStatsOverviewVO;
+import kr.or.tacs.vo.systemadmin.stats.AdminStatsSearchVO;
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class AdminStatsServiceImpl implements IAdminStatsService {
+
+    private static final int DEFAULT_TOP_N = 10;
+    private static final int MAX_TOP_N = 50;
+
+    private final IAdminStatsMapper statsMapper;
+
+    @Override
+    public AdminStatsOverviewVO retrieveOverview(AdminStatsSearchVO search) {
+        AdminStatsSearchVO normalized = normalize(search);
+
+        AdminStatsOverviewVO overview = new AdminStatsOverviewVO();
+        overview.setSummary(statsMapper.selectSummary(normalized));
+        overview.setDeclarationStatus(statsMapper.selectDeclarationStatus(normalized));
+        overview.setMonthlyTrend(statsMapper.selectMonthlyTrend(normalized));
+        overview.setTopItems(statsMapper.selectTopItems(normalized));
+        overview.setOriginDistribution(statsMapper.selectOriginDistribution(normalized));
+        overview.setTopBrokers(statsMapper.selectTopBrokers(normalized));
+        overview.setTopTransportManagers(statsMapper.selectTopTransportManagers(normalized));
+        overview.setWarehouseUsage(statsMapper.selectWarehouseUsage(normalized));
+        overview.setWarehouseFlow(statsMapper.selectWarehouseFlow(normalized));
+        overview.setMemberDistribution(statsMapper.selectMemberDistribution(normalized));
+        overview.setQuarantineStats(statsMapper.selectQuarantineStats(normalized));
+        overview.setNotificationStats(statsMapper.selectNotificationStats(normalized));
+        return overview;
+    }
+
+    private AdminStatsSearchVO normalize(AdminStatsSearchVO search) {
+        AdminStatsSearchVO result = search == null ? new AdminStatsSearchVO() : search;
+        result.setStartDate(blankToNull(result.getStartDate()));
+        result.setEndDate(blankToNull(result.getEndDate()));
+
+        Integer topN = result.getTopN();
+        if (topN == null || topN < 1) {
+            topN = DEFAULT_TOP_N;
+        }
+        result.setTopN(Math.min(topN, MAX_TOP_N));
+        return result;
+    }
+
+    private String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+}

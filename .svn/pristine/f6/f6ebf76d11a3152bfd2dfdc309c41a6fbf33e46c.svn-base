@@ -1,0 +1,31 @@
+package kr.or.tacs.officer.basicscreen.mapper;
+
+import java.util.List;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import kr.or.tacs.dto.officer.WorkHistoryDTO;
+
+@Mapper
+public interface IWorkHistoryMapper {
+
+    // ── 보완요청 (SUPP_RQST) ──────────────────────────
+    int insertSupplement(WorkHistoryDTO dto);
+    int cancelSupplement(String srNo);          // DELETE
+    WorkHistoryDTO selectLatestActiveSupplement(String reqNo);
+    String selectBrokerIdByReqNo(WorkHistoryDTO dto);
+
+    // ── 통관보류 (CUSTOMS_STATUS_HISTORY) ─────────────
+    int insertHold(WorkHistoryDTO dto);
+    int cancelHold(Long cshNo);                 // DELETE
+    WorkHistoryDTO selectLatestActiveHold(String reqNo);
+
+    // ── 통합 이력 조회 ─────────────────────────────────
+    List<WorkHistoryDTO> selectWorkHistoryList(String reqNo);
+    
+    void updateImpDeclStatus(@Param("reqNo") String reqNo,
+            @Param("statusCd") String statusCd);
+
+    void updateExpDeclStatus(@Param("reqNo") String reqNo,
+            @Param("statusCd") String statusCd);
+}

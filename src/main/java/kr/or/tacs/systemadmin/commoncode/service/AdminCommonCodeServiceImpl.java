@@ -1,0 +1,262 @@
+package kr.or.tacs.systemadmin.commoncode.service;
+
+import java.util.List;
+import java.util.Locale;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
+
+import kr.or.tacs.systemadmin.commoncode.mapper.IAdminCommonCodeMapper;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeGroupRequestVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeGroupSearchVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeGroupVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeRequestVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeSearchVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeVO;
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class AdminCommonCodeServiceImpl implements IAdminCommonCodeService {
+
+    // 분류명이 '시스템'인 그룹은 액터유형/역할/파일 등 코드·권한 로직과 직접 연결된 시스템 핵심 코드다.
+    // 화면에서 비활성화해도 하드코딩 문자열로 동작이 그대로 돌아가 "관리 화면이 거짓말하는" 상태가 되므로,
+    // 사용여부(use_yn)를 'N'으로 바꾸는 모든 경로(그룹/코드 토글 및 수정)를 서버에서 차단한다.
+    private static final String SYSTEM_CLASS_NAME = "시스템";
+
+    private final IAdminCommonCodeMapper commonCodeMapper;
+
+    @Override
+    public List<AdminCommonCodeGroupVO> retrieveGroupList(AdminCommonCodeGroupSearchVO search) {
+        AdminCommonCodeGroupSearchVO normalized = search == null ? new AdminCommonCodeGroupSearchVO() : search;
+        normalized.setKeyword(trim(normalized.getKeyword()));
+        normalized.setUseYn(normalizeFilterUseYn(normalized.getUseYn()));
+        return commonCodeMapper.selectGroupList(normalized);
+    }
+
+    @Override
+    public AdminCommonCodeGroupVO retrieveGroup(String ccgId) {
+        return getGroup(normalizeId(ccgId, "그룹 ID를 입력해 주세요."));
+    }
+
+    @Override
+    @Transactional
+    public void registGroup(AdminCommonCodeGroupRequestVO request) {
+        AdminCommonCodeGroupVO group = toGroupVO(request, true, null);
+        if (commonCodeMapper.countGroup(group.getCcgId()) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 존재하는 그룹 ID입니다.");
+        }
+        commonCodeMapper.insertGroup(group);
+    }
+
+    @Override
+    @Transactional
+    public void modifyGroup(String ccgId, AdminCommonCodeGroupRequestVO request) {
+        String normalizedCcgId = normalizeId(ccgId, "그룹 ID를 입력해 주세요.");
+        AdminCommonCodeGroupVO existing = getGroup(normalizedCcgId);
+        AdminCommonCodeGroupVO group = toGroupVO(request, false, normalizedCcgId);
+        assertSystemGroupNotDeactivated(existing, group.getUseYn());
+        int updated = commonCodeMapper.updateGroup(group);
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "공통코드그룹이 존재하지 않습니다.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void modifyGroupUseYn(String ccgId, String useYn) {
+        String normalizedCcgId = normalizeId(ccgId, "그룹 ID를 입력해 주세요.");
+        String normalizedUseYn = normalizeYn(useYn, "사용여부는 Y 또는 N만 가능합니다.");
+        AdminCommonCodeGroupVO group = getGroup(normalizedCcgId);
+        assertSystemGroupNotDeactivated(group, normalizedUseYn);
+        int updated = commonCodeMapper.updateGroupUseYn(normalizedCcgId, normalizedUseYn);
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "공통코드그룹이 존재하지 않습니다.");
+        }
+        if ("N".equals(normalizedUseYn)) {
+            commonCodeMapper.updateCodeUseYnByGroup(normalizedCcgId, "N");
+        }
+    }
+
+    @Override
+    public List<AdminCommonCodeVO> retrieveCodeList(AdminCommonCodeSearchVO search) {
+        AdminCommonCodeSearchVO normalized = search == null ? new AdminCommonCodeSearchVO() : search;
+        normalized.setCcgId(normalizeId(normalized.getCcgId(), "그룹을 선택해 주세요."));
+        normalized.setKeyword(trim(normalized.getKeyword()));
+        normalized.setUseYn(normalizeFilterUseYn(normalized.getUseYn()));
+        return commonCodeMapper.selectCodeList(normalized);
+    }
+
+    @Override
+    public AdminCommonCodeVO retrieveCode(String ccgId, String ccCd) {
+        return getCode(
+                normalizeId(ccgId, "그룹 ID를 입력해 주세요."),
+                normalizeId(ccCd, "코드값을 입력해 주세요.")
+        );
+    }
+
+    @Override
+    @Transactional
+    public void registCode(AdminCommonCodeRequestVO request) {
+        AdminCommonCodeVO code = toCodeVO(request, true, null, null);
+        getGroup(code.getCcgId());
+        if (commonCodeMapper.countCode(code.getCcgId(), code.getCcCd()) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 존재하는 코드값입니다.");
+        }
+        commonCodeMapper.insertCode(code);
+    }
+
+    @Override
+    @Transactional
+    public void modifyCode(String ccgId, String ccCd, AdminCommonCodeRequestVO request) {
+        String normalizedCcgId = normalizeId(ccgId, "그룹 ID를 입력해 주세요.");
+        String normalizedCcCd = normalizeId(ccCd, "코드값을 입력해 주세요.");
+        getCode(normalizedCcgId, normalizedCcCd);
+        AdminCommonCodeVO code = toCodeVO(request, false, normalizedCcgId, normalizedCcCd);
+        assertSystemGroupNotDeactivated(getGroup(normalizedCcgId), code.getUseYn());
+        int updated = commonCodeMapper.updateCode(code);
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "공통코드가 존재하지 않습니다.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void modifyCodeUseYn(String ccgId, String ccCd, String useYn) {
+        String normalizedCcgId = normalizeId(ccgId, "그룹 ID를 입력해 주세요.");
+        String normalizedCcCd = normalizeId(ccCd, "코드값을 입력해 주세요.");
+        String normalizedUseYn = normalizeYn(useYn, "사용여부는 Y 또는 N만 가능합니다.");
+        getCode(normalizedCcgId, normalizedCcCd);
+        assertSystemGroupNotDeactivated(getGroup(normalizedCcgId), normalizedUseYn);
+        int updated = commonCodeMapper.updateCodeUseYn(normalizedCcgId, normalizedCcCd, normalizedUseYn);
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "공통코드가 존재하지 않습니다.");
+        }
+    }
+
+    private AdminCommonCodeGroupVO toGroupVO(AdminCommonCodeGroupRequestVO request, boolean create, String ccgId) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 데이터가 없습니다.");
+        }
+
+        AdminCommonCodeGroupVO group = new AdminCommonCodeGroupVO();
+        group.setCcgId(create ? normalizeId(request.getCcgId(), "그룹 ID를 입력해 주세요.") : ccgId);
+        group.setCcgName(requireText(request.getCcgName(), "그룹명을 입력해 주세요."));
+        group.setClassName(trim(request.getClassName()));
+        group.setBizAreaName(trim(request.getBizAreaName()));
+        group.setDescription(trim(request.getDescription()));
+        group.setStatusScopeName(trim(request.getStatusScopeName()));
+        group.setUseRecommendName(trim(request.getUseRecommendName()));
+        group.setRemark(trim(request.getRemark()));
+        group.setUseYn(normalizeYn(defaultValue(request.getUseYn(), "Y"), "사용여부는 Y 또는 N만 가능합니다."));
+        return group;
+    }
+
+    private AdminCommonCodeVO toCodeVO(AdminCommonCodeRequestVO request, boolean create, String ccgId, String ccCd) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 데이터가 없습니다.");
+        }
+
+        AdminCommonCodeVO code = new AdminCommonCodeVO();
+        code.setCcgId(create ? normalizeId(request.getCcgId(), "그룹 ID를 입력해 주세요.") : ccgId);
+        code.setCcCd(create ? normalizeId(request.getCcCd(), "코드값을 입력해 주세요.") : ccCd);
+        code.setCcName(requireText(request.getCcName(), "코드명을 입력해 주세요."));
+        code.setDescription(trim(request.getDescription()));
+        code.setSortOrder(normalizeSortOrder(request.getSortOrder()));
+        code.setExternalYn(normalizeYn(defaultValue(request.getExternalYn(), "Y"), "외부표시는 Y 또는 N만 가능합니다."));
+        code.setEndYn(normalizeYn(defaultValue(request.getEndYn(), "N"), "종료상태는 Y 또는 N만 가능합니다."));
+        code.setRemark(trim(request.getRemark()));
+        code.setUseYn(normalizeYn(defaultValue(request.getUseYn(), "Y"), "사용여부는 Y 또는 N만 가능합니다."));
+        return code;
+    }
+
+    // 시스템 핵심 그룹(분류='시스템')을 비활성화('N')하려는 모든 시도를 차단한다.
+    private void assertSystemGroupNotDeactivated(AdminCommonCodeGroupVO group, String useYn) {
+        if (group != null && SYSTEM_CLASS_NAME.equals(group.getClassName()) && "N".equals(useYn)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "시스템 핵심 코드(분류 '시스템')는 비활성화할 수 없습니다. 코드·권한 로직과 직접 연결되어 있습니다.");
+        }
+    }
+
+    private AdminCommonCodeGroupVO getGroup(String ccgId) {
+        AdminCommonCodeGroupVO group = commonCodeMapper.selectGroup(ccgId);
+        if (group == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "공통코드그룹이 존재하지 않습니다.");
+        }
+        return group;
+    }
+
+    private AdminCommonCodeVO getCode(String ccgId, String ccCd) {
+        AdminCommonCodeVO code = commonCodeMapper.selectCode(ccgId, ccCd);
+        if (code == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "공통코드가 존재하지 않습니다.");
+        }
+        return code;
+    }
+
+    private Integer normalizeSortOrder(Integer sortOrder) {
+        if (sortOrder == null) {
+            return 1;
+        }
+        if (sortOrder < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "정렬순번은 1 이상이어야 합니다.");
+        }
+        return sortOrder;
+    }
+
+    private String normalizeFilterUseYn(String useYn) {
+        String value = trim(useYn);
+        if (!StringUtils.hasText(value) || "all".equalsIgnoreCase(value)) {
+            return "all";
+        }
+        return normalizeYn(value, "사용여부 필터는 all, Y, N만 가능합니다.");
+    }
+
+    private String normalizeYn(String value, String message) {
+        String normalized = trim(value);
+        if (!StringUtils.hasText(normalized)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
+        normalized = normalized.toUpperCase(Locale.ROOT);
+        if (!"Y".equals(normalized) && !"N".equals(normalized)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
+        return normalized;
+    }
+
+    private String normalizeId(String value, String message) {
+        String normalized = requireText(value, message).toUpperCase(Locale.ROOT);
+        if (!normalized.matches("^[A-Z0-9_ ]+$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID와 코드값은 영문 대문자, 숫자, 언더스코어, 공백만 사용할 수 있습니다.");
+        }
+        if (normalized.length() > 50) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID와 코드값은 50자 이하로 입력해 주세요.");
+        }
+        return normalized;
+    }
+
+    private String requireText(String value, String message) {
+        String trimmed = trim(value);
+        if (!StringUtils.hasText(trimmed)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
+        return trimmed;
+    }
+
+    private String defaultValue(String value, String defaultValue) {
+        String trimmed = trim(value);
+        return StringUtils.hasText(trimmed) ? trimmed : defaultValue;
+    }
+
+    private String trim(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+}

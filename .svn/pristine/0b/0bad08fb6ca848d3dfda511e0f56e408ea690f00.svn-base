@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.tacs.transport.importp.mapper.ImportTransportMapper">
+  <!-- 수입운송 Mapper들이 함께 쓰는 공통 SQL 조각을 관리한다. -->
+  <sql id="impReleaseStatusCdCase">
+        CASE
+        WHEN CRR.CRR_NO IS NULL THEN NULL
+        WHEN CRR.CRR_RELEASE_DT IS NOT NULL THEN 'REL_DONE'
+        WHEN CRR.CRR_STATUS_CD IN ('DONE', 'RELEASED', 'APPROVED') THEN 'REL_DONE'
+        ELSE CRR.CRR_STATUS_CD
+        END
+    </sql>
+  <sql id="impReleaseStatusNmCase">
+        CASE
+        WHEN CRR.CRR_NO IS NULL THEN '-'
+        WHEN CRR.CRR_RELEASE_DT IS NOT NULL THEN '반출완료'
+        WHEN CRR.CRR_STATUS_CD IN ('REL_WAIT',  'REQUESTED', 'READY') THEN '반출대기'
+        WHEN CRR.CRR_STATUS_CD IN ('REL_DONE', 'DONE', 'RELEASED', 'APPROVED') THEN '반출완료'
+        WHEN CRR.CRR_STATUS_CD IN ('REL_FIX', 'REL_REJECT', 'REJECT') THEN '보완요청'
+        WHEN CRR.CRR_STATUS_CD IN ('REL_SENT', 'REQ_SENT') THEN '보완제출완료'
+        ELSE NVL(CRR.CRR_STATUS_CD, '-')
+        END
+    </sql>
+</mapper>

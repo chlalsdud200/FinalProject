@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.fieldofficer.dashboard.mapper.IFieldOfficerDashboardMapper">
+
+			<!--
+				대시보드 통계 조회
+		
+				조회 항목:
+				1. 오늘 신규 요청 수
+				2. 검역 판정 대기 수
+				3. 오늘 결과 통보 완료 수
+				4. 접수 처리율
+				5. 합격 / 불합격 / 보완요청 수
+			-->
+			<select id="selectDashboard" resultType="kr.or.tacs.vo.fieldofficer.dashboard.DashboardVO">
+
+			    <![CDATA[
+			    SELECT
+			        /* 오늘 신규 검역 요청 수 */
+			        (
+			            SELECT COUNT(*)
+			            FROM IMP_INS_REQ REQ
+			            WHERE TRUNC(REQ.IIR_DT) = TRUNC(SYSDATE)
+			        ) AS newRequestCnt,
+			
+			        /* 검역 판정 대기 수 */
+			        (
+			            SELECT COUNT(*)
+			            FROM IMP_INS_REQ REQ
+			                 LEFT JOIN IMP_INS_RESULT RES
+			                   ON RES.IIR_IMP_INS_REQ_NO = REQ.IIR_REQ_NO
+			            WHERE REQ.IIR_STATUS_CD NOT IN ('완료', '취소')
+			              AND RES.IIR_RESULT_CD IS NULL
+			        ) AS judgeWaitCnt,
+			
+			        /* 오늘 결과 통보 완료 수 */
+			        (
+			            SELECT COUNT(*)
+			            FROM IMP_INS_RESULT RES
+			            WHERE TRUNC(RES.IIR_RESULT_DT) = TRUNC(SYSDATE)
+			              AND (
+			                     RES.IIR_RESULT_STATUS_CD IN ('검역완료', '완료')
+			                  OR RES.IIR_RESULT_CD IS NOT NULL
+			              )
+			        ) AS resultCompleteCnt,
+			
+			        /* 접수 처리율 */
+			        NVL(
+			            ROUND(
+			                (
+			                    SELECT COUNT(*)
+			                    FROM IMP_INS_REQ REQ
+			                    WHERE REQ.IIR_STATUS_CD = '완료'
+			                )
+			                /
+			                NULLIF(
+			                    (
+			                        SELECT COUNT(*)
+			                        FROM IMP_INS_REQ REQ
+			                    ), 0
+			                )
+			                * 100
+			            ), 0
+			        ) AS processRate,
+			
+			        /* 보완요청 수 */
+			        (
+			            SELECT COUNT(*)
+			            FROM IMP_INS_RESULT RES
+			            WHERE RES.IIR_RESULT_CD IN ('보완요청', '조건부적합')
+			        ) AS supplementCnt
+			    FROM DUAL
+			    ]]>
+			
+			</select>
+			
+			<!--
+				최근 검역 요청 목록 조회
+		
+				대시보드의 "최근 검역 요청 내역" 영역에 출력된다.
+				최근 요청일시 기준 5건만 조회한다.
+			-->
+			<select id="selectRecentRequestList" resultType="kr.or.tacs.vo.fieldofficer.dashboard.DashboardRecentRequestVO">
+			
+				<![CDATA[
+				SELECT *
+				FROM (
+				    SELECT
+				        REQ.IIR_REQ_NO AS iirReqNo,
+				        REQ.IIR_QRTN_INST_CD AS iirQrtnInstCd,
+				        REQ.IIR_STATUS_CD AS iirStatusCd,
+				        NVL(RES.IIR_RESULT_STATUS_CD, '검역진행중') AS iirResultStatusCd,
+				        NVL(REQ.IIR_MAIN_GOODS_NM, '-') AS iirMainGoodsNm,
+				        TO_CHAR(REQ.IIR_DT, 'YYYY-MM-DD HH24:MI') AS iirDt,
+		
+				        /* 오늘 접수된 건이면 NEW 표시 */
+				        CASE
+				            WHEN TRUNC(REQ.IIR_DT) = TRUNC(SYSDATE)
+				            THEN 'Y'
+				            ELSE 'N'
+				        END AS newYn,
+		
+				        /* 회신기한이 오늘 또는 내일이면 긴급 표시 */
+				        CASE
+				            WHEN REQ.IIR_RPLY_DDLINE_DT IS NOT NULL
+				             AND TRUNC(REQ.IIR_RPLY_DDLINE_DT) - TRUNC(SYSDATE) <= 1
+				             AND REQ.IIR_STATUS_CD NOT IN ('완료', '취소')
+				            THEN 'Y'
+				            ELSE 'N'
+				        END AS urgentYn
+		
+				    FROM IMP_INS_REQ REQ
+				         LEFT JOIN IMP_INS_RESULT RES
+				           ON RES.IIR_IMP_INS_REQ_NO = REQ.IIR_REQ_NO
+				    ORDER BY REQ.IIR_DT DESC
+				)
+				WHERE ROWNUM <= 5
+				]]>
+			</select>
+		
+		
+			<!--
+				회신기한 임박 목록 조회
+		
+				대시보드의 "다가오는 기한" 영역에 출력된다.
+				회신기한이 가까운 순서로 5건만 조회한다.
+			-->
+			<select id="selectDeadlineList" resultType="kr.or.tacs.vo.fieldofficer.dashboard.DashboardDeadlineVO">
+			
+				<![CDATA[
+				SELECT *
+				FROM (
+				    SELECT
+				        REQ.IIR_REQ_NO AS iirReqNo,
+				        NVL(REQ.IIR_MAIN_GOODS_NM, '-') AS iirMainGoodsNm,
+				        TO_CHAR(REQ.IIR_RPLY_DDLINE_DT, 'YYYY-MM-DD HH24:MI') AS iirRplyDdlineDt,
+			
+				        CASE
+				            WHEN TRUNC(REQ.IIR_RPLY_DDLINE_DT) = TRUNC(SYSDATE)
+				            THEN 'D-DAY'
+			
+				            WHEN TRUNC(REQ.IIR_RPLY_DDLINE_DT) > TRUNC(SYSDATE)
+				            THEN 'D-' || TO_CHAR(TRUNC(REQ.IIR_RPLY_DDLINE_DT) - TRUNC(SYSDATE))
+				        END AS ddayText,
+			
+				        CASE
+				            WHEN TRUNC(REQ.IIR_RPLY_DDLINE_DT) = TRUNC(SYSDATE)
+				            THEN 'dday'
+				            ELSE 'safe'
+				        END AS ddayClass
+			
+				    FROM IMP_INS_REQ REQ
+				    WHERE REQ.IIR_RPLY_DDLINE_DT IS NOT NULL
+			
+				      /* 이미 지난 회신기한 제외 */
+				      AND REQ.IIR_RPLY_DDLINE_DT >= SYSDATE
+			
+				      /* 완료/취소 건 제외 */
+				      AND REQ.IIR_STATUS_CD NOT IN ('완료', '취소')
+			
+				    ORDER BY REQ.IIR_RPLY_DDLINE_DT ASC
+				)
+				WHERE ROWNUM <= 5
+				]]>
+			</select>
+
+</mapper>

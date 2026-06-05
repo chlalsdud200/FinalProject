@@ -1,0 +1,389 @@
+package kr.or.tacs.fieldofficer.inspection.controller;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.Principal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import kr.or.tacs.fieldofficer.inspection.service.IInspectionService;
+import kr.or.tacs.vo.common.PaginationInfoVO;
+import kr.or.tacs.vo.fieldofficer.Inspection.InspectionFileVO;
+import kr.or.tacs.vo.fieldofficer.Inspection.InspectionRequestItemVO;
+import kr.or.tacs.vo.fieldofficer.Inspection.InspectionRequestVO;
+
+import java.io.ByteArrayOutputStream;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+@Controller
+@RequestMapping("/fieldofficer")
+public class InspectionRequestController {
+	
+	private final IInspectionService inspectionService;		// inspectionService는 검역 요청 목록/상세 정보를 가져오는 역할
+	
+	public InspectionRequestController(IInspectionService inspectionService) {
+		this.inspectionService = inspectionService;			// IInspectionService를 자동으로 넣어줌
+	}
+
+	/*
+	 *  하는 일:
+	 * 1. 화면에서 넘어온 page 값을 받는다.
+	 *    - page 값이 없으면 기본값 1페이지로 처리한다.
+	 *
+	 * 2. 화면에서 입력한 검색 조건을 InspectionRequestVO searchVO로 받는다.
+	 *    - 검역요청번호, 수입신청번호, 검역장소, 검역기관, 요청상태, 판정상태
+	 *
+	 * 3. PaginationInfoVO 객체를 생성한다.
+	 *    - 한 페이지에 10개씩 보여준다.
+	 *    - 페이지 번호는 5개씩 보여준다.
+	 *
+	 * 4. 현재 페이지 번호를 pagingVO에 저장한다.
+	 *    - 이때 startRow, endRow가 자동으로 계산된다.
+	 *
+	 * 5. 검색 조건 searchVO를 pagingVO 안에 담는다.
+	 *    - Mapper XML에서는 searchDTO.iirReqNo 형태로 사용한다.
+	 *
+	 * 6. 검색 조건에 맞는 전체 건수를 조회한다.
+	 *    - 전체 페이지 수 계산에 사용된다.
+	 *
+	 * 7. 현재 페이지에 해당하는 검역 요청 목록만 조회한다.
+	 *
+	 * 8. 조회한 목록을 inspectionList라는 이름으로 JSP에 보낸다.
+	 *
+	 * 9. 페이지네이션 정보는 pagingVO라는 이름으로 JSP에 보낸다.
+	 *
+	 * 10. 검색 조건을 searchVO라는 이름으로 JSP에 다시 보낸다.
+	 *
+	 * 11. inspectionRequest.jsp 화면을 보여준다.
+	 */
+	// 검역 요청 조회 목록 페이지
+	@GetMapping("/inspectionRequest.do")
+	public String retriveInspectionRequestList(
+			@RequestParam(value = "page", required = false, defaultValue = "1") int currentPage,
+			InspectionRequestVO searchVO,
+			Principal principal,
+			Model model) {
+		
+		/*
+		 * 로그인한 현장공무원 ID 세팅
+		 *
+		 * IMP_INS_REQ.IIR_QRTN_OFFICER_ID와 비교해서
+		 * 본인에게 배정된 검역요청만 조회되도록 한다.
+		 */
+		String officerId = principal == null ? null : principal.getName();
+		searchVO.setIirQrtnOfficerId(officerId);
+		
+		// 1. 페이지네이션 객체 생성
+		// 한 페이지에 10개, 페이지 번호는 5개씩 표시
+		PaginationInfoVO<InspectionRequestVO> pagingVO = new PaginationInfoVO<>(10, 5);
+		
+		// 2. 현재 페이지 번호 설정
+		// setCurrentPage()가 실행되면 startRow, endRow가 자동 계산됨
+		pagingVO.setCurrentPage(currentPage);
+		
+		// 3. 검색 조건 저장
+		// PaginationInfoVO의 필드명이 searchDTO이므로 Mapper XML에서는 searchDTO.xxx 형태로 사용
+		pagingVO.setSearchDTO(searchVO);
+		
+		// 4. 검색 조건에 맞는 전체 건수 조회
+		int totalRecord = inspectionService.retriveInspectionRequestCount(pagingVO);
+		
+		// 5. 전체 건수를 pagingVO에 저장
+		// totalPage, startPage, endPage 계산에 사용됨
+		pagingVO.setTotalRecord(totalRecord);
+		
+		// 6. 현재 페이지에 해당하는 검역 요청 목록 조회
+		List<InspectionRequestVO> inspectionList = inspectionService.retriveInspectionRequestList(pagingVO);
+		
+		// 7. 페이지네이션 객체에도 목록 저장
+		pagingVO.setDataList(inspectionList);
+		
+		// 8. JSP에서 ${inspectionList}로 사용할 수 있게 담아줌
+		model.addAttribute("inspectionList", inspectionList);
+		
+		// 9. JSP에서 ${pagingVO.pagingHTML}로 페이지 번호를 출력할 수 있게 담아줌
+		model.addAttribute("pagingVO", pagingVO);
+		
+		// 10. JSP에서 검색 조건을 유지하기 위해 다시 담아줌
+		model.addAttribute("searchVO", searchVO);
+		
+		// /WEB-INF/views/fieldofficer/inspectionRequest.jsp 로 이동
+		return "fieldofficer/inspectionRequest";
+	}
+	
+	/*
+	 * TOAS UI GRID 테이터 조회
+	 * 
+	 * 하는 일:
+	 * - inspectionRequest.jsp 화면에서 AJAX로 호출한다.
+	 * - 검색 조건을 InspectionRequestVO searchVO로 받는다.
+	 * - 기존 목록 조회 Service/Mapper를 재사용한다.
+	 * - 결과는 JSON 배열로 반환된다.
+	 */
+	@ResponseBody
+	@GetMapping("/inspectionRequest/gridData.do")
+	public List<InspectionRequestVO> retriveInspectionRequestGridData(InspectionRequestVO searchVO, Principal principal){
+		
+		/*
+		 * 로그인한 현장공무원에게 배정된 검역요청만 Grid에 조회
+		 */
+		String officerId = principal == null ? null : principal.getName();
+		searchVO.setIirQrtnOfficerId(officerId);
+		
+		/*
+		 * 현재는 TOAST UI Grid의 클라이언트 페이징을 사용한다.
+		 * 그래서 한 번에 넉넉하게 1000건까지 조회한다.
+		 * 나중에 데이터가 많아지면 서버 페이징 방식으로 변경하면 된다.
+		 */
+		PaginationInfoVO<InspectionRequestVO> pagingVO = new PaginationInfoVO<>(1000, 5);
+		
+		// 1페이지 기준으로 조회
+		pagingVO.setCurrentPage(1);
+		
+		// 검색 조건 저장
+		pagingVO.setSearchDTO(searchVO);
+		
+		// 기존 목록 조회 Service 재사용
+		List<InspectionRequestVO> inspectionList = inspectionService.retriveInspectionRequestList(pagingVO);
+		
+		// JSON으로 반환
+		return inspectionList;
+		
+	}
+	
+	/*
+	 * 검역 요청 조회 엑셀 다운로드
+	 * 
+	 * 처리 흐름:
+	 * 1. 화면 검색 조건을 IspenctionRequestVO searchVO로 받는다.
+	 * 2. 기존 목록 조회 Service를 재새용한다.
+	 * 3. 조회 결과를 Excel Workbook으로 만든다.
+	 * 4. 브라우저에 .xlsx 파일로 다운로드 응답을 내려준다.
+	 */
+	@GetMapping("/inspectionRequest/excelDownload.do")
+	public ResponseEntity<byte[]> downloadInspectionRequestExcel(InspectionRequestVO searchVO, Principal principal) throws Exception {
+		
+		/*
+		 * 로그인한 현장공무원에게 배정된 검역요청만 엑셀 다운로드
+		 */
+		String officerId = principal == null ? null : principal.getName();
+		searchVO.setIirQrtnOfficerId(officerId);
+		
+		// 엑셀은 화면 페이지네이션과 별도로 검색 결과를 넉넉하게 조회
+		PaginationInfoVO<InspectionRequestVO> pagingVO = new PaginationInfoVO<>(1000, 5);
+		pagingVO.setCurrentPage(1);
+		pagingVO.setSearchDTO(searchVO);
+		
+		// 기존 목록 조회 로직 재사용
+		List<InspectionRequestVO> inspectionList = inspectionService.retriveInspectionRequestList(pagingVO);
+		
+		byte[] excelBytes = createInspectionRequestExcel(inspectionList);
+		
+		String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+		String fileName = "검역요청조회_" + now + ".xlsx";
+		
+		String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+		
+		return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFileName).body(excelBytes);
+		
+		
+	}
+	
+	
+	/*
+	 * 하는 일:
+	 * 1. 주소에서 reqNo 값을 받는다.
+	 * 2. Service를 통해 해당 reqNo의 상세 정보를 조회한다.
+	 * 3. 조회한 상세 정보를 inspectionDetail이라는 이름으로 JSP에 보낸다.
+	 * 4. inspectionRequestDetail.jsp 화면을 보여준다.
+	 */
+	// 검역 요청 상세 페이지
+	@GetMapping("/inspectionRequest/detail.do")
+	public String retriveInspectionRequest(
+			@RequestParam("reqNo") String reqNo,
+			Model model
+			) {
+		
+		// reqNo에 해당하는 검역 요청 상세 정보 조회
+		InspectionRequestVO inspectionDetail = inspectionService.retriveInspectionRequest(reqNo);
+		// 검역 대상 품목 목록 조회
+		List<InspectionRequestItemVO> inspectionItemList = inspectionService.retriveInspectionItemList(reqNo);
+		// 첨부서류 목록 조회
+		List<InspectionFileVO> inspectionFileList = inspectionService.retriveInspectionFileList(reqNo);
+		
+		// JSP에서 ${reqNo}로 사용할 수 있게 담아줌
+		model.addAttribute("reqNo", reqNo);
+		
+		// JSP에서 ${inspectionDetail}로 사용할 수 있게 담아줌
+		model.addAttribute("inspectionDetail", inspectionDetail);
+		// JSP에서 ${inspectionItemList}로 사용할 수 있게 담아줌
+		model.addAttribute("inspectionItemList", inspectionItemList);
+		// JSP에서 ${inspectionFileList}로 사용할 수 있게 담아줌
+		model.addAttribute("inspectionFileList", inspectionFileList);
+		
+		System.out.println("===== 검역 요청 상세 위치 확인 =====");
+		System.out.println("iilNo = " + inspectionDetail.getIilNo());
+		System.out.println("iilWilNo = " + inspectionDetail.getIilWilNo());
+		System.out.println("iilNm = " + inspectionDetail.getIilNm());
+		System.out.println("iilAdres = " + inspectionDetail.getIilAdres());
+		
+		// /WEB-INF/views/fieldofficer/inspectionRequestDetail.jsp 로 이동
+		return "fieldofficer/inspectionRequestDetail";
+	}
+
+	/*
+	 * 검역 요청 조회 결과를 Excel byte[]로 생성
+	 */
+	private byte[] createInspectionRequestExcel(List<InspectionRequestVO> inspectionList) throws Exception {
+
+	    try (
+	            Workbook workbook = new XSSFWorkbook();
+	            ByteArrayOutputStream out = new ByteArrayOutputStream()
+	    ) {
+	        Sheet sheet = workbook.createSheet("검역요청조회");
+
+	        // 제목 스타일
+	        CellStyle titleStyle = workbook.createCellStyle();
+	        Font titleFont = workbook.createFont();
+	        titleFont.setBold(true);
+	        titleFont.setFontHeightInPoints((short) 14);
+	        titleStyle.setFont(titleFont);
+	        titleStyle.setAlignment(HorizontalAlignment.CENTER);
+
+	        // 헤더 스타일
+	        CellStyle headerStyle = workbook.createCellStyle();
+	        Font headerFont = workbook.createFont();
+	        headerFont.setBold(true);
+	        headerStyle.setFont(headerFont);
+	        headerStyle.setAlignment(HorizontalAlignment.CENTER);
+
+	        // 일반 셀 스타일
+	        CellStyle bodyStyle = workbook.createCellStyle();
+	        bodyStyle.setAlignment(HorizontalAlignment.CENTER);
+
+	        // 제목 행
+	        Row titleRow = sheet.createRow(0);
+	        Cell titleCell = titleRow.createCell(0);
+	        titleCell.setCellValue("검역 요청 조회");
+	        titleCell.setCellStyle(titleStyle);
+
+	        // 헤더 행
+	        Row headerRow = sheet.createRow(2);
+
+	        String[] headers = {
+	                "No.",
+	                "검역요청번호",
+	                "수입통관의뢰번호",
+	                "대표품목명",
+	                "대표 HS코드",
+	                "검역장소",
+	                "요청상태",
+	                "판정상태",
+	                "회신기한"
+	        };
+
+	        for (int i = 0; i < headers.length; i++) {
+	            Cell cell = headerRow.createCell(i);
+	            cell.setCellValue(headers[i]);
+	            cell.setCellStyle(headerStyle);
+	        }
+
+	        // 데이터 행
+	        int rowIdx = 3;
+
+	        if (inspectionList != null) {
+	            for (int i = 0; i < inspectionList.size(); i++) {
+	                InspectionRequestVO vo = inspectionList.get(i);
+
+	                Row row = sheet.createRow(rowIdx++);
+
+	                createCell(row, 0, String.valueOf(i + 1), bodyStyle);
+	                createCell(row, 1, safe(vo.getIirReqNo()), bodyStyle);
+	                createCell(row, 2, safe(vo.getIirAplyNo()), bodyStyle);
+	                createCell(row, 3, safe(vo.getIirMainGoodsNm()), bodyStyle);
+	                createCell(row, 4, safe(vo.getIirMainHsCd()), bodyStyle);
+	                createCell(row, 5, safe(vo.getIilNm()), bodyStyle);
+	                createCell(row, 6, safe(vo.getIirStatusCd()), bodyStyle);
+
+	                String resultStatus = vo.getIirResultStatusCd();
+	                if (resultStatus == null || resultStatus.trim().isEmpty()) {
+	                    resultStatus = "검역진행중";
+	                }
+
+	                createCell(row, 7, resultStatus, bodyStyle);
+	                createCell(row, 8, safe(vo.getIirRplyDdlineDt()), bodyStyle);
+	            }
+	        }
+
+	        // 컬럼 너비
+	        sheet.setColumnWidth(0, 2500);
+	        sheet.setColumnWidth(1, 5000);
+	        sheet.setColumnWidth(2, 6000);
+	        sheet.setColumnWidth(3, 7000);
+	        sheet.setColumnWidth(4, 4500);
+	        sheet.setColumnWidth(5, 7000);
+	        sheet.setColumnWidth(6, 3500);
+	        sheet.setColumnWidth(7, 4000);
+	        sheet.setColumnWidth(8, 4000);
+
+	        workbook.write(out);
+	        return out.toByteArray();
+	    }
+	}
+
+	/*
+	 * Excel 셀 생성 공통 메서드
+	 */
+	private void createCell(Row row, int columnIndex, String value, CellStyle style) {
+	    Cell cell = row.createCell(columnIndex);
+	    cell.setCellValue(value);
+	    cell.setCellStyle(style);
+	}
+
+	/*
+	 * null 방지용 문자열 처리
+	 */
+	private String safe(String value) {
+	    return value == null ? "" : value;
+	}
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

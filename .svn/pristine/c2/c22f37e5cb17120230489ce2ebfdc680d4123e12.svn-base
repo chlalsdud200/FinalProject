@@ -1,0 +1,16 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html lang="ko" class="light">
+<head>
+<%@ include file="/WEB-INF/views/transport/common/head.jsp" %>
+</head>
+<body class="bg-background text-on-surface">
+<%@ include file="/WEB-INF/views/transport/common/aside.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/topbar.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/main-content.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/footer.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/modals.jsp" %>
+<script src="${pageContext.request.contextPath}/resources/js/transport/js/common.js?v=20260526-import-server-route1"></script>
+<script src="${pageContext.request.contextPath}/resources/js/transport/js/pages/dash.js"></script>
+</body>
+</html>

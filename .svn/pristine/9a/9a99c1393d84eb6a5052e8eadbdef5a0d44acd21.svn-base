@@ -1,0 +1,6 @@
+/* ===== 대시보드 전용 JS =====
+ * 대시보드는 외부 함수(showModal, openDocDetail 등)만 호출하므로
+ * 자체 함수는 없다.
+ *  - openDocDetail / docDetailStore : pages/clients.js에 정의 (clients.js를 dash에서도 로드)
+ *  - showModal : common.js
+ */

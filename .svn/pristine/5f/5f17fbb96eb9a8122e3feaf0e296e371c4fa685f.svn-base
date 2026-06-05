@@ -1,0 +1,358 @@
+@charset "UTF-8";
+
+/* =========================================================
+   TACS 검역기관 검사 요청 조회 전용 스타일
+   - 검사 요청 목록 검색 조건
+   - 검사 요청 상세 화면
+   - 요청 정보 / 신청인 정보 / 화물 정보 / 검역 위치 정보
+========================================================= */
+
+/* ===== 검사 요청 조회 검색 조건 ===== */
+#receipt-list-view .receipt-search-panel {
+  border: 1px solid #d9eafc;
+  background: #fff;
+  padding: 20px 22px 18px;
+  margin-bottom: 22px;
+}
+
+#receipt-list-view .receipt-search-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 900;
+  color: #203444;
+  margin-bottom: 18px;
+}
+
+#receipt-list-view .receipt-search-title span {
+  width: 4px;
+  height: 16px;
+  background: #565e74;
+  display: inline-block;
+}
+
+#receipt-list-view .receipt-search-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 14px 24px !important;
+  margin-bottom: 16px !important;
+}
+
+#receipt-list-view .receipt-search-grid .form-item {
+  min-width: 0;
+}
+
+#receipt-list-view .receipt-search-grid .form-item label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #4d6172;
+  margin-bottom: 6px;
+}
+
+#receipt-list-view .receipt-search-grid input,
+#receipt-list-view .receipt-search-grid select {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  border: 1px solid #a0b4c8;
+  background: #fff;
+  font-size: 13px;
+}
+
+#receipt-list-view .receipt-search-grid input::placeholder {
+  color: #94a3b8;
+}
+
+#receipt-list-view .receipt-search-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+#receipt-list-view .receipt-search-actions .btn {
+  height: 36px;
+}
+
+#receipt-list-view .receipt-search-actions .material-symbols-outlined {
+  font-size: 17px;
+}
+
+/* ===== 검사 요청 목록 테이블 ===== */
+#receipt-list-view table.data-table tbody tr {
+  cursor: pointer;
+}
+
+#receipt-list-view table.data-table tbody tr:hover {
+  background: #f0f7ff;
+}
+
+/* ===== 검사 요청 상세 상단 카드 ===== */
+#receipt-detail-view .detail-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+#receipt-detail-view .detail-summary-item {
+  background: #ecf4ff;
+  border-left: 4px solid #565e74;
+  padding: 16px;
+}
+
+#receipt-detail-view .detail-summary-item .label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #4d6172;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+
+#receipt-detail-view .detail-summary-item .value {
+  font-size: 16px;
+  font-weight: 900;
+  color: #203444;
+  word-break: keep-all;
+}
+
+/* ===== 검사 요청 상세 섹션 제목 ===== */
+#receipt-detail-view h4 {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4d6172;
+  margin: 18px 0 10px;
+  border-left: 3px solid #565e74;
+  padding-left: 8px;
+}
+
+/* ===== 검사 요청 상세 3열 폼 ===== */
+#receipt-detail-view .form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 24px;
+  margin-bottom: 18px;
+}
+
+#receipt-detail-view .form-item {
+  min-width: 0;
+}
+
+#receipt-detail-view .form-item.full {
+  grid-column: 1 / -1;
+}
+
+#receipt-detail-view .form-item input,
+#receipt-detail-view .form-item select,
+#receipt-detail-view .form-item textarea {
+  width: 100%;
+}
+
+/* ===== 읽기전용 상세 입력값 ===== */
+#receipt-detail-view input[readonly],
+#receipt-detail-view textarea[readonly] {
+  background: #f8fafc;
+  color: #475569;
+}
+
+/* ===== 요청 사유 textarea ===== */
+#receipt-detail-view textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+/* ===== 검역 위치 정보 영역 보정 ===== */
+#receipt-detail-view #rcdInspectAddr,
+#receipt-detail-view #rcdInspectAddrDetail {
+  word-break: keep-all;
+}
+
+/* ===== 상세 하단 버튼 ===== */
+#receipt-detail-view .btn-row {
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* ===== 반응형 ===== */
+@media (max-width: 1400px) {
+  #receipt-list-view .receipt-search-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #receipt-detail-view .detail-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #receipt-detail-view .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  #receipt-list-view .receipt-search-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  #receipt-list-view .receipt-search-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  #receipt-detail-view .detail-summary {
+    grid-template-columns: 1fr;
+  }
+
+  #receipt-detail-view .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #receipt-detail-view .btn-row {
+    justify-content: flex-start;
+  }
+}
+
+/* ===== 검역 요청 조회 목록 페이지네이션 ===== */
+#receipt-list-view .pagination-area {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center;
+  width: 100%;
+  margin-top: 16px;
+}
+
+#receipt-list-view .pagination-area ul.pagination {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#receipt-list-view .pagination-area ul.pagination li {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#receipt-list-view .pagination-area .page-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid #b8c7d9;
+  background: #fff;
+  color: #203444;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+#receipt-list-view .pagination-area .page-item.active .page-link,
+#receipt-list-view .pagination-area .page-item.active span.page-link {
+  background: #565e74;
+  border-color: #565e74;
+  color: #fff;
+}
+
+#receipt-list-view .pagination-area .page-link:hover {
+  background: #eef4fb;
+}
+/* ===== 검역대상 품목 목록 ===== */
+#receipt-detail-view .receipt-item-table-wrap {
+  margin-bottom: 18px;
+  overflow-x: auto;
+  border: 1px solid #d9eafc;
+  background: #fff;
+}
+
+#receipt-detail-view .receipt-item-table {
+  min-width: 980px;
+}
+
+#receipt-detail-view .receipt-item-table thead th,
+#receipt-detail-view .receipt-item-table tbody td {
+  white-space: nowrap;
+}
+
+
+#inspectionRequestGrid .tui-grid-cell {
+    cursor: pointer;
+}
+
+.grid-detail-btn {
+    height: 28px;
+    padding: 0 12px;
+    border: 1px solid #4b5563;
+    background: #ffffff;
+    color: #1f2937;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.grid-detail-btn:hover {
+    background: #1f2937;
+    color: #ffffff;
+}
+
+#inspectionRequestGrid .tui-grid-cell {
+    cursor: pointer;
+}
+
+
+/* ===== 회신기한 날짜 검증 토스트 ===== */
+.tacs-toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    min-width: 280px;
+    max-width: 420px;
+    padding: 14px 18px;
+    background: #1e293b;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    border-left: 4px solid #ef4444;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+    z-index: 9999;
+
+    opacity: 0;
+    transform: translate(-50%, -30px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.tacs-toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* ===== 회신기한 기간 검색 한 줄 정렬 ===== */
+#receipt-list-view .date-range-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    flex-wrap: nowrap;
+}
+
+#receipt-list-view .date-range-wrap input[type="date"] {
+    width: auto !important;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+#receipt-list-view .date-range-separator {
+    flex: 0 0 auto;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 36px;
+}

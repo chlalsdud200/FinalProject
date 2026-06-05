@@ -1,0 +1,28 @@
+package kr.or.tacs.warehouse.outbound.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import kr.or.tacs.dto.warehouse.WarehouseOutboundDocDTO;
+import kr.or.tacs.dto.warehouse.WarehouseOutboundProcessDTO;
+
+@Mapper
+public interface OutboundMapper {
+
+	public List<WarehouseOutboundDocDTO> selectOutboundDocList(String wmId);
+	public List<WarehouseOutboundProcessDTO> selectOutboundProcessList(String wmId);
+	public String selectTransportManagerIdByCrrNo(String crrNo);
+	public int updateCargoReleaseReqStatusToRelFix(Map<String, Object> paramMap);
+	public int insertOutboundSupplementRequest(Map<String, Object> paramMap);
+	public int updateCargoReleaseReqToDone(@Param("crrNo") String crrNo, @Param("wmId") String wmId); 		// 반출 승인시 상태값 rel_done으로 변경
+	public int insertWarehouseOutboundHistory(@Param("crrNo") String crrNo, @Param("wmId") String wmId);	// 반출승인시 반출이력테이블에 저장
+	public int updateWarehouseItemUseYnToN(@Param("crrNo") String crrNo);									// 반출승인된 물품을 3d조회 대상에서 제외
+	public int updateWarehouseZoneUsageByCrrNo(@Param("crrNo") String crrNo);								// 반출 후 창고구역 사용량/사용률 재계산
+	public int selectOutboundProcessCount(WarehouseOutboundProcessDTO searchDTO, String wmId);
+	public List<WarehouseOutboundProcessDTO> selectOutboundProcessPagingList(WarehouseOutboundProcessDTO searchDTO,String wmId);
+	
+
+}

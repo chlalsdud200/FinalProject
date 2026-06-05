@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.common.file.mapper.IFileMapper">
+
+    <select id="selectTfgNo" resultType="long">
+        SELECT NVL(MAX(tfg_no), 0) + 1 FROM tacs_file_grp
+    </select>
+
+    <insert id="insertFileGroup" parameterType="kr.or.tacs.dto.FileGroupDTO">
+        INSERT INTO tacs_file_grp (
+                                    tfg_no
+                                  , tfg_biz_se_cd
+                                  , tfg_regist_dt
+        ) VALUES (
+                   #{tfgNo}
+                 , #{tfgBizSeCd}
+                 , SYSDATE
+                 )
+    </insert>
+
+    <select id="selectDfiNo" resultType="long">
+        SELECT seq_docs_file_data.NEXTVAL FROM dual
+    </select>
+
+    <insert id="insertFileInfo" parameterType="kr.or.tacs.dto.FileInfoDTO">
+        INSERT INTO docs_file_data (
+                                     dfi_file_no
+                                   , dfi_actor_id
+                                   , dfi_actor_type
+                                   , dfi_org_nm
+                                   , dfi_str_nm
+                                   , dfi_size
+                                   , dfi_path
+                                   , dfi_ext
+                                   , dfi_mime_ty
+                                   , dfi_del_yn
+                                   , dfi_regist_dt
+                                   , dfi_biz_ty_cd
+                                   , DFI_DRIVE_FILE_ID
+                                   , dfi_upload_stts_cd
+        ) VALUES (
+                   #{dfiFileNo}
+                 , #{dfiActorId}
+                 , #{dfiActorType}
+                 , #{dfiOrgNm}
+                 , #{dfiStrNm}
+                 , #{dfiSize}
+                 , #{dfiPath}
+                 , #{dfiExt}
+                 , #{dfiMimeTy}
+                 , NVL(#{dfiDelYn}, 'N')
+                 , SYSDATE
+                 , #{dfiBizTyCd}
+                 , #{dfiDriveFileId}
+                 , NVL(#{dfiUploadSttsCd}, 'UPLOADING')
+                 )
+    </insert>
+
+    <update id="updateDriveUploadSuccess" parameterType="kr.or.tacs.dto.FileInfoDTO">
+        UPDATE docs_file_data
+        SET dfi_drive_file_id = #{dfiDriveFileId}
+          , dfi_upload_stts_cd = 'DONE'
+        WHERE dfi_file_no = #{dfiFileNo}
+    </update>
+
+    <update id="updateDriveUploadFail" parameterType="long">
+        UPDATE docs_file_data
+        SET dfi_upload_stts_cd = 'FAIL'
+        WHERE dfi_file_no = #{dfiFileNo}
+    </update>
+
+    <select id="selectTfmNo" resultType="long">
+        SELECT NVL(MAX(tfm_no), 0) + 1 FROM tacs_file_map
+    </select>
+
+    <insert id="insertFileMap" parameterType="kr.or.tacs.dto.FileMapDTO">
+        INSERT INTO tacs_file_map (
+                                    tfm_no
+                                  , tfm_tfg_no
+                                  , tfm_dfi_no
+                                  <if test="tfmDocTyCd != null and tfmDocTyCd != ''">
+                                  , tfm_doc_ty_cd
+                                  </if>
+        ) VALUES (
+                   #{tfmNo}
+                 , #{tfmTfgNo}
+                 , #{tfmDfiNo}
+                 <if test="tfmDocTyCd != null and tfmDocTyCd != ''">
+                 , #{tfmDocTyCd}
+                 </if>
+                 )
+    </insert>
+
+    <select id="selectFileList" parameterType="long" resultType="kr.or.tacs.dto.FileInfoDTO">
+        SELECT
+            dfi.dfi_file_no
+             , dfi.dfi_actor_id
+             , dfi.dfi_actor_type
+             , dfi.dfi_org_nm
+             , dfi.dfi_str_nm
+             , dfi.dfi_size
+             , dfi.dfi_path
+             , dfi.dfi_del_yn
+             , dfi.dfi_regist_dt
+             , dfi.dfi_biz_ty_cd
+             , dfi.dfi_drive_file_id
+             , dfi.dfi_upload_stts_cd
+             , tfm.tfm_no
+             , tfm.tfm_tfg_no
+             , tfm.tfm_dfi_no
+             , tfm.tfm_doc_ty_cd
+        FROM tacs_file_map tfm
+                 JOIN docs_file_data dfi
+                      ON dfi.dfi_file_no = tfm.tfm_dfi_no
+        WHERE tfm.tfm_tfg_no = #{tfgNo}
+          AND NVL(dfi.dfi_del_yn, 'N') = 'N'
+        ORDER BY dfi.dfi_regist_dt DESC, dfi.dfi_file_no DESC
+    </select>
+
+    <select id="selectFileInfo" parameterType="long" resultType="kr.or.tacs.dto.FileInfoDTO">
+        SELECT
+            dfi_file_no
+            , dfi_actor_id
+            , dfi_actor_type
+            , dfi_org_nm
+            , dfi_str_nm
+            , dfi_path
+            , dfi_size
+            , dfi_ext
+            , dfi_mime_ty
+            , dfi_del_yn
+            , dfi_biz_ty_cd
+            , dfi.dfi_drive_file_id
+            , dfi.dfi_upload_stts_cd
+        FROM docs_file_data dfi
+        WHERE dfi_file_no = #{fileNo}
+          AND dfi_del_yn  = 'N'
+    </select>
+
+    <update id="deleteFile" parameterType="long">
+        UPDATE docs_file_data
+        SET dfi_del_yn = 'Y'
+        WHERE dfi_file_no = #{dfiFileNo}
+    </update>
+
+    <!--
+        파일 다운로드 권한 검증용.
+        파일(dfi_no) → 파일그룹(tfg_no) → 수입/수출 신고건, 운송접수건 또는 보세반출 요청건으로 역추적하여
+        소유 화주(owner_id) / 담당 관세사(broker_id) / 담당 운송관리자(transport_manager_id)
+        / 담당 창고관리자(warehouse_manager_id)를 조회한다.
+        업무건과 연결되지 않은 파일이면 참여자 컬럼이 NULL 로 반환된다.
+    -->
+    <select id="selectFileAccessContext" parameterType="long"
+            resultType="kr.or.tacs.dto.FileAccessContextDTO">
+        SELECT m.tfm_tfg_no AS tfg_no
+             , COALESCE(
+                   TO_CHAR(ir.ir_owr_id),
+                   TO_CHAR(er.er_owr_id),
+                   TO_CHAR(tr_ir.ir_owr_id),
+                   TO_CHAR(tr.trc_owr_id),
+                   -- 신고필증(CERT): 수입신고 소유자
+                   TO_CHAR(cert_ir.ir_owr_id),
+                   -- 신고필증(CERT): 수출신고 소유자
+                   TO_CHAR(cert_er.er_owr_id)
+               ) AS owner_id
+             , COALESCE(
+                   TO_CHAR(ir.ir_broker_id),
+                   TO_CHAR(er.er_broker_id),
+                   TO_CHAR(tr_ir.ir_broker_id),
+                   -- 신고필증(CERT): 수입신고 관세사
+                   TO_CHAR(cert_ir.ir_broker_id),
+                   -- 신고필증(CERT): 수출신고 관세사
+                   TO_CHAR(cert_er.er_broker_id)
+               ) AS broker_id
+             , COALESCE(
+                   TO_CHAR(tm.tm_id),
+                   TO_CHAR(ir_tm.tm_id)
+               ) AS transport_manager_id
+             , crr.crr_wm_id AS warehouse_manager_id
+        FROM tacs_file_map m
+                 LEFT JOIN imp_rqst ir
+                        ON ir.ir_tfg_no = m.tfm_tfg_no
+                 LEFT JOIN exp_rqst er
+                        ON er.er_tfg_no = m.tfm_tfg_no
+
+                 <!--
+                     신고필증(CERT) 파일그룹은 IMP_RQST/EXP_RQST 의 TFG_NO가 아니라
+                     CERT_INSURANCE.TFG_NO 에 연결된다.
+                     수입·수출 신고건을 역추적해 소유 화주·관세사를 조회한다.
+                 -->
+                 LEFT JOIN cert_insurance ci_imp
+                        ON ci_imp.tfg_no = m.tfm_tfg_no
+                       AND ci_imp.ci_dclr_type_cd = 'IMPORT'
+                 LEFT JOIN imp_rqst cert_ir
+                        ON cert_ir.ir_no = ci_imp.ci_dclr_no
+
+                 LEFT JOIN cert_insurance ci_exp
+                        ON ci_exp.tfg_no = m.tfm_tfg_no
+                       AND ci_exp.ci_dclr_type_cd = 'EXPORT'
+                 LEFT JOIN exp_rqst cert_er
+                        ON cert_er.er_no = ci_exp.ci_dclr_no
+
+                 <!--
+                     운송의뢰 원본 첨부(TRC_TFG_NO)뿐 아니라
+                     화주가 별도로 올린 수입신고필증 파일그룹(TRC_CERT_TFG_NO)도
+                     같은 운송건 파일로 인정해야 운송담당자 다운로드 403이 나지 않는다.
+                 -->
+                 LEFT JOIN tran_rcp tr
+                        ON tr.trc_tfg_no = m.tfm_tfg_no
+                        OR tr.trc_cert_tfg_no = m.tfm_tfg_no
+
+                 LEFT JOIN imp_rqst tr_ir
+                        ON tr_ir.ir_no = tr.trc_no
+                        OR tr_ir.ir_no = REPLACE(tr.trc_no, 'TRC-', '')
+
+                 LEFT JOIN transport_manager tm
+                        ON tm.tm_no = tr.trc_tm_no
+
+                 LEFT JOIN tran_rcp ir_tr
+                        ON ir.ir_no IS NOT NULL
+                       AND (
+                              ir_tr.trc_no = ir.ir_no
+                           OR ir_tr.trc_no = 'TRC-' || ir.ir_no
+                           OR REPLACE(ir_tr.trc_no, 'TRC-', '') = ir.ir_no
+                           )
+                 LEFT JOIN transport_manager ir_tm
+                        ON ir_tm.tm_no = ir_tr.trc_tm_no
+
+                 <!--
+                     보세반출 상세의 D/O + 신고필증 파일은 DO_ISSUANCE.DI_TFG_NO에 연결된다.
+                     반출요청 담당 창고관리자만 다운로드할 수 있도록 운송접수건과 반출요청을 역추적한다.
+                 -->
+                 LEFT JOIN do_issuance di
+                        ON di.di_tfg_no = m.tfm_tfg_no
+
+                 LEFT JOIN cargo_release_req crr
+                        ON crr.crr_tre_id = di.di_trc_no
+        WHERE m.tfm_dfi_no = #{fileNo}
+          AND ROWNUM = 1
+    </select>
+    
+    <!-- =========================================================
+	      수입검역신청 첨부파일 현장공무원 다운로드 권한 확인
+	
+	      목적:
+	      - 관세사가 업로드한 수입검역신청 첨부파일을
+	        해당 검역요청의 담당 현장공무원이 다운로드할 수 있도록 권한 확인
+	
+	      조건:
+	      - 다운로드하려는 파일번호 = TACS_FILE_MAP.TFM_DFI_NO
+	      - 파일그룹번호 = IMP_INS_REQ.IIR_TFG_NO
+	      - 로그인한 현장공무원 ID = IMP_INS_REQ.IIR_QRTN_OFFICER_ID
+	      ========================================================= -->
+	 <select id="selectImportInspectionFileAccessCount"
+	         resultType="int">
+	     SELECT COUNT(*)
+	     FROM IMP_INS_REQ R
+	          JOIN TACS_FILE_MAP M
+	            ON R.IIR_TFG_NO = M.TFM_TFG_NO
+	     WHERE M.TFM_DFI_NO = #{fileNo}
+	       AND R.IIR_QRTN_OFFICER_ID = #{officerId}
+	 </select>
+
+</mapper>

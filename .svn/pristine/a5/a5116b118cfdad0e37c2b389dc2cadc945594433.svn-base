@@ -1,0 +1,29 @@
+package kr.or.tacs.common.notification.inbox.mapper;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import kr.or.tacs.vo.common.notification.inbox.NotificationInboxItemVO;
+import kr.or.tacs.vo.common.notification.inbox.NotificationUnreadCountVO;
+
+@Mapper
+public interface INotificationInboxMapper {
+
+    NotificationUnreadCountVO selectUnreadSummary(@Param("receiverId") String receiverId);
+
+    List<NotificationInboxItemVO> selectInboxList(
+            @Param("receiverId") String receiverId,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
+    int updateRead(@Param("notiNo") Long notiNo, @Param("receiverId") String receiverId);
+
+    int updateReadAll(@Param("receiverId") String receiverId);
+
+    int deleteNotification(@Param("notiNo") Long notiNo, @Param("receiverId") String receiverId);
+
+    int deleteAllNotifications(@Param("receiverId") String receiverId);
+}

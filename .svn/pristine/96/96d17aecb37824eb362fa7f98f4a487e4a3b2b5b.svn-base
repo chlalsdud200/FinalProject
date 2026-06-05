@@ -1,0 +1,273 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ include file="/WEB-INF/views/officer/common/taglibs.jsp" %>
+<%@ taglib uri="http://www.springframework.org/security/tags" prefix="sec" %>
+
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="activeMenu" value="basic" />
+<c:set var="activeSub" value="basicScreenList" />
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <%@ include file="/WEB-INF/views/officer/header/head.jsp" %>
+        <title>TACS · 기본심사목록</title>
+        <link rel="stylesheet" href="${ctx}/resources/css/officer/pages/basicScreenList.css">
+    </head>
+
+    <body>
+        <%@ include file="/WEB-INF/views/officer/header/sidebar.jsp" %>
+        <%@ include file="/WEB-INF/views/officer/header/header.jsp" %>
+
+        <main class="main-content basic-screen-main">
+            <section class="page-inner">
+                <div class="breadcrumb">
+                    <span>신고 접수 및 기본심사</span>
+                    <span>›</span>
+                    <strong>TACS-AD-002</strong>
+                </div>
+
+                <h2 class="page-title">기본심사목록</h2>
+
+                <div class="page-banner">
+                    <h3>기본심사목록</h3>
+                    <p>접수 완료된 신고건의 기본정보, 답변상태, AI위험도를 확인하고 기본심사를 처리합니다.</p>
+                </div>
+
+                <form class="search-panel" id="basicSearchForm" method="get" action="${ctx}/officer/basicScreenList.do">
+                    <input type="hidden" name="page" id="pageInput" value="1">
+                    <input type="hidden" name="size" value="${empty search.size ? 10 : search.size}">
+
+                    <div class="search-title">검색 조건</div>
+
+                    <div class="search-grid">
+                        <span class="sg-label">· 신고번호</span>
+                        <input id="reqNo" name="reqNo" class="form-input sg-input" type="text"
+                               value="${search.reqNo}" placeholder="신고번호 입력">
+
+                        <span class="sg-label">· 수입자명</span>
+                        <input id="companyName" name="companyName" class="form-input sg-input" type="text"
+                               value="${search.companyName}" placeholder="수입자명 입력">
+
+                        <span class="sg-label">· 신고구분</span>
+                        <div class="radio-group">
+                            <label><input type="radio" name="declareType" value=""     ${empty search.declareType ? 'checked' : ''}> 전체</label>
+                            <label><input type="radio" name="declareType" value="수입" ${search.declareType eq '수입' ? 'checked' : ''}> 수입</label>
+                            <label><input type="radio" name="declareType" value="수출" ${search.declareType eq '수출' ? 'checked' : ''}> 수출</label>
+                        </div>
+
+                        <span class="sg-label">· 현재상태</span>
+                        <select id="statusCd" name="statusCd" class="form-select sg-select">
+                            <option value="">전체</option>
+                            <option value="DCLR_REVIEW"   ${search.statusCd eq 'DCLR_REVIEW'   ? 'selected' : ''}>심사중</option>
+                            <option value="DCLR_SUPP_REQ" ${search.statusCd eq 'DCLR_SUPP_REQ' ? 'selected' : ''}>보완요청</option>
+                            <option value="DCLR_SUPP_SUB" ${search.statusCd eq 'DCLR_SUPP_SUB' ? 'selected' : ''}>보완제출</option>
+                            <option value="TAX_UNPAID"    ${search.statusCd eq 'TAX_UNPAID'    ? 'selected' : ''}>세금납부대기</option>
+                            <option value="TAX_PAID"      ${search.statusCd eq 'TAX_PAID'      ? 'selected' : ''}>세금납부완료</option>
+                            <option value="DCLR_DONE"     ${search.statusCd eq 'DCLR_DONE'     ? 'selected' : ''}>심사완료</option>
+                            <option value="DCLR_REJ"      ${search.statusCd eq 'DCLR_REJ'      ? 'selected' : ''}>반려</option>
+                        </select>
+
+                        <span class="sg-label">· AI위험도</span>
+                        <select id="riskGradeCd" name="riskGradeCd" class="form-select sg-select">
+                            <option value="">전체</option>
+                            <option value="HIGH"   ${search.riskGradeCd eq 'HIGH'   ? 'selected' : ''}>고위험</option>
+                            <option value="MIDDLE" ${search.riskGradeCd eq 'MIDDLE' ? 'selected' : ''}>중위험</option>
+                            <option value="LOW"    ${search.riskGradeCd eq 'LOW'    ? 'selected' : ''}>저위험</option>
+                        </select>
+
+                        <span class="sg-label"></span>
+                        <span></span>
+
+                        <div class="sg-cell-auto">
+                            <div class="sg-btn-group">
+                                <button type="submit" class="btn-primary" onclick="document.getElementById('pageInput').value='1'">조회</button>
+                                <button type="button" class="btn-secondary" id="btnReset">초기화</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="result-header">
+                    <div class="result-count">
+                        조회목록 <span><c:out value="${totalCount}" default="0" />건</span>
+                    </div>
+                    <div class="result-actions">
+                        <select class="form-select select-sm" id="pageSizeSelect" onchange="changePageSize(this.value)">
+                            <option value="10"  ${search.size == 10  || (empty search.size) ? 'selected' : ''}>10건씩</option>
+                            <option value="20"  ${search.size == 20  ? 'selected' : ''}>20건씩</option>
+                            <option value="50"  ${search.size == 50  ? 'selected' : ''}>50건씩</option>
+                            <option value="100" ${search.size == 100 ? 'selected' : ''}>100건씩</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <table class="basic-table">
+                        <thead>
+                            <tr>
+                                <th>NO.</th>
+                                <th>신고번호</th>
+                                <th>신고 구분</th>
+                                <th>수입자명</th>
+                                <th>담당자명</th>
+                                <th>현재상태</th>
+                                <th>AI위험도</th>
+                                <th>상세</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:choose>
+                                <c:when test="${empty list}">
+                                    <tr>
+                                        <td colspan="8" class="empty-row">조회된 기본심사 건이 없습니다.</td>
+                                    </tr>
+                                </c:when>
+
+                                <c:otherwise>
+                                  <c:forEach var="item" items="${list}">
+                                        <c:set var="isMine" value="${item.officerId eq loginOfficerId}" />
+                                        <c:set var="isRejected" value="${item.statusCd eq 'DCLR_REJ'}" />
+
+                                        <tr class="clickable-row ${isMine ? 'row-mine' : 'row-others'} ${isRejected ? 'row-rejected' : ''}"
+                                            data-url="${ctx}/officer/basicScreenDetail.do?reqNo=${item.reqNo}">
+
+                                            <td>${item.no}</td>
+                                            <td><strong>${item.reqNo}</strong></td>
+                                            <td>${item.declareType}</td>
+                                            <td>${item.companyName}</td>
+                                            <td>${item.officerName}</td>
+
+                                            <td>
+                                                <c:choose>
+                                                    <c:when test="${item.statusCd eq 'DCLR_REVIEW'}">
+                                                        <span class="status-text">심사중</span>
+                                                    </c:when>
+                                                    <c:when test="${item.statusCd eq 'DCLR_SUPP_REQ'}">
+                                                        <span class="status-text">보완요청</span>
+                                                    </c:when>
+                                                    <c:when test="${item.statusCd eq 'DCLR_SUPP_SUB'}">
+                                                        <span class="status-text">보완제출</span>
+                                                    </c:when>
+                                                    <c:when test="${item.statusCd eq 'TAX_UNPAID'}">
+                                                        <span class="status-text status-tax-unpaid">세금납부대기</span>
+                                                    </c:when>
+                                                    <c:when test="${item.statusCd eq 'TAX_PAID'}">
+                                                        <span class="status-text status-tax-paid">세금납부완료</span>
+                                                    </c:when>
+                                                    <c:when test="${item.statusCd eq 'DCLR_DONE'}">
+                                                        <span class="status-text status-approved">심사완료</span>
+                                                    </c:when>
+                                                    <c:when test="${item.statusCd eq 'DCLR_REJ'}">
+                                                        <span class="status-text status-rejected">반려</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="status-text"><c:out value="${item.statusCd}" /></span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
+
+                                            <td>
+                                                <c:choose>
+                                                    <c:when test="${item.riskStatusCd eq 'DONE'}">
+                                                        <c:choose>
+                                                            <c:when test="${item.riskGradeCd eq 'HIGH'}">
+                                                                <span class="risk-text high">● 고위험 ${item.riskScore}점</span>
+                                                            </c:when>
+                                                            <c:when test="${item.riskGradeCd eq 'MIDDLE'}">
+                                                                <span class="risk-text middle">● 중위험 ${item.riskScore}점</span>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <span class="risk-text low">● 저위험 ${item.riskScore}점</span>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </c:when>
+                                                    <c:when test="${item.riskStatusCd eq 'READY'}">
+                                                        <span class="risk-text low">● 분석대기</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="risk-text low">● 미분석</span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
+
+                                            <td class="td-detail-action" onclick="event.stopPropagation()">
+                                                <c:choose>
+                                                    <c:when test="${!isMine}">
+                                                        <a class="btn-secondary btn-sm"
+                                                           href="${ctx}/officer/basicScreenDetail.do?reqNo=${item.reqNo}&mode=readonly">
+                                                            상세
+                                                        </a>
+                                                    </c:when>
+                                                    <c:when test="${isMine and (item.statusCd eq 'DCLR_DONE' or item.statusCd eq 'DCLR_REJ')}">
+                                                        <a class="btn-secondary btn-sm"
+                                                           href="${ctx}/officer/basicScreenDetail.do?reqNo=${item.reqNo}&mode=readonly">
+                                                            상세
+                                                        </a>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <a class="btn-primary btn-sm"
+                                                           href="${ctx}/officer/basicScreenDetail.do?reqNo=${item.reqNo}&mode=edit">
+                                                            검토
+                                                        </a>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
+                                        </tr>
+                                    </c:forEach>
+                                </c:otherwise>
+                            </c:choose>
+                        </tbody>
+                    </table>
+                </div>
+
+                <c:if test="${totalPage > 0}">
+                <div class="paging-box" id="pagingBox">
+
+                    <c:choose>
+                        <c:when test="${startPage <= 1}">
+                            <button type="button" class="paging-btn disabled" disabled>«</button>
+                            <button type="button" class="paging-btn disabled" disabled>‹</button>
+                        </c:when>
+                        <c:otherwise>
+                            <button type="button" class="paging-btn" onclick="goPage(1)">«</button>
+                            <button type="button" class="paging-btn" onclick="goPage(${startPage - 1})">‹</button>
+                        </c:otherwise>
+                    </c:choose>
+
+                    <c:forEach var="p" begin="${startPage}" end="${endPage}">
+                        <c:choose>
+                            <c:when test="${p == currentPage}">
+                                <button type="button" class="paging-current" disabled>${p}</button>
+                            </c:when>
+                            <c:otherwise>
+                                <button type="button" class="paging-btn" onclick="goPage(${p})">${p}</button>
+                            </c:otherwise>
+                        </c:choose>
+                    </c:forEach>
+
+                    <c:choose>
+                        <c:when test="${endPage >= totalPage}">
+                            <button type="button" class="paging-btn disabled" disabled>›</button>
+                            <button type="button" class="paging-btn disabled" disabled>»</button>
+                        </c:when>
+                        <c:otherwise>
+                            <button type="button" class="paging-btn" onclick="goPage(${endPage + 1})">›</button>
+                            <button type="button" class="paging-btn" onclick="goPage(${totalPage})">»</button>
+                        </c:otherwise>
+                    </c:choose>
+
+                </div>
+                </c:if>
+
+            </section>
+        </main>
+
+        <%@ include file="/WEB-INF/views/officer/footer/footer.jsp" %>
+        <%@ include file="/WEB-INF/views/officer/footer/scripts.jsp" %>
+
+        <script defer src="${ctx}/resources/js/officer/pages/basicScreenList.js"></script>
+        <script>
+            window.contextPath = '${ctx}';
+        </script>
+    </body>
+</html>

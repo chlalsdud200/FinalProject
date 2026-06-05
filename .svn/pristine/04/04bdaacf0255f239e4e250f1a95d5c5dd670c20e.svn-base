@@ -1,0 +1,87 @@
+package kr.or.tacs.officer.basicscreen.service;
+
+import java.util.List;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import kr.or.tacs.dto.officer.WorkHistoryDTO;
+import kr.or.tacs.officer.basicscreen.mapper.IWorkHistoryMapper;
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class WorkHistoryServiceImpl implements IWorkHistoryService {
+
+    private final IWorkHistoryMapper mapper;
+
+    @Override
+    @Transactional
+    public WorkHistoryDTO save(WorkHistoryDTO dto) {
+        boolean isImp = dto.getReqNo().startsWith("IMP");
+
+        if ("supplement".equals(dto.getWorkType())) {
+            dto.setRefBizCd(isImp ? "IMP_RQST" : "EXP_RQST");
+            dto.setReceiverId(mapper.selectBrokerIdByReqNo(dto));
+            mapper.insertSupplement(dto);
+            dto.setWorkHistoryId(dto.getSrNo());
+
+            // ★ 신고 상태 → 보완요청
+            if (isImp) mapper.updateImpDeclStatus(dto.getReqNo(), "CSTM_SUPP");
+            else       mapper.updateExpDeclStatus(dto.getReqNo(), "CSTM_SUPP");
+
+        } else if ("hold".equals(dto.getWorkType())) {
+            dto.setScopeCd(isImp ? "IMPORT" : "EXPORT");
+            dto.setRefBizCd(isImp ? "IMP_RQST" : "EXP_RQST");
+            mapper.insertHold(dto);
+            dto.setWorkHistoryId(String.valueOf(dto.getCshNo()));
+
+            // ★ 신고 상태 → 통관보류
+            if (isImp) mapper.updateImpDeclStatus(dto.getReqNo(), "CSTM_HOLD");
+            else       mapper.updateExpDeclStatus(dto.getReqNo(), "CSTM_HOLD");
+        }
+        dto.setStatus("ACTIVE");
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public WorkHistoryDTO cancel(String reqNo, String workType) {
+        boolean isImp = reqNo.startsWith("IMP");
+
+        if ("supplement".equals(workType)) {
+            WorkHistoryDTO active = mapper.selectLatestActiveSupplement(reqNo);
+            if (active == null) return null;
+            mapper.cancelSupplement(active.getSrNo());
+
+            // ★ 진행 중인 다른 보완요청이 있는지 확인 후 상태 복구
+            WorkHistoryDTO stillActive = mapper.selectLatestActiveSupplement(reqNo);
+            if (stillActive == null) {
+                if (isImp) mapper.updateImpDeclStatus(reqNo, "CSTM_INPRG");
+                else       mapper.updateExpDeclStatus(reqNo, "CSTM_INPRG");
+            }
+            return active;
+
+        } else if ("hold".equals(workType)) {
+            WorkHistoryDTO active = mapper.selectLatestActiveHold(reqNo);
+            if (active == null) return null;
+            mapper.cancelHold(active.getCshNo());
+
+            // ★ 상태 복구
+            if (isImp) mapper.updateImpDeclStatus(reqNo, "CSTM_INPRG");
+            else       mapper.updateExpDeclStatus(reqNo, "CSTM_INPRG");
+            return active;
+        }
+        return null;
+    }
+
+    @Override
+    public List<WorkHistoryDTO> getList(String reqNo) {
+        return mapper.selectWorkHistoryList(reqNo);
+    }
+
+    @Override
+    public WorkHistoryDTO findActive(String reqNo) {
+        WorkHistoryDTO supp = mapper.selectLatestActiveSupplement(reqNo);
+        if (supp != null) return supp;
+        return mapper.selectLatestActiveHold(reqNo);
+    }
+}

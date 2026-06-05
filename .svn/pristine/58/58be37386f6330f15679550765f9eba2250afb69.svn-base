@@ -1,0 +1,31 @@
+<%@ page pageEncoding="UTF-8" %>
+<header class="topbar">
+<div class="tb-left">
+<span class="tb-brand">TACS</span>
+<div class="search-wrap">
+<span class="material-symbols-outlined">search</span>
+<input id="gSearch" onkeydown="if(event.key==='Enter')doSearch()" placeholder="신청번호 · 업체명 · HS코드 통합 검색..."/>
+</div>
+</div>
+<div class="tb-right">
+<% if (request.isUserInRole("SYSTEM_ADMIN")) { %>
+<button class="tb-btn" title="액터 목록" onclick="location.href='${ctx}/systemadmin/dashboard.do'">
+<span class="material-symbols-outlined">list</span>
+</button>
+<% } %>
+<button class="tb-btn" onclick="alert('알림 4건\\n\\n1. [NEW] 검역 신규 요청 3건\\n2. [긴급] 보완요청 기한 D-0\\n3. [완료] 결과 통보 처리 완료\\n4. [시스템] 통관단일창구 연계 정상')">
+<span class="material-symbols-outlined">notifications</span><span class="dot"></span>
+</button>
+<button class="tb-btn" onclick="alert('현장공무원 도움말\\n\\n• 검사 요청 조회: 요청 목록 확인 및 상세 검토\\n• 검역 검사 수행: 검사, 시료채취, 정밀검사 의뢰\\n• 검역 결과 처리: 합격/불합격/조건부 합격 처리\\n• 증명서 발급: 검역증명서 발급')">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="tb-sep"></div>
+<div class="tb-user">
+<div class="tb-user-info">
+<div class="name">현장공무원 김검역</div>
+<div class="role">검역기관 담당자</div>
+</div>
+<div class="tb-avatar" onclick="if(confirm('로그아웃 하시겠습니까?')) location.href='${pageContext.request.contextPath}/logout'" style="cursor:pointer">김</div>
+</div>
+</div>
+</header>

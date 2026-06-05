@@ -1,0 +1,210 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%
+    request.setAttribute("activeMenu", "transport");
+    request.setAttribute("activeGroup", "transport");
+    request.setAttribute("activeSub", "forwarder");
+    request.setAttribute("transportTab", "import");
+%>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="ctx-path" content="${pageContext.request.contextPath}">
+    <title>TACS 수입 운송</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+          rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/owner.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/owner/transport.css">
+</head>
+<body>
+<div class="app" id="app">
+    <%@ include file="/WEB-INF/views/owner/sidebar.jsp" %>
+
+    <div class="main-wrap">
+        <%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+        <main class="content">
+            <div class="page active" id="pg-transport">
+                <div class="page-title-row">
+                    <h2>운송</h2>
+                </div>
+
+                <%@ include file="/WEB-INF/views/owner/transport/fragments/transportTabs.jsp" %>
+
+                <div id="trans-import-trans">
+                    <form method="get"
+                          action="${pageContext.request.contextPath}/owner/transport/import/list.do"
+                          class="forwarder-list-filter import-transport-filter">
+
+                        <div class="search-wrap forwarder-search-wrap">
+                            <span class="material-symbols-outlined">search</span>
+                            <input class="forwarder-search-input"
+                                   name="keyword"
+                                   value="${searchDTO.keyword}"
+                                   placeholder="의뢰번호 · 운송업체 · B/L 검색"/>
+                        </div>
+
+                        <select class="forwarder-filter-select" name="statusCd">
+                            <option value="">전체 상태</option>
+                            <option value="CONTRACT_ACTIVE"
+                                    <c:if test="${searchDTO.statusCd eq 'CONTRACT_ACTIVE'}">selected</c:if>>
+                                계약중
+                            </option>
+                            <option value="TRC_END"
+                                    <c:if test="${searchDTO.statusCd eq 'TRC_END'}">selected</c:if>>
+                                완료대기
+                            </option>
+                            <option value="TRC_COMPLETE"
+                                    <c:if test="${searchDTO.statusCd eq 'TRC_COMPLETE'}">selected</c:if>>
+                                완료
+                            </option>
+                        </select>
+
+                        <input class="forwarder-date-input"
+                               type="date"
+                               name="startDate"
+                               value="${searchDTO.startDate}"/>
+
+                        <span class="forwarder-date-sep">~</span>
+
+                        <input class="forwarder-date-input"
+                               type="date"
+                               name="endDate"
+                               value="${searchDTO.endDate}"/>
+
+                        <button type="submit" class="btn btn-dark">조회</button>
+                    </form>
+
+                    <div class="transport-section-title">수입 운송 진행 현황</div>
+
+                    <div class="card-section">
+                        <table class="data-table">
+                            <thead>
+                            <tr>
+                                <th>의뢰번호</th>
+                                <th>운송 구간</th>
+                                <th>운송업체</th>
+                                <th>B/L 번호</th>
+                                <th>D/O 수령여부</th>
+                                <th>도착 예정일(ETA)</th>
+                                <th>상태</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <c:choose>
+                                <c:when test="${empty impTrcProgressList}">
+                                    <tr>
+                                        <td colspan="8" class="forwarder-empty-cell">
+                                            조회된 수입 운송 진행 건이 없습니다.
+                                        </td>
+                                    </tr>
+                                </c:when>
+
+                                <c:otherwise>
+                                    <c:forEach var="item" items="${impTrcProgressList}">
+                                        <tr>
+                                            <td>
+                                                <a class="transport-request-link import"
+                                                   href="${pageContext.request.contextPath}/owner/transport/import/detail.do/${item.trcNo}">
+                                                        ${item.trcNo}
+                                                </a>
+                                            </td>
+
+                                            <td class="transport-route-cell">
+                                                <span class="material-symbols-outlined transport-route-icon">directions_boat</span>
+                                                <c:out value="${empty item.deptPortNm ? item.deptPortCd : item.deptPortNm}"/>
+                                                <span class="transport-route-arrow">→</span>
+                                                <c:out value="${empty item.arvlPortNm ? item.arvlPortCd : item.arvlPortNm}"/>
+                                            </td>
+
+                                            <td>
+                                                <c:out value="${item.tmCpNm}"/>
+                                            </td>
+
+                                            <td>
+                                                <c:choose>
+                                                    <c:when test="${not empty item.trcBiNo}">
+                                                        <c:out value="${item.trcBiNo}"/>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="doc-status wait">미발급</span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
+
+                                            <td>
+                                                <c:choose>
+                                                    <c:when test="${item.doStatusCd eq 'TRC_DO_REQ'}">
+                                                        <span class="badge badge-ok">수령</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="badge badge-wait">미수령</span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
+
+                                            <td>
+                                                <c:choose>
+                                                    <c:when test="${not empty item.etaDt}">
+                                                        <fmt:formatDate value="${item.etaDt}" pattern="MM/dd"/>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        -
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
+
+                                            <td>
+                                                <c:choose>
+                                                    <c:when test="${item.trcStatusCd eq 'TRC_COMPLETE'}">
+                                                        <span class="badge badge-done">
+                                                            <c:out value="${item.trcStatusNm}"/>
+                                                        </span>
+                                                    </c:when>
+                                                    <c:when test="${item.trcStatusCd eq 'TRC_END'}">
+                                                        <span class="badge badge-wait">
+                                                            <c:out value="${item.trcStatusNm}"/>
+                                                        </span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="badge badge-ok">
+                                                            <c:out value="${item.trcStatusNm}"/>
+                                                        </span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
+
+                                            <td>
+                                                <a class="mini mini-view transport-detail-link"
+                                                   href="${pageContext.request.contextPath}/owner/transport/import/detail.do/${item.trcNo}">
+                                                    상세보기
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </c:forEach>
+                                </c:otherwise>
+                            </c:choose>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <%@ include file="/WEB-INF/views/common/ownerModals.jsp" %>
+        <%@ include file="/WEB-INF/views/common/footer.jsp" %>
+    </div>
+</div>
+
+<%@ include file="/WEB-INF/views/common/ownerScripts.jsp" %>
+
+</body>
+</html>

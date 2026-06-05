@@ -1,0 +1,200 @@
+package kr.or.tacs.common.interceptor;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerInterceptor;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import kr.or.tacs.systemadmin.menu.service.IAdminMenuService;
+import kr.or.tacs.vo.common.CustomUser;
+import kr.or.tacs.vo.systemadmin.menu.RoleMenuVO;
+import lombok.RequiredArgsConstructor;
+
+@Component
+@RequiredArgsConstructor
+public class MenuAuthInterceptor implements HandlerInterceptor {
+
+    private final IAdminMenuService adminMenuService;
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // 컨트롤러 메서드 요청이 아니면 메뉴 권한 검사 대상이 아니다.
+        if (!(handler instanceof HandlerMethod)) {
+            return true;
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // 인증 정보가 없으면 여기서 판단하지 않고 Spring Security 기본 흐름에 맡긴다.
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUser loginUser)) {
+            return true;
+        }
+
+        // 시스템 관리자는 메뉴 권한 제한 없이 전체 메뉴를 사용한다.
+        if ("SYSTEM_ADMIN".equals(loginUser.getRoleCd())) {
+            request.setAttribute("menuPermissionEnabled", false);
+            return true;
+        }
+
+        // 현재 로그인 사용자의 역할 기준으로 DB에 저장된 메뉴 권한을 가져와 JSP에서 함께 사용한다.
+        //역할코드 꺼내고 그역할이 가진 권한목록을 db에서 조회
+        List<RoleMenuVO> permissions = adminMenuService.getMenuPermissionsByRole(loginUser.getRoleCd());
+        Map<String, RoleMenuVO> permissionMap = permissions.stream()
+                .filter(permission -> StringUtils.hasText(permission.getMenuUrl())) // url있는것만
+                .collect(Collectors.toMap(
+                        RoleMenuVO::getMenuUrl,
+                        permission -> permission,
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                        /*
+                        Map<String, RoleMenuVO> permissionMap = new LinkedHashMap<>();
+                        for (RoleMenuVO permission : permissions) {
+                          if (StringUtils.hasText(permission.getMenuUrl())) {
+                              String key = permission.getMenuUrl();
+                              RoleMenuVO value = permission;
+                              if (!permissionMap.containsKey(key)) {
+                                  permissionMap.put(key, value);
+                              }
+                          }
+                        }
+                        * */
+                ));
+
+        request.setAttribute("menuPermissionEnabled", true);
+        request.setAttribute("menuPermissionList", permissions);
+        request.setAttribute("menuPermissions", permissionMap);
+
+        String path = getRequestPath(request);
+        String query = request.getQueryString();
+        RoleMenuVO currentPermission = findCurrentPermission(path, query, permissions);
+        if (currentPermission != null) {
+            // DB 메뉴 권한에 매칭되는 URL은 읽기/쓰기/삭제 권한을 실제로 검사한다.
+            request.setAttribute("currentMenuPermission", currentPermission);
+            request.setAttribute("currentCanWrite", "Y".equalsIgnoreCase(currentPermission.getWriteYn()));
+            request.setAttribute("currentCanDelete", "Y".equalsIgnoreCase(currentPermission.getDeleteYn()));
+            if (isActionAllowed(request, currentPermission)) {
+                return true;
+            }
+
+            return deny(request, response);
+        }
+
+        // MENU에 없는 상세/처리 URL은 기존 Spring Security 역할 권한으로만 판단한다.
+        return true;
+    }
+
+    private RoleMenuVO findCurrentPermission(String path, String query, List<RoleMenuVO> permissions) {
+        for (RoleMenuVO permission : permissions) {
+            if (!StringUtils.hasText(permission.getMenuUrl())) {
+                continue;
+            }
+            if (matches(path, query, permission.getMenuUrl())) {
+                return permission;
+            }
+        }
+        return null;
+    }
+
+    private boolean matches(String path, String query, String menuUrl) {
+        String menuPath = getPathPart(menuUrl);
+        String menuQuery = getQueryPart(menuUrl);
+
+        // 메뉴 URL이 정확히 일치하면 해당 메뉴의 권한을 사용한다.
+        if (path.equals(menuPath)) {
+            return menuQuery == null || !StringUtils.hasText(query) || menuQuery.equals(query);
+        }
+
+        // 목록 메뉴에서 파생되는 상세/처리 URL도 같은 메뉴 권한으로 묶어 본다.
+        for (String relatedPrefix : getRelatedMenuPrefixes(menuPath)) {
+            if (path.startsWith(relatedPrefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String getRequestPath(HttpServletRequest request) {
+        String requestUri = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (StringUtils.hasText(contextPath) && requestUri.startsWith(contextPath)) {
+            return requestUri.substring(contextPath.length());
+        }
+        return requestUri;
+    }
+
+    private String getPathPart(String url) {
+        int queryIndex = url.indexOf('?');
+        return queryIndex < 0 ? url : url.substring(0, queryIndex);
+    }
+
+    private String getQueryPart(String url) {
+        int queryIndex = url.indexOf('?');
+        return queryIndex < 0 ? null : url.substring(queryIndex + 1);
+    }
+
+    private List<String> getRelatedMenuPrefixes(String menuPath) {
+        List<String> prefixes = new ArrayList<>();
+        if (menuPath.endsWith("/list.do")) {
+            prefixes.add(menuPath.substring(0, menuPath.length() - "list.do".length()));
+        }
+        if (menuPath.endsWith("List.do")) {
+            prefixes.add(menuPath.substring(0, menuPath.length() - "List.do".length()));
+        }
+        if (menuPath.endsWith(".do")) {
+            prefixes.add(menuPath.substring(0, menuPath.length() - ".do".length()) + "/");
+        }
+        return prefixes;
+    }
+
+    private boolean isActionAllowed(HttpServletRequest request, RoleMenuVO permission) {
+        // 읽기 권한이 없으면 화면 진입과 처리 요청 모두 막는다.
+        if (!"Y".equalsIgnoreCase(permission.getReadYn())) {
+            return false;
+        }
+
+        String method = request.getMethod();
+        if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method) || "OPTIONS".equalsIgnoreCase(method)) {
+            return true;
+        }
+
+        String path = getRequestPath(request).toLowerCase();
+        if (isDeleteRequest(method, path)) {
+            return "Y".equalsIgnoreCase(permission.getDeleteYn());
+        }
+        // GET 계열이 아닌 일반 처리 요청은 쓰기 권한으로 판단한다.
+        return "Y".equalsIgnoreCase(permission.getWriteYn());
+    }
+
+    private boolean isDeleteRequest(String method, String path) {
+        return "DELETE".equalsIgnoreCase(method)
+                || path.contains("delete")
+                || path.contains("remove")
+                || path.contains("trash");
+    }
+
+    private boolean deny(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        if (isAsyncRequest(request)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+        } else {
+            response.sendRedirect(request.getContextPath() + "/accessError");
+        }
+        return false;
+    }
+
+    private boolean isAsyncRequest(HttpServletRequest request) {
+        String requestedWith = request.getHeader("X-Requested-With");
+        String accept = request.getHeader("Accept");
+        return "XMLHttpRequest".equalsIgnoreCase(requestedWith)
+                || (accept != null && accept.contains("application/json"));
+    }
+}

@@ -1,0 +1,85 @@
+package kr.or.tacs.broker.clients.service;
+
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
+import kr.or.tacs.broker.clients.mapper.IClientsMapper;
+import kr.or.tacs.vo.common.PaginationInfoVO;
+import kr.or.tacs.vo.broker.clients.ClientFileVO;
+import kr.or.tacs.vo.broker.clients.ClientSearchVO;
+import kr.or.tacs.vo.broker.clients.ClientVO;
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class ClientsServiceImpl implements IClientsService {
+
+    private final IClientsMapper clientsMapper;
+
+    @Override
+    public List<ClientVO> selectClientList(ClientSearchVO searchVO) {
+        return clientsMapper.selectClientList(searchVO);
+    }
+
+    @Override
+    public PaginationInfoVO<ClientVO> selectClientPage(ClientSearchVO searchVO) {
+
+        PaginationInfoVO<ClientVO> pagingVO = new PaginationInfoVO<>(10, 5);
+
+        int currentPage = searchVO.getPage() <= 0 ? 1 : searchVO.getPage();
+
+        pagingVO.setCurrentPage(currentPage);
+
+        searchVO.setStartRow(pagingVO.getStartRow());
+        searchVO.setEndRow(pagingVO.getEndRow());
+
+        int totalRecord = clientsMapper.selectClientCount(searchVO);
+        pagingVO.setTotalRecord(totalRecord);
+
+        List<ClientVO> dataList = clientsMapper.selectClientList(searchVO);
+        pagingVO.setDataList(dataList);
+
+        return pagingVO;
+    }
+
+    @Override
+    public ClientVO selectClientDetail(ClientSearchVO searchVO) {
+
+        ClientVO client = clientsMapper.selectClientDetail(searchVO);
+
+        if (client != null && client.getTfgNo() != null) {
+            client.setFileList(clientsMapper.selectClientFileList(client.getTfgNo()));
+        }
+
+        return client;
+    }
+
+    @Override
+    public ClientFileVO selectClientFile(Long fileNo) {
+        return clientsMapper.selectClientFile(fileNo);
+    }
+    
+    @Override
+    public int acceptClientRequest(ClientSearchVO searchVO) {
+        return clientsMapper.updateClientAccept(searchVO);
+    }
+
+    @Override
+    public int requestSupplement(ClientSearchVO searchVO) {
+
+        if (searchVO.getSuppReqCn() == null || searchVO.getSuppReqCn().isBlank()) {
+            searchVO.setSuppReqCn("보완 요청");
+        }
+
+        clientsMapper.insertSuppRqst(searchVO);
+
+        return clientsMapper.updateClientSuppStatus(searchVO);
+    }
+
+    @Override
+    public int rejectClientRequest(ClientSearchVO searchVO) {
+        clientsMapper.insertRejectMng(searchVO);
+        return clientsMapper.updateClientRejectStatus(searchVO);
+    }
+}

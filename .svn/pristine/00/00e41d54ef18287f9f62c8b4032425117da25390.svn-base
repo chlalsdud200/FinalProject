@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.systemadmin.commoncode.mapper.IAdminCommonCodeMapper">
+
+    <resultMap id="groupMap" type="kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeGroupVO">
+        <id property="ccgId" column="CCG_ID"/>
+        <result property="ccgName" column="CCG_NM"/>
+        <result property="className" column="CCG_CLS_NM"/>
+        <result property="bizAreaName" column="CCG_BIZ_AREA_NM"/>
+        <result property="description" column="CCG_DESC"/>
+        <result property="statusScopeName" column="CCG_STATUS_SCOPE_NM"/>
+        <result property="useRecommendName" column="CCG_USE_RCMD_NM"/>
+        <result property="remark" column="CCG_RMRK"/>
+        <result property="useYn" column="CCG_USE_YN"/>
+        <result property="createdAt" column="CREATED_AT"/>
+        <result property="codeCount" column="CODE_COUNT"/>
+        <result property="activeCodeCount" column="ACTIVE_CODE_COUNT"/>
+    </resultMap>
+
+    <resultMap id="codeMap" type="kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeVO">
+        <id property="ccgId" column="CC_CCG_ID"/>
+        <id property="ccCd" column="CC_CD"/>
+        <result property="ccName" column="CC_NM"/>
+        <result property="description" column="CC_DESC"/>
+        <result property="sortOrder" column="CC_SORT_SN"/>
+        <result property="externalYn" column="CC_EXTERNAL_YN"/>
+        <result property="endYn" column="CC_END_YN"/>
+        <result property="remark" column="CC_RMRK"/>
+        <result property="useYn" column="CC_USE_YN"/>
+        <result property="createdAt" column="CREATED_AT"/>
+    </resultMap>
+
+    <sql id="groupColumns">
+          G.ccg_id
+        , G.ccg_nm
+        , G.ccg_cls_nm
+        , G.ccg_biz_area_nm
+        , G.ccg_desc
+        , G.ccg_status_scope_nm
+        , G.ccg_use_rcmd_nm
+        , G.ccg_rmrk
+        , G.ccg_use_yn
+        , TO_CHAR(G.ccg_regist_dt, 'YYYY-MM-DD HH24:MI') AS CREATED_AT
+        , COUNT(C.cc_cd) AS CODE_COUNT
+        , SUM(CASE WHEN NVL(C.cc_use_yn, 'Y') = 'Y' THEN 1 ELSE 0 END) AS ACTIVE_CODE_COUNT
+    </sql>
+
+    <sql id="codeColumns">
+          C.cc_ccg_id
+        , C.cc_cd
+        , C.cc_nm
+        , C.cc_desc
+        , C.cc_sort_sn
+        , C.cc_external_yn
+        , C.cc_end_yn
+        , C.cc_rmrk
+        , C.cc_use_yn
+        , TO_CHAR(C.cc_regist_dt, 'YYYY-MM-DD HH24:MI') AS CREATED_AT
+    </sql>
+
+    <select id="selectGroupList" parameterType="kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeGroupSearchVO" resultMap="groupMap">
+        SELECT
+            <include refid="groupColumns"/>
+        FROM com_code_grp G
+        LEFT JOIN com_code C
+          ON C.cc_ccg_id = G.ccg_id
+        WHERE 1 = 1
+        <if test="keyword != null and keyword != ''">
+          AND (
+                UPPER(G.ccg_id) LIKE '%' || UPPER(#{keyword}) || '%'
+             OR UPPER(G.ccg_nm) LIKE '%' || UPPER(#{keyword}) || '%'
+             OR UPPER(G.ccg_desc) LIKE '%' || UPPER(#{keyword}) || '%'
+             OR UPPER(G.ccg_rmrk) LIKE '%' || UPPER(#{keyword}) || '%'
+          )
+        </if>
+        <if test="useYn != null and useYn != '' and useYn != 'all'">
+          AND G.ccg_use_yn = #{useYn}
+        </if>
+        GROUP BY
+              G.ccg_id
+            , G.ccg_nm
+            , G.ccg_cls_nm
+            , G.ccg_biz_area_nm
+            , G.ccg_desc
+            , G.ccg_status_scope_nm
+            , G.ccg_use_rcmd_nm
+            , G.ccg_rmrk
+            , G.ccg_use_yn
+            , G.ccg_regist_dt
+        ORDER BY G.ccg_id ASC
+    </select>
+
+    <select id="selectGroup" resultMap="groupMap">
+        SELECT
+            <include refid="groupColumns"/>
+        FROM com_code_grp G
+        LEFT JOIN com_code C
+          ON C.cc_ccg_id = G.ccg_id
+        WHERE G.ccg_id = #{ccgId}
+        GROUP BY
+              G.ccg_id
+            , G.ccg_nm
+            , G.ccg_cls_nm
+            , G.ccg_biz_area_nm
+            , G.ccg_desc
+            , G.ccg_status_scope_nm
+            , G.ccg_use_rcmd_nm
+            , G.ccg_rmrk
+            , G.ccg_use_yn
+            , G.ccg_regist_dt
+    </select>
+
+    <select id="countGroup" resultType="int">
+        SELECT COUNT(*)
+        FROM com_code_grp
+        WHERE ccg_id = #{ccgId}
+    </select>
+
+    <insert id="insertGroup" parameterType="kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeGroupVO">
+        INSERT INTO com_code_grp (
+              ccg_id
+            , ccg_nm
+            , ccg_cls_nm
+            , ccg_biz_area_nm
+            , ccg_desc
+            , ccg_status_scope_nm
+            , ccg_use_rcmd_nm
+            , ccg_rmrk
+            , ccg_use_yn
+            , ccg_regist_dt
+        ) VALUES (
+              #{ccgId}
+            , #{ccgName}
+            , #{className}
+            , #{bizAreaName}
+            , #{description}
+            , #{statusScopeName}
+            , #{useRecommendName}
+            , #{remark}
+            , #{useYn}
+            , SYSDATE
+        )
+    </insert>
+
+    <update id="updateGroup" parameterType="kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeGroupVO">
+        UPDATE com_code_grp
+        SET
+              ccg_nm = #{ccgName}
+            , ccg_cls_nm = #{className}
+            , ccg_biz_area_nm = #{bizAreaName}
+            , ccg_desc = #{description}
+            , ccg_status_scope_nm = #{statusScopeName}
+            , ccg_use_rcmd_nm = #{useRecommendName}
+            , ccg_rmrk = #{remark}
+            , ccg_use_yn = #{useYn}
+        WHERE ccg_id = #{ccgId}
+    </update>
+
+    <update id="updateGroupUseYn">
+        UPDATE com_code_grp
+        SET ccg_use_yn = #{useYn}
+        WHERE ccg_id = #{ccgId}
+    </update>
+
+    <select id="selectCodeList" parameterType="kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeSearchVO" resultMap="codeMap">
+        SELECT
+            <include refid="codeColumns"/>
+        FROM com_code C
+        WHERE C.cc_ccg_id = #{ccgId}
+        <if test="keyword != null and keyword != ''">
+          AND (
+                UPPER(C.cc_cd) LIKE '%' || UPPER(#{keyword}) || '%'
+             OR UPPER(C.cc_nm) LIKE '%' || UPPER(#{keyword}) || '%'
+             OR UPPER(C.cc_desc) LIKE '%' || UPPER(#{keyword}) || '%'
+             OR UPPER(C.cc_rmrk) LIKE '%' || UPPER(#{keyword}) || '%'
+          )
+        </if>
+        <if test="useYn != null and useYn != '' and useYn != 'all'">
+          AND C.cc_use_yn = #{useYn}
+        </if>
+        ORDER BY C.cc_sort_sn ASC, C.cc_cd ASC
+    </select>
+
+    <select id="selectCode" resultMap="codeMap">
+        SELECT
+            <include refid="codeColumns"/>
+        FROM com_code C
+        WHERE C.cc_ccg_id = #{ccgId}
+          AND C.cc_cd = #{ccCd}
+    </select>
+
+    <select id="countCode" resultType="int">
+        SELECT COUNT(*)
+        FROM com_code
+        WHERE cc_ccg_id = #{ccgId}
+          AND cc_cd = #{ccCd}
+    </select>
+
+    <insert id="insertCode" parameterType="kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeVO">
+        INSERT INTO com_code (
+              cc_cd
+            , cc_ccg_id
+            , cc_nm
+            , cc_desc
+            , cc_sort_sn
+            , cc_external_yn
+            , cc_end_yn
+            , cc_rmrk
+            , cc_use_yn
+            , cc_regist_dt
+        ) VALUES (
+              #{ccCd}
+            , #{ccgId}
+            , #{ccName}
+            , #{description}
+            , #{sortOrder}
+            , #{externalYn}
+            , #{endYn}
+            , #{remark}
+            , #{useYn}
+            , SYSDATE
+        )
+    </insert>
+
+    <update id="updateCode" parameterType="kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeVO">
+        UPDATE com_code
+        SET
+              cc_nm = #{ccName}
+            , cc_desc = #{description}
+            , cc_sort_sn = #{sortOrder}
+            , cc_external_yn = #{externalYn}
+            , cc_end_yn = #{endYn}
+            , cc_rmrk = #{remark}
+            , cc_use_yn = #{useYn}
+        WHERE cc_ccg_id = #{ccgId}
+          AND cc_cd = #{ccCd}
+    </update>
+
+    <update id="updateCodeUseYn">
+        UPDATE com_code
+        SET cc_use_yn = #{useYn}
+        WHERE cc_ccg_id = #{ccgId}
+          AND cc_cd = #{ccCd}
+    </update>
+</mapper>

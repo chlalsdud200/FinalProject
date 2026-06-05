@@ -1,0 +1,17 @@
+@charset "UTF-8";
+
+/* ── Reset & Base ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0 !important; font-family: 'Inter', sans-serif; }
+.material-symbols-outlined {
+  width: 1em;
+  min-width: 1em;
+  overflow: hidden;
+  line-height: 1;
+  display: inline-block;
+  white-space: nowrap;
+  font-family: 'Material Symbols Outlined';
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+html, body { background: #f6f9ff; color: #203444; }

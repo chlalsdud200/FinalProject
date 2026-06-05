@@ -1,0 +1,98 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%
+    request.setAttribute("activeMenu", "export");
+    request.setAttribute("activeGroup", "");
+    request.setAttribute("activeSub", "");
+%>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="ctx-path" content="${pageContext.request.contextPath}">
+    <title>TACS 수출신고의뢰 작성</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/owner.css">
+</head>
+<body>
+<div class="app" id="app">
+    <%@ include file="/WEB-INF/views/owner/sidebar.jsp" %>
+
+    <div class="main-wrap">
+        <%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+        <main class="content">
+            <div class="page active" id="pg-export-form">
+                <div class="page-title-row">
+                    <div>
+                        <div style="font-size:11px;color:#94a3b8;font-weight:600;letter-spacing:.5px;margin-bottom:4px;text-transform:uppercase">통관관리</div>
+                        <h2>수출신고의뢰 작성</h2>
+                    </div>
+                    <div class="btn-row">
+                        <a class="btn btn-outline" href="/owner/export/list.do">
+                            <span class="material-symbols-outlined" style="font-size:16px">arrow_back</span> 목록으로
+                        </a>
+                    </div>
+                </div>
+
+                <form id="exportRequestForm"
+                      class="form-doc"
+                      method="post"
+                      enctype="multipart/form-data"
+                      action="/owner/export/form.do">
+                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                    <div class="form-doc-head">
+                        <div class="form-doc-head-left">
+                            <div class="form-doc-type">TACS · Export Customs</div>
+                            <div class="form-doc-title">수출신고의뢰서</div>
+                        </div>
+                        <div class="form-doc-head-right">
+                            <div class="form-doc-meta"><strong>작성상태</strong> 신규 작성</div>
+                            <div class="form-doc-meta"><strong>임시번호</strong> 자동채번 예정</div>
+                        </div>
+                    </div>
+
+                    <div class="form-doc-body">
+                        <%@ include file="/WEB-INF/views/owner/export/fragments/exportFormFields.jsp" %>
+                        <div class="form-doc-divider"></div>
+                        <%@ include file="/WEB-INF/views/owner/export/fragments/exportDocUpload.jsp" %>
+                    </div>
+
+                    <div class="btn-row" style="padding:20px 28px;border-top:1px solid #f1f5f9;">
+                        <button type="submit" class="btn btn-primary">수출신고의뢰 등록</button>
+                        <button type="button" class="btn btn-secondary" onclick="saveExportDraft()">임시저장</button>
+                        <a class="btn btn-outline" href="/owner/export/list.do">취소</a>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <%@ include file="/WEB-INF/views/common/ownerModals.jsp" %>
+        <%@ include file="/WEB-INF/views/common/footer.jsp" %>
+    </div>
+</div>
+
+<div id="exportUploadLoadingOverlay"
+     style="display:none;
+            position:fixed;
+            inset:0;
+            background:rgba(15,23,42,.45);
+            z-index:9999;
+            align-items:center;
+            justify-content:center;">
+    <div style="background:#fff;
+                padding:24px 32px;
+                font-weight:700;
+                color:#203444;
+                border:1px solid #e2e8f0;">
+        수출 의뢰 등록 중입니다...
+    </div>
+</div>
+
+<%@ include file="/WEB-INF/views/common/ownerScripts.jsp" %>
+<script src="${pageContext.request.contextPath}/resources/js/owner/export-request.js"></script>
+</body>
+</html>

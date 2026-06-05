@@ -1,0 +1,127 @@
+package kr.or.tacs.owner.payment.controller;
+
+import kr.or.tacs.cmmenums.TacsPayRcTy;
+import kr.or.tacs.dto.owner.OwnerPayDTO;
+import kr.or.tacs.dto.owner.OwnerPayRecordDTO;
+import kr.or.tacs.dto.owner.TossConfirmResponseDTO;
+import kr.or.tacs.owner.payment.service.IOwnerPaymentService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import java.util.Map;
+
+@Controller
+@RequestMapping("/owner/payment")
+public class OwnerPaymentController {
+
+    @Value("${toss.client-key}")
+    private String tossClientKey;
+
+    @Autowired
+    private IOwnerPaymentService paymentService;
+
+    @GetMapping("/success.do")
+    public String paySuccess(@RequestParam String paymentKey, @RequestParam String orderId,
+                             @RequestParam Long amount, @RequestParam(required = false) String paymentType, Model model) {
+
+        TossConfirmResponseDTO payment = paymentService.confirm(paymentKey, orderId, amount);
+
+        addPaymentViewInfo(orderId, model);
+
+        model.addAttribute("payment", payment);
+        model.addAttribute("paymentType", paymentType);
+
+        return "owner/paymentSuccess";
+    }
+
+    @GetMapping("/fail.do")
+    public String payFail(@RequestParam String code, @RequestParam String message,
+                          @RequestParam(required = false) String orderId, Model model) {
+
+        paymentService.fail(code, message, orderId);
+
+        model.addAttribute("code", code);
+        model.addAttribute("message", message);
+        model.addAttribute("orderId", orderId);
+
+        return "owner/paymentFail";
+    }
+
+    @ResponseBody
+    @PostMapping("/ready.do")
+    public ResponseEntity<Map<String, Object>> payReady(@RequestBody OwnerPayDTO payDTO, Authentication authentication){
+
+        String owrId = authentication.getName();
+
+        Map<String, Object> resultMap = paymentService.ready(payDTO, owrId);
+
+        return ResponseEntity.ok(resultMap);
+
+    }
+
+    private void addPaymentViewInfo(String orderId, Model model) {
+        OwnerPayRecordDTO payRecord = paymentService.retrievePayRecordByOrderId(orderId);
+
+        String paymentTitle = "결제";
+        String listUrl = "/owner/dashboard/list.do";
+
+        if (payRecord != null) {
+            if (TacsPayRcTy.FREIGHT.equals(payRecord.getOprRecordTy())) {
+                paymentTitle = TacsPayRcTy.FREIGHT.getLabel();
+                listUrl = "/owner/transport/freight/list.do";
+            } else if (TacsPayRcTy.BROKER_CHARGE.equals(payRecord.getOprRecordTy())) {
+                paymentTitle = TacsPayRcTy.BROKER_CHARGE.getLabel();
+                listUrl = "/owner/customs/duty/list.do";
+            }
+
+            model.addAttribute("recordTy", payRecord.getOprRecordTy());
+            model.addAttribute("claimNo", payRecord.getOprClaimNo());
+            model.addAttribute("amount", payRecord.getOprAmt());
+        }
+
+        model.addAttribute("paymentTitle", paymentTitle);
+        model.addAttribute("listUrl", listUrl);
+    }
+
+    @GetMapping("/receipt.do/{recordTy}/{claimNo}")
+    public String paymentReceipt(@PathVariable String recordTy,
+                                 @PathVariable String claimNo,
+                                 Authentication authentication,
+                                 Model model) {
+
+        String owrId = authentication.getName();
+
+        OwnerPayRecordDTO payRecord = paymentService.retrieveReceipt(recordTy, claimNo, owrId);
+
+        if (payRecord == null) {
+            model.addAttribute("code", "RECEIPT_NOT_FOUND");
+            model.addAttribute("message", "결제 완료된 영수증 정보를 찾을 수 없습니다.");
+            model.addAttribute("orderId", "-");
+            return "owner/paymentFail";
+        }
+
+        String paymentTitle = "결제";
+        String listUrl = "/owner/dashboard/list.do";
+
+        if (TacsPayRcTy.FREIGHT.getCode().equals(recordTy)) {
+            paymentTitle = TacsPayRcTy.FREIGHT.getLabel();
+            listUrl = "/owner/transport/freight/list.do";
+        } else if (TacsPayRcTy.BROKER_CHARGE.getCode().equals(recordTy)) {
+            paymentTitle = TacsPayRcTy.BROKER_CHARGE.getLabel();
+            listUrl = "/owner/tariff/duty/list.do";
+        }
+
+        model.addAttribute("paymentTitle", paymentTitle);
+        model.addAttribute("listUrl", listUrl);
+        model.addAttribute("recordTy", recordTy);
+        model.addAttribute("claimNo", payRecord.getOprClaimNo());
+        model.addAttribute("amount", payRecord.getOprAmt());
+        model.addAttribute("payRecord", payRecord);
+
+        return "owner/paymentReceipt";
+    }
+}

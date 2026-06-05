@@ -1,0 +1,52 @@
+@charset "UTF-8";
+
+.broker-scope .cm-card{background:#fff;border-left:4px solid #565e74;padding:16px;margin-bottom:12px;box-shadow:0 1px 0 #e2e8f0}
+.broker-scope .cm-card h3{font-size:14px;color:#203444;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.broker-scope .cm-card p{font-size:12px;color:#4d6172;line-height:1.6}
+.broker-scope .notice-list{display:flex;flex-direction:column;gap:8px}
+.broker-scope .notice-item{display:flex;align-items:center;gap:12px;padding:12px;background:#f6f9ff;border-left:3px solid transparent;cursor:pointer;transition:.12s}
+.broker-scope .notice-item:hover{background:#ecf4ff;border-left-color:#565e74}
+.broker-scope .notice-label{font-size:10px;font-weight:800;padding:3px 7px;background:#565e74;color:#fff;min-width:48px;text-align:center}
+.broker-scope .notice-label.work{background:#1d6b4f}
+.broker-scope .notice-body{flex:1}
+.broker-scope .notice-title{font-size:13px;font-weight:700;color:#203444}
+.broker-scope .notice-date{font-size:10px;color:#697d8f;margin-top:2px}
+.broker-scope .cs-category{display:inline-block;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid #cbd5e1;background:#fff;color:#697d8f;margin-right:4px;margin-bottom:8px}
+.broker-scope .cs-category.active{background:#565e74;color:#fff;border-color:#565e74}
+.broker-scope .faq-item{border-bottom:1px solid #d9eafc;margin-bottom:0;border-left:0;border-right:0;border-top:0;border-radius:0;box-shadow:none;background:#fff}
+.broker-scope .faq-q{padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;color:#203444}
+.broker-scope .faq-a{display:none;padding:0 0 12px 0;font-size:12px;color:#4d6172;line-height:1.6}
+.broker-scope .faq-a.open{display:block}
+.broker-scope .file-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.broker-scope .file-card{background:#f6f9ff;padding:14px;display:flex;gap:12px;align-items:flex-start;border:1px solid #d9eafc}
+.broker-scope .file-card .material-symbols-outlined{font-size:28px;color:#565e74}
+.broker-scope .file-info{flex:1}
+.broker-scope .file-info h4{font-size:13px;color:#203444;margin-bottom:4px}
+.broker-scope .file-info p{font-size:11px;color:#697d8f;margin-bottom:8px}
+.broker-scope .notice-detail{background:#fff;padding:32px;border:0;border-radius:0;box-shadow:none;margin:0}
+.broker-scope .notice-detail .nd-header{border-bottom:2px solid #0f172a;padding-bottom:16px;margin-bottom:24px}
+.broker-scope .notice-detail .nd-title{font-size:18px;font-weight:800;color:#0f172a;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.broker-scope .notice-detail .nd-meta{display:flex;gap:20px;font-size:12px;color:#697d8f}
+.broker-scope .notice-detail .nd-meta span{font-weight:700;color:#4d6172}
+.broker-scope .notice-detail .nd-body{font-size:14px;line-height:1.9;color:#334155;min-height:200px;padding:20px 0}
+.broker-scope .notice-detail .nd-body h4{font-size:14px;font-weight:700;color:#1e293b;margin:20px 0 8px}
+.broker-scope .notice-detail .nd-body ul{margin-left:20px;margin-bottom:12px}
+.broker-scope .notice-detail .nd-body ul li{margin-bottom:4px}
+.broker-scope .notice-detail .nd-attach{background:#f8fafc;padding:16px;margin-top:20px}
+.broker-scope .notice-detail .nd-attach h5{font-size:12px;font-weight:700;color:#4d6172;margin-bottom:10px}
+.broker-scope .notice-detail .nd-nav{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;padding-top:16px;margin-top:24px}
+.broker-scope .inquiry-form{background:#fff;padding:24px;display:block}
+.broker-scope .inquiry-form h4{font-size:14px;font-weight:700;color:#1e293b;border-bottom:1px solid #e2e8f0;padding-bottom:10px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.broker-scope .detail-content{background:#fff;padding:24px;border-left:4px solid #565e74;margin-bottom:16px}
+.broker-scope .detail-header{border-bottom:1px solid #e2e8f0;padding-bottom:12px;margin-bottom:16px}
+.broker-scope .detail-header h3{font-size:16px;color:#0f172a;margin:6px 0}
+.broker-scope .detail-meta{font-size:12px;color:#697d8f}
+.broker-scope .file-detail{background:#fff;padding:24px;border:0;border-radius:0;box-shadow:none;margin:0}
+.broker-scope .file-detail-header{display:flex;gap:20px;align-items:flex-start;padding-bottom:20px;border-bottom:1px solid #e2e8f0;margin-bottom:20px}
+.broker-scope .file-detail-icon{width:64px;height:64px;background:#ecf4ff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.broker-scope .file-detail-icon .material-symbols-outlined{font-size:32px;color:#565e74}
+.broker-scope .file-detail-info h3{font-size:16px;font-weight:800;color:#0f172a;margin-bottom:6px}
+.broker-scope .file-detail-meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:12px;color:#697d8f;margin-top:8px}
+.broker-scope .file-detail-meta span{font-weight:700;color:#4d6172}
+.broker-scope .file-detail-desc{font-size:13px;line-height:1.8;color:#334155;padding:16px 0}
+@media(max-width:900px){.broker-scope .file-list{grid-template-columns:1fr}}

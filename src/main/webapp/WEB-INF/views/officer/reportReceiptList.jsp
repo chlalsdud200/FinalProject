@@ -1,0 +1,261 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ include file="/WEB-INF/views/officer/common/taglibs.jsp" %>
+<%@ taglib uri="http://www.springframework.org/security/tags" prefix="sec" %>
+
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="activeMenu" value="basic" />
+<c:set var="activeSub" value="reportReceiptList" />
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <%@ include file="/WEB-INF/views/officer/header/head.jsp" %>
+        <title>TACS · 신고접수목록</title>
+        <link rel="stylesheet" href="${ctx}/resources/css/officer/pages/reportReceiptList.css">
+    </head>
+
+    <body>
+        <%@ include file="/WEB-INF/views/officer/header/sidebar.jsp" %>
+        <%@ include file="/WEB-INF/views/officer/header/header.jsp" %>
+
+        <main class="officer-main report-receipt-main">
+            <section class="page-inner">
+                <div class="breadcrumb">
+                    <span>신고 접수 및 기본심사</span>
+                    <span>›</span>
+                    <strong>TACS-AD-001</strong>
+                </div>
+
+                <h2 class="page-title">신고접수목록</h2>
+
+                <div class="page-banner">
+                    <h3>신고 접수 및 기본심사</h3>
+                    <p>신고 접수 현황을 조회하고 접수 또는 반려 처리합니다. 접수 완료 건은 기본심사목록으로 이동됩니다.</p>
+                </div>
+
+                <form class="search-panel" id="receiptSearchForm" method="get" action="${ctx}/officer/reportReceiptList.do">
+                    <div class="search-title">검색 조건</div>
+
+                    <div class="search-grid">
+                        <span class="sg-label">· 신고번호</span>
+                        <input type="text" id="reqNo" name="reqNo" class="form-input sg-input" value="${search.reqNo}" placeholder="신고번호 입력">
+
+                        <span class="sg-label">· 업체명</span>
+                        <input type="text" id="companyName" name="companyName" class="form-input sg-input" value="${search.companyName}" placeholder="업체명 입력">
+
+                        <span class="sg-label">· 신고구분</span>
+                        <div class="radio-group">
+                            <label><input type="radio" name="declareType" value=""     ${empty search.declareType ? 'checked' : ''}> 전체</label>
+                            <label><input type="radio" name="declareType" value="수입" ${search.declareType eq '수입' ? 'checked' : ''}> 수입</label>
+                            <label><input type="radio" name="declareType" value="수출" ${search.declareType eq '수출' ? 'checked' : ''}> 수출</label>
+                        </div>
+
+                        <span class="sg-label">· 품명</span>
+                        <input type="text" id="itemName" name="itemName" class="form-input sg-input" value="${search.itemName}" placeholder="품목 입력">
+
+                        <span class="sg-label">· 현재상태</span>
+                        <select id="statusCd" name="statusCd" class="form-select sg-select">
+                            <option value="" ${empty search.statusCd ? 'selected' : ''}>전체</option>
+                            <option value="DCLR_WAIT" ${search.statusCd eq 'DCLR_WAIT' ? 'selected' : ''}>접수대기</option>
+                            <option value="DCLR_REJ"  ${search.statusCd eq 'DCLR_REJ'  ? 'selected' : ''}>반려</option>
+                        </select>
+
+                        <span class="sg-label">· 신고일시</span>
+                        <div class="date-inline">
+                            <input type="date" name="startDate" class="form-input date-input" value="${search.startDate}">
+                            <span class="date-sep">~</span>
+                            <input type="date" name="endDate" class="form-input date-input" value="${search.endDate}">
+                            <button type="button" class="btn-secondary btn-quick" data-range="7">최근 1주일</button>
+                            <button type="button" class="btn-secondary btn-quick" data-range="30">1개월</button>
+                        </div>
+
+                        <div class="sg-cell-auto">
+                            <div class="sg-btn-group">
+                                <button type="submit" class="btn-primary">조회</button>
+                                <button type="button" class="btn-secondary" id="btnReset">초기화</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+
+                <div class="result-header">
+                    <div class="result-count">조회목록 <span>${empty totalCount ? 0 : totalCount}건</span></div>
+                    <div class="result-actions">
+                        <button type="button" id="btnBatchReceive" class="btn-primary">일괄접수</button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <table class="receipt-table">
+                        <thead>
+                            <tr>
+                                <th class="col-check"><input type="checkbox" id="checkAll"></th>
+                                <th>NO.</th>
+                                <th>통관의뢰번호</th>
+                                <th>신고구분</th>
+                                <th>업체명</th>
+                                <th>품명</th>
+                                <th>접수상태</th>
+                                <th>신고일시</th>
+                                <th>처리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach var="item" items="${list}">
+                                <c:set var="isRejected" value="${item.statusCd eq 'DCLR_REJ'}" />
+
+                                <tr class="receipt-row ${isRejected ? 'row-locked' : ''}"
+                                    onclick="location.href='${ctx}/officer/basicScreenDetail.do?reqNo=${item.reqNo}&amp;declareType=${item.declareType}'">
+
+                                    <td onclick="event.stopPropagation();">
+                                        <input type="checkbox"
+                                               class="row-check"
+                                               value="${item.reqNo}"
+                                               data-declare-type="${item.declareType}"
+                                               <c:if test="${isRejected}">disabled</c:if>>
+                                    </td>
+
+                                    <td>${item.no}</td>
+                                    <td><strong>${item.reqNo}</strong></td>
+                                    <td>${item.declareType}</td>
+                                    <td>${item.companyName}</td>
+                                    <td>${item.itemName}</td>
+
+                                    <td>
+                                        <c:choose>
+                                            <c:when test="${item.statusCd eq 'DCLR_WAIT'}">
+                                                <span class="status-text wait">접수대기</span>
+                                            </c:when>
+                                            <c:when test="${item.statusCd eq 'DCLR_REJ'}">
+                                                <span class="status-text reject">반려</span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="status-text"><c:out value="${item.statusCd}" /></span>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </td>
+
+                                    <td>${item.requestDate}</td>
+
+                                    <td class="td-action" onclick="event.stopPropagation();">
+                                        <div class="action-buttons">
+                                            <c:choose>
+                                                <c:when test="${isRejected}">
+                                                    <button type="button"
+                                                            class="btn-action btn-detail"
+                                                            data-req-no="${item.reqNo}">
+                                                        상세
+                                                    </button>
+
+                                                    <button type="button"
+                                                            class="btn-action btn-reject-reason"
+                                                            data-req-no="${item.reqNo}"
+                                                            data-reason="<c:out value='${item.rejectReason}' />"
+                                                            data-date="<c:out value='${item.rejectDate}' />"
+                                                            data-type="<c:out value='${item.rejectType}' />">
+                                                        반려사유
+                                                    </button>
+                                                </c:when>
+
+                                                <c:otherwise>
+                                                    <form action="${ctx}/officer/receiptAccept.do"
+                                                          method="post"
+                                                          style="display:inline-block; margin-right:4px;">
+                                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                        <input type="hidden" name="reqNo" value="${item.reqNo}">
+                                                        <input type="hidden" name="declareType" value="${item.declareType}">
+                                                        <button type="submit" class="btn-action btn-accept">접수</button>
+                                                    </form>
+
+                                                    <button type="button"
+                                                            class="btn-action btn-reject"
+                                                            data-req-no="${item.reqNo}"
+                                                            data-declare-type="${item.declareType}">
+                                                        반려
+                                                    </button>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </c:forEach>
+
+                            <c:if test="${empty list}">
+                                <tr>
+                                    <td colspan="9" class="empty-text">
+                                        조회된 신고 접수 목록이 없습니다.
+                                    </td>
+                                </tr>
+                            </c:if>
+                        </tbody>
+                    </table>
+                    <form id="batchAcceptForm"
+                          action="${ctx}/officer/receiptBatchAccept.do"
+                          method="post">
+                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                    </form>
+                </div>
+            </section>
+        </main>
+
+        <div id="rejectModal" class="modal" aria-hidden="true">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <strong>신고 반려</strong>
+                    <button type="button" class="modal-close" onclick="closeRejectModal()">×</button>
+                </div>
+
+                <form action="${ctx}/officer/receiptReject.do" method="post">
+                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                    <input type="hidden" id="rejectReqNo" name="reqNo">
+                    <input type="hidden" id="rejectDeclareType" name="declareType">
+
+                    <div class="modal-body">
+                        <label class="modal-label">반려사유</label>
+                        <textarea id="rejectReason"
+                                  name="rejectReason"
+                                  class="modal-textarea"
+                                  required
+                                  placeholder="반려사유를 입력하세요."></textarea>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="closeRejectModal()">취소</button>
+                        <button type="submit" class="btn-danger">반려처리</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal" id="rejectReasonModal" aria-hidden="true">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <strong>반려사유 확인</strong>
+                    <button type="button" class="modal-close" id="btnRejectReasonClose">×</button>
+                </div>
+                <div class="modal-body">
+                    <label class="modal-label">신고번호</label>
+                    <input type="text" id="rejectReasonReqNo" class="form-input" readonly>
+
+                    <label class="modal-label" style="margin-top:12px;">반려일시</label>
+                    <input type="text" id="rejectReasonDate" class="form-input" readonly>
+
+                    <label class="modal-label" style="margin-top:12px;">반려유형</label>
+                    <input type="text" id="rejectReasonType" class="form-input" readonly>
+
+                    <label class="modal-label" style="margin-top:12px;">반려사유</label>
+                    <textarea id="rejectReasonView" class="modal-textarea" readonly></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="btnRejectReasonCancel">닫기</button>
+                </div>
+            </div>
+        </div>
+
+        <%@ include file="/WEB-INF/views/officer/footer/footer.jsp" %>
+        <%@ include file="/WEB-INF/views/officer/footer/scripts.jsp" %>
+
+        <script defer src="${ctx}/resources/js/officer/pages/reportReceiptList.js"></script>
+    </body>
+</html>

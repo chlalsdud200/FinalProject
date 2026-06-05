@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.systemadmin.hsknowledge.mapper.IHsRefDocMapper">
+
+    <resultMap id="hsRefDocMap" type="kr.or.tacs.vo.systemadmin.hsknowledge.HsRefDocVO">
+        <id property="hsRefDocNo" column="HS_REF_DOC_NO"/>
+        <result property="tfgNo" column="TFG_NO"/>
+        <result property="hsParentDocumentId" column="HS_PARENT_DOCUMENT_ID"/>
+        <result property="hsTotalChunks" column="HS_TOTAL_CHUNKS"/>
+        <result property="hsMilvusCollection" column="HS_MILVUS_COLLECTION"/>
+        <result property="hsEmbeddingModel" column="HS_EMBEDDING_MODEL"/>
+        <result property="hsEmbedStatusCd" column="HS_EMBED_STATUS_CD"/>
+        <result property="hsUseYn" column="HS_USE_YN"/>
+        <result property="hsRegistDt" column="HS_REGIST_DT"/>
+        <result property="hsUpdtDt" column="HS_UPDT_DT"/>
+        <result property="fileOrgNm" column="FILE_ORG_NM"/>
+        <result property="fileNo" column="FILE_NO"/>
+        <result property="fileSize" column="FILE_SIZE"/>
+    </resultMap>
+
+    <resultMap id="hsRefChunkMap" type="kr.or.tacs.vo.systemadmin.hsknowledge.HsRefChunkVO">
+        <id property="hsRefChunkNo" column="HS_REF_CHUNK_NO"/>
+        <result property="hsRefDocNo" column="HS_REF_DOC_NO"/>
+        <result property="hsDocId" column="HS_DOC_ID"/>
+        <result property="hsParentDocumentId" column="HS_PARENT_DOCUMENT_ID"/>
+        <result property="hsChunkIndex" column="HS_CHUNK_INDEX"/>
+        <result property="hsCode" column="HS_CODE"/>
+        <result property="hsRegistDt" column="HS_REGIST_DT"/>
+    </resultMap>
+
+    <sql id="hsRefDocColumns">
+          D.hs_ref_doc_no
+        , D.tfg_no
+        , D.hs_parent_document_id
+        , D.hs_total_chunks
+        , D.hs_milvus_collection
+        , D.hs_embedding_model
+        , D.hs_embed_status_cd
+        , D.hs_use_yn
+        , TO_CHAR(D.hs_regist_dt, 'YYYY-MM-DD HH24:MI') AS hs_regist_dt
+        , TO_CHAR(D.hs_updt_dt, 'YYYY-MM-DD HH24:MI') AS hs_updt_dt
+        , F.dfi_org_nm AS file_org_nm
+        , F.dfi_file_no AS file_no
+        , F.dfi_size AS file_size
+    </sql>
+
+    <sql id="hsRefDocJoin">
+        FROM hs_ref_doc D
+        LEFT JOIN (
+            SELECT
+                  TFM.tfm_tfg_no
+                , DFI.dfi_file_no
+                , DFI.dfi_org_nm
+                , DFI.dfi_size
+                , ROW_NUMBER() OVER (PARTITION BY TFM.tfm_tfg_no ORDER BY DFI.dfi_file_no DESC) AS rn
+            FROM tacs_file_map TFM
+            JOIN docs_file_data DFI
+              ON DFI.dfi_file_no = TFM.tfm_dfi_no
+            WHERE NVL(DFI.dfi_del_yn, 'N') = 'N'
+        ) F
+          ON F.tfm_tfg_no = D.tfg_no
+         AND F.rn = 1
+    </sql>
+
+    <sql id="hsRefDocSearchWhere">
+        WHERE 1 = 1
+        <if test="keyword != null and keyword != ''">
+          AND (
+                UPPER(F.dfi_org_nm) LIKE '%' || UPPER(#{keyword}) || '%'
+             OR UPPER(D.hs_parent_document_id) LIKE '%' || UPPER(#{keyword}) || '%'
+          )
+        </if>
+        <if test="embedStatusCd != null and embedStatusCd != '' and embedStatusCd != 'all'">
+          AND D.hs_embed_status_cd = #{embedStatusCd}
+        </if>
+        <if test="useYn != null and useYn != '' and useYn != 'all'">
+          AND D.hs_use_yn = #{useYn}
+        </if>
+    </sql>
+
+    <select id="selectHsRefDocList"
+            parameterType="kr.or.tacs.vo.systemadmin.hsknowledge.HsRefDocSearchVO"
+            resultMap="hsRefDocMap">
+        SELECT
+              hs_ref_doc_no
+            , tfg_no
+            , hs_parent_document_id
+            , hs_total_chunks
+            , hs_milvus_collection
+            , hs_embedding_model
+            , hs_embed_status_cd
+            , hs_use_yn
+            , hs_regist_dt
+            , hs_updt_dt
+            , file_org_nm
+            , file_no
+            , file_size
+        FROM (
+            SELECT
+                  ROWNUM AS row_no
+                , inner_query.*
+            FROM (
+                SELECT
+                    <include refid="hsRefDocColumns"/>
+                <include refid="hsRefDocJoin"/>
+                <include refid="hsRefDocSearchWhere"/>
+                ORDER BY D.hs_ref_doc_no DESC
+            ) inner_query
+            WHERE ROWNUM &lt;= #{endRow}
+        )
+        WHERE row_no &gt;= #{startRow}
+    </select>
+
+    <select id="selectHsRefDocTotalRecord"
+            parameterType="kr.or.tacs.vo.systemadmin.hsknowledge.HsRefDocSearchVO"
+            resultType="int">
+        SELECT
+            COUNT(*)
+        <include refid="hsRefDocJoin"/>
+        <include refid="hsRefDocSearchWhere"/>
+    </select>
+
+    <select id="selectHsRefDoc" resultMap="hsRefDocMap">
+        SELECT
+            <include refid="hsRefDocColumns"/>
+        <include refid="hsRefDocJoin"/>
+        WHERE D.hs_ref_doc_no = #{hsRefDocNo}
+    </select>
+
+    <select id="selectHsRefDocsByNos" resultMap="hsRefDocMap">
+        SELECT
+            <include refid="hsRefDocColumns"/>
+        <include refid="hsRefDocJoin"/>
+        WHERE D.hs_use_yn = 'Y'
+          AND D.hs_ref_doc_no IN
+        <foreach collection="hsRefDocNos" item="hsRefDocNo" open="(" separator="," close=")">
+            #{hsRefDocNo}
+        </foreach>
+    </select>
+
+    <insert id="insertHsRefDoc" parameterType="kr.or.tacs.vo.systemadmin.hsknowledge.HsRefDocVO">
+        <selectKey keyProperty="hsRefDocNo" resultType="long" order="BEFORE">
+            SELECT seq_hs_ref_doc_no.NEXTVAL FROM dual
+        </selectKey>
+        INSERT INTO hs_ref_doc (
+              hs_ref_doc_no
+            , tfg_no
+            , hs_parent_document_id
+            , hs_total_chunks
+            , hs_milvus_collection
+            , hs_embedding_model
+            , hs_embed_status_cd
+            , hs_use_yn
+            , hs_regist_dt
+        ) VALUES (
+              #{hsRefDocNo}
+            , #{tfgNo}
+            , #{hsParentDocumentId}
+            , #{hsTotalChunks}
+            , #{hsMilvusCollection}
+            , #{hsEmbeddingModel}
+            , #{hsEmbedStatusCd}
+            , #{hsUseYn}
+            , SYSDATE
+        )
+    </insert>
+
+    <update id="updateHsRefDoc" parameterType="kr.or.tacs.vo.systemadmin.hsknowledge.HsRefDocVO">
+        UPDATE hs_ref_doc
+        SET
+              hs_parent_document_id = #{hsParentDocumentId}
+            , hs_milvus_collection = #{hsMilvusCollection}
+            , hs_embedding_model = #{hsEmbeddingModel}
+            , hs_embed_status_cd = #{hsEmbedStatusCd}
+            , hs_use_yn = #{hsUseYn}
+            , hs_updt_dt = SYSDATE
+        WHERE hs_ref_doc_no = #{hsRefDocNo}
+    </update>
+
+    <update id="updateHsRefDocUseYn">
+        UPDATE hs_ref_doc
+        SET
+              hs_use_yn = #{useYn}
+            , hs_updt_dt = SYSDATE
+        WHERE hs_ref_doc_no = #{hsRefDocNo}
+    </update>
+
+    <select id="selectHsRefChunkList" resultMap="hsRefChunkMap">
+        SELECT
+              hs_ref_chunk_no
+            , hs_ref_doc_no
+            , hs_doc_id
+            , hs_parent_document_id
+            , hs_chunk_index
+            , hs_code
+            , TO_CHAR(hs_regist_dt, 'YYYY-MM-DD HH24:MI') AS hs_regist_dt
+        FROM hs_ref_chunk
+        WHERE hs_ref_doc_no = #{hsRefDocNo}
+        ORDER BY hs_chunk_index ASC
+    </select>
+
+    <insert id="insertHsRefChunk" parameterType="kr.or.tacs.vo.systemadmin.hsknowledge.HsRefChunkVO">
+        <selectKey keyProperty="hsRefChunkNo" resultType="long" order="BEFORE">
+            SELECT seq_hs_ref_chunk_no.NEXTVAL FROM dual
+        </selectKey>
+        INSERT INTO hs_ref_chunk (
+              hs_ref_chunk_no
+            , hs_ref_doc_no
+            , hs_doc_id
+            , hs_parent_document_id
+            , hs_chunk_index
+            , hs_code
+            , hs_regist_dt
+        ) VALUES (
+              #{hsRefChunkNo}
+            , #{hsRefDocNo}
+            , #{hsDocId}
+            , #{hsParentDocumentId}
+            , #{hsChunkIndex}
+            , #{hsCode}
+            , SYSDATE
+        )
+    </insert>
+
+    <delete id="deleteHsRefChunks">
+        DELETE FROM hs_ref_chunk
+        WHERE hs_ref_doc_no = #{hsRefDocNo}
+    </delete>
+
+    <update id="updateHsRefDocEmbedStatus">
+        UPDATE hs_ref_doc
+        SET
+              hs_embed_status_cd = #{statusCd}
+            , hs_updt_dt = SYSDATE
+        WHERE hs_ref_doc_no = #{hsRefDocNo}
+    </update>
+
+    <update id="updateHsRefDocEmbedResult">
+        UPDATE hs_ref_doc
+        SET
+              hs_embed_status_cd = #{statusCd}
+            , hs_total_chunks = #{totalChunks}
+            , hs_updt_dt = SYSDATE
+        WHERE hs_ref_doc_no = #{hsRefDocNo}
+    </update>
+</mapper>

@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.broker.clients.mapper.IClientsMapper">
+
+    <select id="selectClientCount"
+            parameterType="kr.or.tacs.vo.broker.clients.ClientSearchVO"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM (
+            SELECT
+                IR.IR_NO AS reqNo,
+                '수입' AS reqType,
+                'IMPORT' AS reqTypeCd,
+                IR.IR_TFG_NO AS tfgNo,
+                IR.IR_OWR_ID AS clientId,
+                IR.IR_OWR_ID AS clientName,
+                NVL(IR.IR_CN, NVL(IR.IR_COMMENT, '수입 통관 의뢰')) AS itemName,
+                IR.IR_STATUS_CD AS statusCd,
+                NVL(CC.CC_NM, IR.IR_STATUS_CD) AS statusName,
+                TO_CHAR(NVL(IR.IR_DT, IR.IR_REGIST_DT), 'YYYY-MM-DD') AS requestDate
+            FROM IMP_RQST IR
+            LEFT JOIN COM_CODE CC
+              ON CC.CC_CCG_ID = 'CSTM_STATUS'
+             AND CC.CC_CD = IR.IR_STATUS_CD
+             AND CC.CC_USE_YN = 'Y'
+            WHERE IR.IR_BROKER_ID = #{brokerId}
+              AND NVL(IR.IR_USE_YN, 'Y') = 'Y'
+
+            UNION ALL
+
+            SELECT
+                ER.ER_NO AS reqNo,
+                '수출' AS reqType,
+                'EXPORT' AS reqTypeCd,
+                CAST(NULL AS NUMBER) AS tfgNo,
+                ER.ER_OWR_ID AS clientId,
+                NVL(ER.ER_ONER_NM, ER.ER_OWR_ID) AS clientName,
+                NVL(ER.ER_COMMENT, '수출 통관 의뢰') AS itemName,
+                ER.ER_STATUS_CD AS statusCd,
+                NVL(CC.CC_NM, ER.ER_STATUS_CD) AS statusName,
+                TO_CHAR(NVL(ER.ER_RQST_DT, ER.ER_REGIST_DT), 'YYYY-MM-DD') AS requestDate
+            FROM EXP_RQST ER
+            LEFT JOIN COM_CODE CC
+              ON CC.CC_CCG_ID = 'CSTM_STATUS'
+             AND CC.CC_CD = ER.ER_STATUS_CD
+             AND CC.CC_USE_YN = 'Y'
+            WHERE ER.ER_BROKER_ID = #{brokerId}
+              AND NVL(ER.ER_USE_YN, 'Y') = 'Y'
+        ) T
+        WHERE 1 = 1
+
+        <if test="reqNo != null and reqNo != ''">
+            AND LOWER(T.reqNo) LIKE '%' || LOWER(#{reqNo}) || '%'
+        </if>
+
+        <if test="status != null and status != ''">
+            AND (T.statusCd = #{status} OR T.statusName = #{status})
+        </if>
+
+        <if test="clientName != null and clientName != ''">
+            AND LOWER(T.clientName) LIKE '%' || LOWER(#{clientName}) || '%'
+        </if>
+
+        <if test="itemName != null and itemName != ''">
+            AND LOWER(T.itemName) LIKE '%' || LOWER(#{itemName}) || '%'
+        </if>
+
+        <if test="requestDate != null and requestDate != ''">
+            AND T.requestDate = #{requestDate}
+        </if>
+
+        <if test="reqType != null and reqType != ''">
+            AND (T.reqType = #{reqType} OR T.reqTypeCd = #{reqType})
+        </if>
+    </select>
+
+
+    <select id="selectClientList"
+            parameterType="kr.or.tacs.vo.broker.clients.ClientSearchVO"
+            resultType="kr.or.tacs.vo.broker.clients.ClientVO">
+
+        SELECT *
+        FROM (
+            SELECT A.*, ROWNUM AS rnum
+            FROM (
+                SELECT *
+                FROM (
+                    SELECT
+                        IR.IR_NO AS reqNo,
+                        '수입' AS reqType,
+                        'IMPORT' AS reqTypeCd,
+                        IR.IR_TFG_NO AS tfgNo,
+                        IR.IR_OWR_ID AS clientId,
+                        IR.IR_OWR_ID AS clientName,
+                        NVL(IR.IR_CN, NVL(IR.IR_COMMENT, '수입 통관 의뢰')) AS itemName,
+                        IR.IR_STATUS_CD AS statusCd,
+                        NVL(CC.CC_NM, IR.IR_STATUS_CD) AS statusName,
+                        TO_CHAR(NVL(IR.IR_DT, IR.IR_REGIST_DT), 'YYYY-MM-DD') AS requestDate,
+                        TO_CHAR(NVL(IR.IR_DT, IR.IR_REGIST_DT), 'YYYY-MM-DD HH24:MI') AS requestDateTime
+                    FROM IMP_RQST IR
+                    LEFT JOIN COM_CODE CC
+                      ON CC.CC_CCG_ID = 'CSTM_STATUS'
+                     AND CC.CC_CD = IR.IR_STATUS_CD
+                     AND CC.CC_USE_YN = 'Y'
+                    WHERE IR.IR_BROKER_ID = #{brokerId}
+                      AND NVL(IR.IR_USE_YN, 'Y') = 'Y'
+
+                    UNION ALL
+
+                    SELECT
+                        ER.ER_NO AS reqNo,
+                        '수출' AS reqType,
+                        'EXPORT' AS reqTypeCd,
+                        CAST(NULL AS NUMBER) AS tfgNo,
+                        ER.ER_OWR_ID AS clientId,
+                        NVL(ER.ER_ONER_NM, ER.ER_OWR_ID) AS clientName,
+                        NVL(ER.ER_COMMENT, '수출 통관 의뢰') AS itemName,
+                        ER.ER_STATUS_CD AS statusCd,
+                        NVL(CC.CC_NM, ER.ER_STATUS_CD) AS statusName,
+                        TO_CHAR(NVL(ER.ER_RQST_DT, ER.ER_REGIST_DT), 'YYYY-MM-DD') AS requestDate,
+                        TO_CHAR(NVL(ER.ER_RQST_DT, ER.ER_REGIST_DT), 'YYYY-MM-DD HH24:MI') AS requestDateTime
+                    FROM EXP_RQST ER
+                    LEFT JOIN COM_CODE CC
+                      ON CC.CC_CCG_ID = 'CSTM_STATUS'
+                     AND CC.CC_CD = ER.ER_STATUS_CD
+                     AND CC.CC_USE_YN = 'Y'
+                    WHERE ER.ER_BROKER_ID = #{brokerId}
+                      AND NVL(ER.ER_USE_YN, 'Y') = 'Y'
+                ) T
+                WHERE 1 = 1
+
+                <if test="reqNo != null and reqNo != ''">
+                    AND LOWER(T.reqNo) LIKE '%' || LOWER(#{reqNo}) || '%'
+                </if>
+
+                <if test="status != null and status != ''">
+                    AND (T.statusCd = #{status} OR T.statusName = #{status})
+                </if>
+
+                <if test="clientName != null and clientName != ''">
+                    AND LOWER(T.clientName) LIKE '%' || LOWER(#{clientName}) || '%'
+                </if>
+
+                <if test="itemName != null and itemName != ''">
+                    AND LOWER(T.itemName) LIKE '%' || LOWER(#{itemName}) || '%'
+                </if>
+
+                <if test="requestDate != null and requestDate != ''">
+                    AND T.requestDate = #{requestDate}
+                </if>
+
+                <if test="reqType != null and reqType != ''">
+                    AND (T.reqType = #{reqType} OR T.reqTypeCd = #{reqType})
+                </if>
+
+                ORDER BY requestDateTime DESC
+            ) A
+            WHERE ROWNUM <![CDATA[<=]]> #{endRow}
+        )
+        WHERE rnum <![CDATA[>=]]> #{startRow}
+    </select>
+
+
+    <select id="selectClientDetail"
+            parameterType="kr.or.tacs.vo.broker.clients.ClientSearchVO"
+            resultType="kr.or.tacs.vo.broker.clients.ClientVO">
+
+        SELECT *
+        FROM (
+            SELECT
+                IR.IR_NO AS reqNo,
+                '수입' AS reqType,
+                'IMPORT' AS reqTypeCd,
+                IR.IR_TFG_NO AS tfgNo,
+                IR.IR_OWR_ID AS clientId,
+                IR.IR_OWR_ID AS clientName,
+                NVL(IR.IR_CN, NVL(IR.IR_COMMENT, '수입 통관 의뢰')) AS itemName,
+                IR.IR_STATUS_CD AS statusCd,
+                NVL(CC.CC_NM, IR.IR_STATUS_CD) AS statusName,
+                TO_CHAR(NVL(IR.IR_DT, IR.IR_REGIST_DT), 'YYYY-MM-DD') AS requestDate,
+                TO_CHAR(NVL(IR.IR_DT, IR.IR_REGIST_DT), 'YYYY-MM-DD HH24:MI') AS requestDateTime,
+
+                IR.IR_CSTM_IDF_NO AS cstmIdfNo,
+                IR.IR_CORP_REG_NO AS corpRegNo,
+                IR.IR_ARRV_SCHD_YMD AS scheduleDate,
+                IR.IR_BL_AWB_NO AS blAwbNo,
+                IR.IR_INVC_AMT AS invoiceAmount,
+                IR.IR_COMMENT AS "comment",
+                IR.IR_PAY_TYPE_CD AS payTypeCd,
+                IR.IR_INSTL_PAY_CNT AS instlPayCnt,
+
+                CAST(NULL AS VARCHAR2(50)) AS portFrom,
+                IR.IR_ARRV_PORT_CD AS portTo,
+                IR.IR_DCLR_CURR_CD AS currencyCd
+            FROM IMP_RQST IR
+            LEFT JOIN COM_CODE CC
+              ON CC.CC_CCG_ID = 'CSTM_STATUS'
+             AND CC.CC_CD = IR.IR_STATUS_CD
+             AND CC.CC_USE_YN = 'Y'
+            WHERE IR.IR_BROKER_ID = #{brokerId}
+              AND IR.IR_NO = #{reqNo}
+
+            UNION ALL
+
+            SELECT
+                ER.ER_NO AS reqNo,
+                '수출' AS reqType,
+                'EXPORT' AS reqTypeCd,
+                CAST(NULL AS NUMBER) AS tfgNo,
+                ER.ER_OWR_ID AS clientId,
+                NVL(ER.ER_ONER_NM, ER.ER_OWR_ID) AS clientName,
+                NVL(ER.ER_COMMENT, '수출 통관 의뢰') AS itemName,
+                ER.ER_STATUS_CD AS statusCd,
+                NVL(CC.CC_NM, ER.ER_STATUS_CD) AS statusName,
+                TO_CHAR(NVL(ER.ER_RQST_DT, ER.ER_REGIST_DT), 'YYYY-MM-DD') AS requestDate,
+                TO_CHAR(NVL(ER.ER_RQST_DT, ER.ER_REGIST_DT), 'YYYY-MM-DD HH24:MI') AS requestDateTime,
+
+                ER.ER_CSTM_IDF_NO AS cstmIdfNo,
+                ER.ER_CORP_REG_NO AS corpRegNo,
+                ER.ER_LOAD_SCHD_YMD AS scheduleDate,
+                CAST(NULL AS VARCHAR2(50)) AS blAwbNo,
+                CAST(NULL AS NUMBER) AS invoiceAmount,
+                ER.ER_COMMENT AS "comment",
+                CAST(NULL AS VARCHAR2(30)) AS payTypeCd,
+                CAST(NULL AS NUMBER) AS instlPayCnt,
+
+                ER.ER_LOAD_PORT_CD AS portFrom,
+                ER.ER_ARRV_PORT_CD AS portTo,
+                CAST(NULL AS VARCHAR2(20)) AS currencyCd
+            FROM EXP_RQST ER
+            LEFT JOIN COM_CODE CC
+              ON CC.CC_CCG_ID = 'CSTM_STATUS'
+             AND CC.CC_CD = ER.ER_STATUS_CD
+             AND CC.CC_USE_YN = 'Y'
+            WHERE ER.ER_BROKER_ID = #{brokerId}
+              AND ER.ER_NO = #{reqNo}
+        ) T
+        WHERE T.reqTypeCd = #{reqType}
+          AND ROWNUM = 1
+    </select>
+
+
+    <select id="selectClientFileList"
+            parameterType="long"
+            resultType="kr.or.tacs.vo.broker.clients.ClientFileVO">
+        SELECT
+            DFD.DFI_FILE_NO AS fileNo,
+            MAP.TFM_TFG_NO AS tfgNo,
+            DFD.DFI_ORG_NM AS orgName,
+            DFD.DFI_STR_NM AS saveName,
+            DFD.DFI_PATH AS filePath,
+            DFD.DFI_SIZE AS fileSize,
+            TO_CHAR(ROUND(DFD.DFI_SIZE / 1024, 1)) || ' KB' AS fancySize,
+            TO_CHAR(DFD.DFI_REGIST_DT, 'YYYY-MM-DD HH24:MI') AS registDate
+        FROM TACS_FILE_MAP MAP
+        JOIN DOCS_FILE_DATA DFD
+          ON MAP.TFM_DFI_NO = DFD.DFI_FILE_NO
+        WHERE MAP.TFM_TFG_NO = #{tfgNo}
+          AND NVL(DFD.DFI_DEL_YN, 'N') = 'N'
+        ORDER BY DFD.DFI_REGIST_DT DESC
+    </select>
+
+
+    <select id="selectClientFile"
+            parameterType="long"
+            resultType="kr.or.tacs.vo.broker.clients.ClientFileVO">
+        SELECT
+            DFD.DFI_FILE_NO AS fileNo,
+            MAP.TFM_TFG_NO AS tfgNo,
+            DFD.DFI_ORG_NM AS orgName,
+            DFD.DFI_STR_NM AS saveName,
+            DFD.DFI_PATH AS filePath,
+            DFD.DFI_SIZE AS fileSize,
+            DFD.DFI_MIME_TY AS mimeType,
+			DFD.DFI_DRIVE_FILE_ID AS driveFileId,
+			TO_CHAR(ROUND(DFD.DFI_SIZE / 1024, 1)) || ' KB' AS fancySize,
+            TO_CHAR(DFD.DFI_REGIST_DT, 'YYYY-MM-DD HH24:MI') AS registDate
+        FROM TACS_FILE_MAP MAP
+        JOIN DOCS_FILE_DATA DFD
+          ON MAP.TFM_DFI_NO = DFD.DFI_FILE_NO
+        WHERE DFD.DFI_FILE_NO = #{fileNo}
+          AND NVL(DFD.DFI_DEL_YN, 'N') = 'N'
+          AND ROWNUM = 1
+    </select>
+
+
+    <update id="updateClientAccept"
+        parameterType="kr.or.tacs.vo.broker.clients.ClientSearchVO">
+	    <choose>
+	        <when test="reqType == 'IMPORT'">
+	            UPDATE IMP_RQST
+	            SET IR_STATUS_CD = 'CSTM_ACPT',
+	                IR_ACPT_DT = SYSDATE
+	            WHERE IR_NO = #{reqNo}
+	              AND IR_BROKER_ID = #{brokerId}
+	              AND IR_STATUS_CD IN ('CSTM_REQ', 'CSTM_SUPP_SUB')
+	        </when>
+	        <when test="reqType == 'EXPORT'">
+	            UPDATE EXP_RQST
+	            SET ER_STATUS_CD = 'CSTM_ACPT',
+	                ER_ACPT_DT = SYSDATE
+	            WHERE ER_NO = #{reqNo}
+	              AND ER_BROKER_ID = #{brokerId}
+	              AND ER_STATUS_CD IN ('CSTM_REQ', 'CSTM_SUPP_SUB')
+	        </when>
+	    </choose>
+	</update>
+
+
+      <insert id="insertSuppRqst"
+        parameterType="kr.or.tacs.vo.broker.clients.ClientSearchVO">
+		    INSERT INTO SUPP_RQST (
+		        SR_NO,
+		        SR_REF_BIZ_CD,
+		        SR_REF_NO,
+		        SENDER_ID,
+		        SENDER_TY_CD,
+		        RECEIVER_ID,
+		        RECEIVER_TY_CD,
+		        SR_STATUS_CD,
+		        SR_REQ_DT,
+		        SR_REQ_CN
+		    )
+		    SELECT
+		        'SR-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' ||
+		        LPAD(
+		            NVL((
+		                SELECT MAX(TO_NUMBER(SUBSTR(SR_NO, -4)))
+		                FROM SUPP_RQST
+		                WHERE SUBSTR(SR_NO, 4, 8) = TO_CHAR(SYSDATE, 'YYYYMMDD')
+		                  AND REGEXP_LIKE(SR_NO, '^SR-[0-9]{8}-[0-9]{4}$')
+		            ), 0) + 1,
+		            4,
+		            '0'
+		        ),
+		        #{reqType},
+		        #{reqNo},
+		        #{brokerId},
+		        'BROKER',
+		        #{clientId},
+		        'OWNER',
+		        'REQ',
+		        SYSDATE,
+		        #{suppReqCn}
+		    FROM DUAL
+		    WHERE NOT EXISTS (
+		        SELECT 1
+		        FROM SUPP_RQST
+		        WHERE SR_REF_BIZ_CD = #{reqType}
+		          AND SR_REF_NO = #{reqNo}
+		          AND SENDER_ID = #{brokerId}
+		          AND RECEIVER_ID = #{clientId}
+		          AND SR_STATUS_CD = 'REQ'
+		    )
+		</insert>
+
+
+   <update id="updateClientSuppStatus"
+        parameterType="kr.or.tacs.vo.broker.clients.ClientSearchVO">
+    <choose>
+        <when test="reqType == 'IMPORT'">
+            UPDATE IMP_RQST
+            SET IR_STATUS_CD = 'CSTM_SUPP'
+            WHERE IR_NO = #{reqNo}
+              AND IR_BROKER_ID = #{brokerId}
+              AND IR_STATUS_CD IN ('CSTM_REQ', 'CSTM_INPRG', 'CSTM_SUPP_SUB')
+        </when>
+        <when test="reqType == 'EXPORT'">
+            UPDATE EXP_RQST
+            SET ER_STATUS_CD = 'CSTM_SUPP'
+            WHERE ER_NO = #{reqNo}
+              AND ER_BROKER_ID = #{brokerId}
+              AND ER_STATUS_CD IN ('CSTM_REQ', 'CSTM_INPRG', 'CSTM_SUPP_SUB')
+        </when>
+    </choose>
+</update>
+
+
+    <insert id="insertRejectMng"
+            parameterType="kr.or.tacs.vo.broker.clients.ClientSearchVO">
+        INSERT INTO RJCT_MNG (
+            RM_NO,
+            RM_REF_BIZ_CD,
+            RM_REF_NO,
+            RM_RJCT_DT,
+            RM_RJCT_CN,
+            RM_RJCTR_ID,
+            RM_TARGET_ID
+        ) VALUES (
+            'RJ-' || TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            #{statusCd},
+            #{reqNo},
+            SYSDATE,
+            #{rejectCn},
+            #{brokerId},
+            #{clientId}
+        )
+    </insert>
+
+
+    <update id="updateClientRejectStatus"
+        parameterType="kr.or.tacs.vo.broker.clients.ClientSearchVO">
+    <choose>
+        <when test="reqType == 'IMPORT'">
+            UPDATE IMP_RQST
+            SET IR_STATUS_CD = 'CSTM_REJ',
+                IR_RJCT_DT = SYSDATE,
+                IR_RJCT_RSN_CN = #{rejectCn}
+            WHERE IR_NO = #{reqNo}
+              AND IR_BROKER_ID = #{brokerId}
+              AND IR_STATUS_CD IN ('CSTM_REQ', 'CSTM_SUPP_SUB')
+        </when>
+        <when test="reqType == 'EXPORT'">
+            UPDATE EXP_RQST
+            SET ER_STATUS_CD = 'CSTM_REJ',
+                ER_RJCT_DT = SYSDATE,
+                ER_RJCT_RSN_CN = #{rejectCn}
+            WHERE ER_NO = #{reqNo}
+              AND ER_BROKER_ID = #{brokerId}
+              AND ER_STATUS_CD IN ('CSTM_REQ', 'CSTM_SUPP_SUB')
+        </when>
+    </choose>
+</update>
+
+</mapper>

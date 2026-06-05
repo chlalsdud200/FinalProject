@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.owner.transport.mapper.IFreightMapper">
+
+    <select id="selectFreightList" resultType="kr.or.tacs.dto.owner.OwnerFreightDTO">
+        SELECT tcs_no,
+            tcs_trc_no,
+            tcs_owr_id,
+            tcs_gg_no,
+            tcs_mbl_no,
+            tcs_hbl_no,
+            tcs_owr_msg_cn,
+            tcs_stl_status_cd,
+            tcs_frgt_amt,
+            tcs_wh_amt,
+            tcs_tot_bill_amt,
+            tcs_stl_expln
+        FROM tran_cost_stl
+    </select>
+
+    <select id="selectFreight" parameterType="String" resultType="kr.or.tacs.dto.owner.OwnerFreightDTO">
+        SELECT tcs_no,
+               tcs_trc_no,
+               tcs_owr_id,
+               tcs_gg_no,
+               tcs_mbl_no,
+               tcs_hbl_no,
+               tcs_owr_msg_cn,
+               tcs_stl_status_cd,
+               tcs_frgt_amt,
+               tcs_wh_amt,
+               tcs_tot_bill_amt,
+               tcs_stl_expln
+        FROM tran_cost_stl
+        WHERE tcs_no = #{trcNo}
+    </select>
+
+</mapper>

@@ -1,0 +1,1121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.tacs.transport.importp.mapper.ImportTransportMapper">
+  <!-- 수입운송 의뢰접수 탭에서 의뢰 목록, 접수, 반려, 공통 보완요청을 관리한다. -->
+  <select id="selectImportCountryList" resultType="map">
+        SELECT *
+        FROM (
+            SELECT
+              C.COUNTRY_CD AS countryCd
+            , C.COUNTRY_NM_KR AS countryNmKr
+            , C.COUNTRY_NM_EN AS countryNmEn
+            , C.COUNTRY_CD || ' / ' || C.COUNTRY_NM_KR || ' / ' || C.COUNTRY_NM_EN AS label
+            , C.COUNTRY_CD AS value
+            FROM COUNTRY C
+            WHERE NVL(C.COUNTRY_USE_YN, 'Y') = 'Y'
+            <if test="keyword != null and keyword.trim() != ''">
+              AND (
+                    LOWER(C.COUNTRY_CD) LIKE '%' || LOWER(TRIM(#{keyword,jdbcType=VARCHAR})) || '%'
+                 OR LOWER(C.COUNTRY_NM_KR) LIKE '%' || LOWER(TRIM(#{keyword,jdbcType=VARCHAR})) || '%'
+                 OR LOWER(C.COUNTRY_NM_EN) LIKE '%' || LOWER(TRIM(#{keyword,jdbcType=VARCHAR})) || '%'
+              )
+            </if>
+            ORDER BY
+              CASE
+                WHEN UPPER(C.COUNTRY_CD) = UPPER(TRIM(#{keyword,jdbcType=VARCHAR})) THEN 0
+                WHEN LOWER(C.COUNTRY_NM_EN) LIKE LOWER(TRIM(#{keyword,jdbcType=VARCHAR})) || '%' THEN 1
+                WHEN LOWER(C.COUNTRY_NM_KR) LIKE LOWER(TRIM(#{keyword,jdbcType=VARCHAR})) || '%' THEN 1
+                ELSE 2
+              END,
+              C.COUNTRY_CD
+        )
+        WHERE ROWNUM <![CDATA[<=]]> 50
+    </select>
+
+  <select id="selectImportPortList" resultType="map">
+        SELECT *
+        FROM (
+            SELECT
+              P.PORT_CD AS portCd
+            , P.PORT_COUNTRY_CD AS countryCd
+            , P.PORT_NM AS portNm
+            , P.PORT_CD || ' / ' || P.PORT_NM AS label
+            , P.PORT_CD AS value
+            FROM PORT P
+            WHERE NVL(P.PORT_USE_YN, 'Y') = 'Y'
+            <if test="keyword != null and keyword.trim() != ''">
+              AND (
+                    LOWER(P.PORT_CD) LIKE '%' || LOWER(TRIM(#{keyword,jdbcType=VARCHAR})) || '%'
+                 OR LOWER(P.PORT_NM) LIKE '%' || LOWER(TRIM(#{keyword,jdbcType=VARCHAR})) || '%'
+                 OR LOWER(P.PORT_COUNTRY_CD) LIKE '%' || LOWER(TRIM(#{keyword,jdbcType=VARCHAR})) || '%'
+              )
+            </if>
+            ORDER BY
+              CASE
+                WHEN UPPER(P.PORT_CD) = UPPER(TRIM(#{keyword,jdbcType=VARCHAR})) THEN 0
+                WHEN LOWER(P.PORT_NM) LIKE LOWER(TRIM(#{keyword,jdbcType=VARCHAR})) || '%' THEN 1
+                ELSE 2
+              END,
+              P.PORT_COUNTRY_CD,
+              P.PORT_CD
+        )
+        WHERE ROWNUM <![CDATA[<=]]> 50
+    </select>
+
+
+  <select id="retriveImpTransportReqList" resultType="kr.or.tacs.vo.transport.TransportRequestVO">
+        /* 수입 운송의뢰 목록 - 단계별 진행상태 표시/검색용 상태값 포함 */
+        SELECT
+          T.TRC_NO AS trcNo
+        , T.TRC_NO AS requestNo
+        , T.TRC_TFG_NO AS ggNo
+        , T.TRC_OWR_ID AS ownerId
+        , NVL(O.OWR_NM, T.TRC_OWR_ID) AS ownerNm
+        , O.OWR_TELNO AS ownerTelno
+        , O.OWR_EMAIL AS ownerEmail
+        , T.TRC_TRDR_NM AS buyerNm
+        , T.TRC_TRDR_COUNTRY_CD AS buyerCountryCd
+        , CTRY.COUNTRY_NM_KR AS buyerCountryNm
+        , CASE
+            WHEN T.TRC_TRDR_COUNTRY_CD IS NULL THEN NULL
+            WHEN CTRY.COUNTRY_CD IS NOT NULL THEN CTRY.COUNTRY_CD || ' / ' || CTRY.COUNTRY_NM_KR || ' / ' || CTRY.COUNTRY_NM_EN
+            ELSE T.TRC_TRDR_COUNTRY_CD
+          END AS buyerCountryLabel
+        , T.TRC_DEPT_PORT_CD AS deptPortCd
+        , CASE T.TRC_DEPT_PORT_CD
+            WHEN 'BUSAN' THEN '부산항'
+            WHEN 'KRPUS' THEN '부산항'
+            WHEN 'INCHEON' THEN '인천항'
+            WHEN 'KRINC' THEN '인천항'
+            WHEN 'PYEONGTAEK' THEN '평택항'
+            WHEN 'OSAKA' THEN '오사카항'
+            WHEN 'TOKYO' THEN '도쿄항'
+            WHEN 'SHANGHAI' THEN '상하이항'
+            ELSE T.TRC_DEPT_PORT_CD
+          END AS deptPortNm
+        , T.TRC_ARVL_PORT_CD AS arvlPortCd
+        , CASE T.TRC_ARVL_PORT_CD
+            WHEN 'BUSAN' THEN '부산항'
+            WHEN 'KRPUS' THEN '부산항'
+            WHEN 'INCHEON' THEN '인천항'
+            WHEN 'KRINC' THEN '인천항'
+            WHEN 'PYEONGTAEK' THEN '평택항'
+            WHEN 'OSAKA' THEN '오사카항'
+            WHEN 'TOKYO' THEN '도쿄항'
+            WHEN 'SHANGHAI' THEN '상하이항'
+            ELSE T.TRC_ARVL_PORT_CD
+          END AS arvlPortNm
+        , T.TRC_TRAN_MN_CD AS transportMeanCd
+        , CASE T.TRC_TRAN_MN_CD
+            WHEN 'SEA' THEN '해상'
+            WHEN 'AIR' THEN '항공'
+            WHEN 'LAND' THEN '육상'
+            ELSE T.TRC_TRAN_MN_CD
+          END AS transportMeanNm
+        , T.TRC_TRAN_TY_CD AS transportTypeCd
+        , CASE T.TRC_TRAN_TY_CD
+            WHEN 'LCL' THEN 'Less than Container Load'
+            WHEN 'FCL' THEN 'Full Container Load'
+            ELSE T.TRC_TRAN_TY_CD
+          END AS transportTypeNm
+        , T.TRC_INCO_TERMS_CD AS incoTermsCd
+        , CASE T.TRC_INCO_TERMS_CD
+            WHEN 'FOB' THEN 'Free On Board'
+            WHEN 'CIF' THEN 'Cost Insurance and Freight'
+            ELSE T.TRC_INCO_TERMS_CD
+          END AS incoTermsNm
+        , T.TRC_RQST_CN AS requestCn
+        , T.TRC_STATUS_CD AS statusCd
+        , T.TRC_STATUS_CD AS trcStatusCd
+        , T.TRC_STATUS_CD AS receiptStatusCd
+        , CASE T.TRC_STATUS_CD
+            WHEN 'TRC_WAIT' THEN '접수대기'
+            WHEN 'TRC_DONE' THEN '접수완료'
+            WHEN 'TRC_REJECT' THEN '접수반려'
+            WHEN 'TRC_END' THEN '완료대기'
+            WHEN 'TRC_COMPLETE' THEN '최종완료'
+            ELSE T.TRC_STATUS_CD
+          END AS statusNm
+        , CASE T.TRC_STATUS_CD
+            WHEN 'TRC_WAIT' THEN '접수대기'
+            WHEN 'TRC_DONE' THEN '접수완료'
+            WHEN 'TRC_REJECT' THEN '접수반려'
+            WHEN 'TRC_END' THEN '완료대기'
+            WHEN 'TRC_COMPLETE' THEN '최종완료'
+            ELSE T.TRC_STATUS_CD
+          END AS trcStatusNm
+        , CASE T.TRC_STATUS_CD
+            WHEN 'TRC_WAIT' THEN '접수대기'
+            WHEN 'TRC_DONE' THEN '접수완료'
+            WHEN 'TRC_REJECT' THEN '접수반려'
+            WHEN 'TRC_END' THEN '완료대기'
+            WHEN 'TRC_COMPLETE' THEN '최종완료'
+            ELSE T.TRC_STATUS_CD
+          END AS receiptStatusNm
+        , CASE
+            WHEN T.TRC_STATUS_CD = 'TRC_WAIT' THEN '접수대기'
+            WHEN T.TRC_STATUS_CD = 'TRC_REJECT' THEN '접수반려'
+            WHEN T.TRC_STATUS_CD = 'TRC_END' THEN '완료대기'
+            WHEN T.TRC_STATUS_CD = 'TRC_COMPLETE' THEN '최종완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND DSP.DISPATCH_STATUS_CD IN ('DISPATCH_DONE', 'TRC_DISPATCH_DONE') THEN '배차완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND CRR.CRR_STATUS_CD = 'REL_WAIT' THEN '반출대기'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND CRR.CRR_STATUS_CD = 'REL_DONE' THEN '반출완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND CRR.CRR_STATUS_CD IN ('REL_FIX', 'REL_REJECT', 'REQ_FIX') THEN '반출 보완요청'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND CRR.CRR_STATUS_CD = 'REL_SENT' THEN '반출 보완제출완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND CRR.CRR_RELEASE_DT IS NOT NULL THEN '반출완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND DOIS.DI_STATUS_CD IN ('TRC_DO_REQ', 'DELIVERED') THEN 'D/O전달완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND DOIS.DI_STATUS_CD IN ('TRC_DO_ISSUED', 'ISSUED') THEN 'D/O발급완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND TCS.TCS_STL_STATUS_CD IN ('TRC_STL_PAID', 'TCS_STL_PAID', 'PAID') THEN '정산완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND TCS.TCS_STL_STATUS_CD IN ('TRC_STL_REQ', 'TCS_STL_REQ', 'REQ', 'UNPAID') THEN '정산요청'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND DOIS.DI_STATUS_CD IN ('TRC_DO_READY', 'READY') THEN 'D/O발급대기'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND (W.WIR_STATUS_CD = 'IN_DONE' OR W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE') THEN '입고완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND (W.WIR_STATUS_CD IN ('REQ_FIX', 'REJECT') OR W.WIR_WH_REPLY_STATUS_CD IN ('REQ_FIX', 'REJECT')) THEN '입고 보완요청'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND (W.WIR_STATUS_CD = 'REQ_SENT' OR W.WIR_WH_REPLY_STATUS_CD = 'REQ_SENT') THEN '입고 보완제출완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND (W.WIR_STATUS_CD = 'WAIT' OR W.WIR_WH_REPLY_STATUS_CD = 'WAIT') THEN '입고대기'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE'
+             AND NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT') IN ('TRC_NTC_SENT', 'SENT') THEN '발급완료'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' THEN '접수완료'
+            ELSE T.TRC_STATUS_CD
+          END AS requestDisplayStatusNm
+        , CASE
+            WHEN T.TRC_STATUS_CD = 'TRC_WAIT' THEN 'TRC_WAIT'
+            WHEN T.TRC_STATUS_CD = 'TRC_REJECT' THEN 'TRC_REJECT'
+            WHEN T.TRC_STATUS_CD = 'TRC_END' THEN 'TRC_END'
+            WHEN T.TRC_STATUS_CD = 'TRC_COMPLETE' THEN 'TRC_COMPLETE'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND DSP.DISPATCH_STATUS_CD IN ('DISPATCH_DONE', 'TRC_DISPATCH_DONE') THEN 'DISPATCH_DONE'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND CRR.CRR_STATUS_CD = 'REL_WAIT' THEN 'REL_WAIT'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND CRR.CRR_STATUS_CD = 'REL_DONE' THEN 'REL_DONE'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND CRR.CRR_STATUS_CD IS NOT NULL THEN CRR.CRR_STATUS_CD
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND CRR.CRR_RELEASE_DT IS NOT NULL THEN 'REL_DONE'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND DOIS.DI_STATUS_CD IN ('TRC_DO_REQ', 'DELIVERED') THEN DOIS.DI_STATUS_CD
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND DOIS.DI_STATUS_CD IN ('TRC_DO_ISSUED', 'ISSUED') THEN DOIS.DI_STATUS_CD
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND TCS.TCS_STL_STATUS_CD IN ('TRC_STL_PAID', 'TCS_STL_PAID', 'PAID') THEN 'TRC_STL_PAID'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND TCS.TCS_STL_STATUS_CD IN ('TRC_STL_REQ', 'TCS_STL_REQ', 'REQ', 'UNPAID') THEN 'TRC_STL_REQ'
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND DOIS.DI_STATUS_CD IN ('TRC_DO_READY', 'READY') THEN DOIS.DI_STATUS_CD
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) IS NOT NULL THEN COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD)
+            WHEN T.TRC_STATUS_CD = 'TRC_DONE' AND NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT') IN ('TRC_NTC_SENT', 'SENT') THEN 'TRC_NTC_SENT'
+            ELSE T.TRC_STATUS_CD
+          END AS requestDisplayStatusCd
+        , W.WIR_NO AS wirNo
+        , W.WIR_STATUS_CD AS wirStatusCd
+        , CASE W.WIR_STATUS_CD
+            WHEN 'WAIT' THEN '입고대기'
+            WHEN 'IN_DONE' THEN '입고완료'
+            WHEN 'REQ_FIX' THEN '입고 보완요청'
+            WHEN 'REJECT' THEN '입고 보완요청'
+            WHEN 'REQ_SENT' THEN '입고 보완제출완료'
+            ELSE W.WIR_STATUS_CD
+          END AS wirStatusNm
+        , COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) AS warehouseInStatusCd
+        , CASE COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD)
+            WHEN 'WAIT' THEN '입고대기'
+            WHEN 'IN_DONE' THEN '입고완료'
+            WHEN 'REQ_FIX' THEN '입고 보완요청'
+            WHEN 'REJECT' THEN '입고 보완요청'
+            WHEN 'REQ_SENT' THEN '입고 보완제출완료'
+            ELSE COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD)
+          END AS warehouseInStatusNm
+        , CRR.CRR_STATUS_CD AS releaseStatusCd
+        , CASE
+            WHEN CRR.CRR_STATUS_CD = 'REL_WAIT' THEN '반출대기'
+            WHEN CRR.CRR_STATUS_CD = 'REL_DONE' THEN '반출완료'
+            WHEN CRR.CRR_STATUS_CD IN ('REL_FIX', 'REL_REJECT', 'REQ_FIX') THEN '반출 보완요청'
+            WHEN CRR.CRR_STATUS_CD = 'REL_SENT' THEN '반출 보완제출완료'
+            WHEN CRR.CRR_RELEASE_DT IS NOT NULL THEN '반출완료'
+            ELSE CRR.CRR_STATUS_CD
+          END AS releaseStatusNm
+        , CASE
+            WHEN CRR.CRR_STATUS_CD IS NOT NULL THEN CRR.CRR_STATUS_CD
+            ELSE COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD)
+          END AS inboundOutboundStatusCd
+        , CASE
+            WHEN CRR.CRR_STATUS_CD = 'REL_WAIT' THEN '반출대기'
+            WHEN CRR.CRR_STATUS_CD = 'REL_DONE' THEN '반출완료'
+            WHEN CRR.CRR_STATUS_CD IN ('REL_FIX', 'REL_REJECT', 'REQ_FIX') THEN '반출 보완요청'
+            WHEN CRR.CRR_STATUS_CD = 'REL_SENT' THEN '반출 보완제출완료'
+            WHEN CRR.CRR_RELEASE_DT IS NOT NULL THEN '반출완료'
+            WHEN COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'WAIT' THEN '입고대기'
+            WHEN COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'IN_DONE' THEN '입고완료'
+            WHEN COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) IN ('REQ_FIX', 'REJECT') THEN '입고 보완요청'
+            WHEN COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'REQ_SENT' THEN '입고 보완제출완료'
+            ELSE COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD)
+          END AS inboundOutboundStatusNm
+        , CASE
+            WHEN CRR.CRR_STATUS_CD IN ('REL_FIX', 'REL_REJECT', 'REQ_FIX') THEN '반출 보완요청'
+            WHEN COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) IN ('REQ_FIX', 'REJECT') THEN '입고 보완요청'
+            WHEN CRR.CRR_STATUS_CD = 'REL_SENT' THEN '반출 보완제출완료'
+            WHEN COALESCE(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'REQ_SENT' THEN '입고 보완제출완료'
+            ELSE NULL
+          END AS supplementStatusNm
+        , NVL(M.ICM_MBL_NO, B.BI_MBL_NO) AS blNo
+        , NVL(M.ICM_MBL_NO, B.BI_MBL_NO) AS mblNo
+        , NVL(M.ICM_HBL_NO, B.BI_HBL_NO) AS hblNo
+        , BL_FILE.DFI_ORG_NM AS blPdfFile
+        , BL_FILE.DFI_FILE_NO AS blPdfFileNo
+        , B.BI_STL_STATUS_CD AS blSettlementStatusCd
+        , NVL(TCS.TCS_STL_STATUS_CD, B.BI_STL_STATUS_CD) AS settlementStatusCd
+        , TCS.TCS_STL_STATUS_CD AS tcsStlStatusCd
+        , CASE
+            WHEN TCS.TCS_STL_STATUS_CD IN ('TRC_STL_PAID', 'TCS_STL_PAID', 'PAID') THEN '정산완료'
+            WHEN TCS.TCS_STL_STATUS_CD IN ('TRC_STL_REQ', 'TCS_STL_REQ', 'REQ', 'UNPAID') THEN '정산요청'
+            ELSE '미정산'
+          END AS tcsStlStatusNm
+        , CASE
+            WHEN TCS.TCS_STL_STATUS_CD IN ('TRC_STL_PAID', 'TCS_STL_PAID', 'PAID') THEN '정산완료'
+            WHEN TCS.TCS_STL_STATUS_CD IN ('TRC_STL_REQ', 'TCS_STL_REQ', 'REQ', 'UNPAID') THEN '정산요청'
+            ELSE '미정산'
+          END AS settlementStatusNm
+        , DOIS.DI_STATUS_CD AS doStatusCd
+        , CASE DOIS.DI_STATUS_CD
+            WHEN 'TRC_DO_READY' THEN 'D/O발급대기'
+            WHEN 'TRC_DO_ISSUED' THEN 'D/O발급완료'
+            WHEN 'TRC_DO_REQ' THEN 'D/O전달완료'
+            WHEN 'READY' THEN 'D/O발급대기'
+            WHEN 'ISSUED' THEN 'D/O발급완료'
+            WHEN 'DELIVERED' THEN 'D/O전달완료'
+            ELSE DOIS.DI_STATUS_CD
+          END AS doStatusNm
+        , DSP.DISPATCH_STATUS_CD AS dispatchStatusCd
+        , CASE DSP.DISPATCH_STATUS_CD
+            WHEN 'DISPATCH_DONE' THEN '배차완료'
+            WHEN 'TRC_DISPATCH_DONE' THEN '배차완료'
+            ELSE DSP.DISPATCH_STATUS_CD
+          END AS dispatchStatusNm
+        , NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT') AS noticeStatus
+        , NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT') AS arrivalNoticeStatusCd
+        , NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT') AS sendStatusCd
+        , NVL(IAN.IAN_ARRV_STATUS_CD, 'TRC_ARR_PENDING') AS arrivalStatus
+        , CASE NVL(IAN.IAN_ARRV_STATUS_CD, 'TRC_ARR_PENDING')
+            WHEN 'TRC_ARR_IN_TRANSIT' THEN '운송중'
+            WHEN 'TRC_ARR_DELAYED' THEN '지연'
+            WHEN 'TRC_ARR_PENDING' THEN '도착대기'
+            WHEN 'TRC_ARR_ARRIVED' THEN '도착'
+            ELSE NVL(IAN.IAN_ARRV_STATUS_CD, '도착대기')
+          END AS arrivalStatusNm
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS eta
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS arrivalEta
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS arrivalScheduledDate
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS arrvDt
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS arrvSchdYmd
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS ianArrvDt
+        , TO_CHAR(IAN.IAN_ARRV_DT, 'YYYY-MM-DD') AS ianArrvSchdYmd
+        , CASE NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT')
+            WHEN 'TRC_NTC_SENT' THEN '발급완료'
+            WHEN 'SENT' THEN '발급완료'
+            ELSE '미발급'
+          END AS noticeStatusNm
+        , CASE NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT')
+            WHEN 'TRC_NTC_SENT' THEN '발급완료'
+            WHEN 'SENT' THEN '발급완료'
+            ELSE '미발급'
+          END AS arrivalNoticeStatusNm
+        , T.TRC_ITEM_CTGRY_NM AS itemCategory
+        , CASE T.TRC_ITEM_CTGRY_NM
+            WHEN '전자기기' THEN 'Electronics'
+            WHEN '식품' THEN 'Food'
+            WHEN 'ELECTRONICS' THEN 'Electronics'
+            WHEN 'FOOD' THEN 'Food'
+            ELSE T.TRC_ITEM_CTGRY_NM
+          END AS itemCategoryNm
+        , GDS.GOODS_NAME AS goodsName
+        , GDS.GOODS_NAME AS itemNm
+        , GDS.CG_QTY AS qty
+        , GDS.CG_WEIGHT AS weight
+        , W.WIR_INVOICE_NO AS invoiceNo
+        , INV_FILE.DFI_ORG_NM AS invoiceFile
+        , INV_FILE.DFI_FILE_NO AS invoiceFileNo
+        , PKG_FILE.DFI_ORG_NM AS packingListFile
+        , PKG_FILE.DFI_FILE_NO AS packingListFileNo
+        , TO_CHAR(T.TRC_RQST_DT, 'YYYY-MM-DD HH24' || CHR(58) || 'MI') AS requestDt
+        , T.TRC_REJ_TYPE AS rejectType
+        , T.TRC_REJ_MEMO AS rejectMemo
+        , T.TRC_RJCT_RSN AS rejectReason
+        FROM TRAN_RCP T
+        LEFT JOIN OWNER O
+          ON O.OWR_ID = T.TRC_OWR_ID
+        LEFT JOIN (
+          SELECT
+            WIR_NO
+          , WIR_GG_NO
+          , WIR_STATUS_CD
+          , WIR_WH_REPLY_STATUS_CD
+          , WIR_INVOICE_NO
+          FROM (
+            SELECT
+              WIR_NO
+            , WIR_GG_NO
+            , WIR_STATUS_CD
+            , WIR_WH_REPLY_STATUS_CD
+            , WIR_INVOICE_NO
+            , ROW_NUMBER() OVER (
+                PARTITION BY WIR_GG_NO
+                ORDER BY WIR_IN_PLAN_DT DESC NULLS LAST, WIR_NO DESC
+              ) AS RN
+            FROM WH_IN_RPT
+            WHERE WIR_IO_SE_CD IN ('IMP', 'IMPORT')
+          )
+          WHERE RN = 1
+        ) W
+          ON W.WIR_GG_NO = T.TRC_TFG_NO
+        LEFT JOIN (
+          SELECT
+            CRR_TRE_ID
+          , MAX(CRR_STATUS_CD) KEEP (DENSE_RANK LAST ORDER BY CRR_NO) AS CRR_STATUS_CD
+          , MAX(CRR_RELEASE_DT) KEEP (DENSE_RANK LAST ORDER BY CRR_NO) AS CRR_RELEASE_DT
+          FROM CARGO_RELEASE_REQ
+          GROUP BY CRR_TRE_ID
+        ) CRR
+          ON CRR.CRR_TRE_ID = T.TRC_NO
+        LEFT JOIN (
+          SELECT
+            IAN_TRC_NO
+          , MAX(IAN_SEND_STTS_CD) KEEP (DENSE_RANK LAST ORDER BY IAN_NO) AS IAN_SEND_STTS_CD
+          , MAX(IAN_ARRV_STATUS_CD) KEEP (DENSE_RANK LAST ORDER BY IAN_NO) AS IAN_ARRV_STATUS_CD
+          , MAX(IAN_ARRV_DT)      KEEP (DENSE_RANK LAST ORDER BY IAN_NO) AS IAN_ARRV_DT
+          FROM IMP_ARRV_NTC
+          GROUP BY IAN_TRC_NO
+        ) IAN
+          ON IAN.IAN_TRC_NO = T.TRC_NO
+        LEFT JOIN (
+          SELECT
+            TCS_TRC_NO
+          , MAX(TCS_STL_STATUS_CD) KEEP (DENSE_RANK LAST ORDER BY TCS_NO) AS TCS_STL_STATUS_CD
+          FROM TRAN_COST_STL
+          GROUP BY TCS_TRC_NO
+        ) TCS
+          ON TCS.TCS_TRC_NO = T.TRC_NO
+        LEFT JOIN (
+          SELECT
+            DI_TRC_NO
+          , MAX(DI_STATUS_CD) KEEP (DENSE_RANK LAST ORDER BY DI_REQ_DT NULLS FIRST, DI_DO_NO) AS DI_STATUS_CD
+          FROM DO_ISSUANCE
+          GROUP BY DI_TRC_NO
+        ) DOIS
+          ON DOIS.DI_TRC_NO = T.TRC_NO
+        LEFT JOIN (
+          SELECT
+            DISPATCH_TRE_ID
+          , MAX(DISPATCH_STATUS_CD) KEEP (DENSE_RANK LAST ORDER BY DISPATCH_NO) AS DISPATCH_STATUS_CD
+          FROM DISPATCH
+          GROUP BY DISPATCH_TRE_ID
+        ) DSP
+          ON DSP.DISPATCH_TRE_ID = T.TRC_NO
+        LEFT JOIN (
+          SELECT
+            TFM_TFG_NO,
+            DFI_ORG_NM,
+            DFI_FILE_NO
+          FROM (
+            SELECT
+              FM.TFM_TFG_NO,
+              FD.DFI_ORG_NM,
+              FD.DFI_FILE_NO,
+              ROW_NUMBER() OVER (
+                PARTITION BY FM.TFM_TFG_NO
+                ORDER BY
+                  CASE WHEN FM.TFM_DOC_TY_CD = 'INVOICE' THEN 0 ELSE 1 END,
+                  FM.TFM_NO DESC
+              ) AS RN
+            FROM TACS_FILE_MAP FM
+            INNER JOIN DOCS_FILE_DATA FD
+              ON FD.DFI_FILE_NO = FM.TFM_DFI_NO
+             AND FD.DFI_DEL_YN = 'N'
+             AND FD.DFI_UPLOAD_STTS_CD = 'DONE'
+             AND FD.DFI_DRIVE_FILE_ID IS NOT NULL
+            WHERE FM.TFM_DOC_TY_CD = 'INVOICE'
+               OR LOWER(FD.DFI_ORG_NM) LIKE '%invoice%'
+               OR FD.DFI_ORG_NM LIKE '%송장%'
+          )
+          WHERE RN = 1
+        ) INV_FILE
+          ON INV_FILE.TFM_TFG_NO = T.TRC_TFG_NO
+        LEFT JOIN (
+          SELECT
+            TFM_TFG_NO,
+            DFI_ORG_NM,
+            DFI_FILE_NO
+          FROM (
+            SELECT
+              FM.TFM_TFG_NO,
+              FD.DFI_ORG_NM,
+              FD.DFI_FILE_NO,
+              ROW_NUMBER() OVER (
+                PARTITION BY FM.TFM_TFG_NO
+                ORDER BY
+                  CASE WHEN FM.TFM_DOC_TY_CD = 'PACKING_LIST' THEN 0 ELSE 1 END,
+                  FM.TFM_NO DESC
+              ) AS RN
+            FROM TACS_FILE_MAP FM
+            INNER JOIN DOCS_FILE_DATA FD
+              ON FD.DFI_FILE_NO = FM.TFM_DFI_NO
+             AND FD.DFI_DEL_YN = 'N'
+             AND FD.DFI_UPLOAD_STTS_CD = 'DONE'
+             AND FD.DFI_DRIVE_FILE_ID IS NOT NULL
+            WHERE FM.TFM_DOC_TY_CD = 'PACKING_LIST'
+               OR LOWER(FD.DFI_ORG_NM) LIKE '%packing%'
+               OR LOWER(FD.DFI_ORG_NM) LIKE '%pack%'
+               OR FD.DFI_ORG_NM LIKE '%패킹%'
+               OR FD.DFI_ORG_NM LIKE '%포장%'
+          )
+          WHERE RN = 1
+        ) PKG_FILE
+          ON PKG_FILE.TFM_TFG_NO = T.TRC_TFG_NO
+        LEFT JOIN (
+          SELECT
+            TFM_TFG_NO,
+            DFI_ORG_NM,
+            DFI_FILE_NO
+          FROM (
+            SELECT
+              FM.TFM_TFG_NO,
+              FD.DFI_ORG_NM,
+              FD.DFI_FILE_NO,
+              ROW_NUMBER() OVER (
+                PARTITION BY FM.TFM_TFG_NO
+                ORDER BY
+                  CASE
+                    WHEN UPPER(FM.TFM_DOC_TY_CD) IN ('BL', 'B/L', 'MBL', 'HBL', 'MASTER_BL', 'HOUSE_BL', 'BILL_OF_LADING') THEN 0
+                    ELSE 1
+                  END,
+                  FM.TFM_NO DESC
+              ) AS RN
+            FROM TACS_FILE_MAP FM
+            INNER JOIN DOCS_FILE_DATA FD
+              ON FD.DFI_FILE_NO = FM.TFM_DFI_NO
+             AND FD.DFI_DEL_YN = 'N'
+             AND FD.DFI_UPLOAD_STTS_CD = 'DONE'
+             AND FD.DFI_DRIVE_FILE_ID IS NOT NULL
+            WHERE UPPER(FM.TFM_DOC_TY_CD) IN ('BL', 'B/L', 'MBL', 'HBL', 'MASTER_BL', 'HOUSE_BL', 'BILL_OF_LADING')
+               OR FD.DFI_ORG_NM LIKE '%선하증권%'
+               OR LOWER(FD.DFI_ORG_NM) LIKE '%bill_of_lading%'
+               OR LOWER(FD.DFI_ORG_NM) LIKE '%bill-of-lading%'
+               OR LOWER(FD.DFI_ORG_NM) LIKE '%b/l%'
+               OR LOWER(FD.DFI_ORG_NM) LIKE '%bl\_%' ESCAPE '\'
+               OR LOWER(FD.DFI_ORG_NM) LIKE '%mbl%'
+               OR LOWER(FD.DFI_ORG_NM) LIKE '%hbl%'
+          )
+          WHERE RN = 1
+        ) BL_FILE
+          ON BL_FILE.TFM_TFG_NO = T.TRC_TFG_NO
+        LEFT JOIN (
+          SELECT
+            CG.GG_NO
+          , CASE
+              WHEN COUNT(*) > 1 THEN
+                MIN(G.GOODS_NAME) KEEP (DENSE_RANK FIRST ORDER BY CG.CG_NO) || ' 외 ' || (COUNT(*) - 1) || '건'
+              ELSE MIN(G.GOODS_NAME) KEEP (DENSE_RANK FIRST ORDER BY CG.CG_NO)
+            END AS GOODS_NAME
+          , NVL(SUM(CG.CG_QTY), 0) AS CG_QTY
+          , NVL(SUM(CG.CG_WEIGHT), 0) AS CG_WEIGHT
+          FROM CUSTOMS_GOODS CG
+          LEFT JOIN GOODS G
+            ON G.GOODS_NO = CG.GOODS_NO
+          GROUP BY CG.GG_NO
+        ) GDS
+          ON GDS.GG_NO = T.TRC_TFG_NO
+        LEFT JOIN (
+          SELECT
+            ICM_GG_NO
+          , MAX(ICM_MBL_NO) AS ICM_MBL_NO
+          , MAX(ICM_HBL_NO) AS ICM_HBL_NO
+          FROM IMP_CARGO_MANIFEST
+          GROUP BY ICM_GG_NO
+        ) M
+          ON M.ICM_GG_NO = T.TRC_TFG_NO
+        LEFT JOIN (
+          SELECT
+            BI_TRE_ID
+          , MAX(BI_MBL_NO) AS BI_MBL_NO
+          , MAX(BI_HBL_NO) AS BI_HBL_NO
+          , MAX(BI_STL_STATUS_CD) AS BI_STL_STATUS_CD
+          FROM BL_ISSU
+          GROUP BY BI_TRE_ID
+        ) B
+          ON B.BI_TRE_ID = T.TRC_NO
+        LEFT JOIN COUNTRY CTRY
+          ON CTRY.COUNTRY_CD = T.TRC_TRDR_COUNTRY_CD
+        WHERE T.TRC_SE_CD IN ('IMP', 'IMPORT')
+        ORDER BY T.TRC_RQST_DT DESC NULLS LAST, T.TRC_NO DESC
+    </select>
+  <update id="updateImpTransportReqStatus">
+        UPDATE TRAN_RCP
+        SET
+        TRC_STATUS_CD =
+        CASE #{statusCd}
+        WHEN 'ACC' THEN 'TRC_DONE'
+        WHEN 'ACCEPTED' THEN 'TRC_DONE'
+        WHEN 'TRC_DONE' THEN 'TRC_DONE'
+        WHEN '접수완료' THEN 'TRC_DONE'
+        WHEN 'REJ' THEN 'TRC_REJECT'
+        WHEN 'REJECTED' THEN 'TRC_REJECT'
+        WHEN 'TRC_REJECT' THEN 'TRC_REJECT'
+        WHEN '접수반려' THEN 'TRC_REJECT'
+        WHEN 'TRC_END' THEN 'TRC_END'
+        WHEN '완료대기' THEN 'TRC_END'
+        WHEN 'TRC_COMPLETE' THEN 'TRC_COMPLETE'
+        WHEN '최종완료' THEN 'TRC_COMPLETE'
+        ELSE TRC_STATUS_CD
+        END
+        , TRC_RCEPT_DT = CASE
+        WHEN #{statusCd} IN ('ACC', 'ACCEPTED', 'TRC_DONE', '접수완료') THEN SYSDATE
+        ELSE TRC_RCEPT_DT
+        END
+        , TRC_TM_NO = CASE
+        WHEN #{statusCd} IN ('ACC', 'ACCEPTED', 'TRC_DONE', '접수완료')
+        THEN NVL((
+            SELECT MAX(TM.TM_NO)
+            FROM TRANSPORT_MANAGER TM
+            WHERE TM.TM_ID = #{actorId,jdbcType=VARCHAR}
+        ), TRC_TM_NO)
+        ELSE TRC_TM_NO
+        END
+        , TRC_REJ_TYPE = CASE
+        WHEN #{statusCd} IN ('REJ', 'REJECTED', 'TRC_REJECT', '접수반려') THEN #{rejectType,jdbcType=VARCHAR}
+        ELSE NULL
+        END
+        , TRC_REJ_MEMO = CASE
+        WHEN #{statusCd} IN ('REJ', 'REJECTED', 'TRC_REJECT', '접수반려') THEN #{rejectMemo,jdbcType=VARCHAR}
+        ELSE NULL
+        END
+        , TRC_RJCT_RSN = CASE
+        WHEN #{statusCd} IN ('REJ', 'REJECTED', 'TRC_REJECT', '접수반려') THEN #{rejectReason,jdbcType=VARCHAR}
+        ELSE NULL
+        END
+        WHERE TRC_NO = #{trcNo}
+        AND TRC_SE_CD IN ('IMP', 'IMPORT')
+    </update>
+  <update id="ensureImpTransportFlowBase">
+        DECLARE
+        V_TFG_NO NUMBER;
+        V_WIR_EXISTS NUMBER;
+        BEGIN
+        SELECT TRC_TFG_NO
+        INTO V_TFG_NO
+        FROM TRAN_RCP
+        WHERE TRC_NO = #{trcNo}
+        AND TRC_SE_CD IN ('IMP', 'IMPORT')
+        FOR UPDATE;
+
+        IF V_TFG_NO IS NULL THEN
+        SELECT NVL(MAX(TFG_NO), 0) + 1
+        INTO V_TFG_NO
+        FROM TACS_FILE_GRP;
+
+        UPDATE TRAN_RCP
+        SET TRC_TFG_NO = V_TFG_NO
+        WHERE TRC_NO = #{trcNo}
+        AND TRC_SE_CD IN ('IMP', 'IMPORT');
+        END IF;
+
+        INSERT INTO TACS_FILE_GRP (
+        TFG_NO
+        , TFG_BIZ_SE_CD
+        , TFG_REGIST_DT
+        )
+        SELECT
+        V_TFG_NO
+        , 'IMPORT'
+        , SYSDATE
+        FROM DUAL
+        WHERE V_TFG_NO IS NOT NULL
+        AND NOT EXISTS (
+        SELECT 1
+        FROM TACS_FILE_GRP
+        WHERE TFG_NO = V_TFG_NO
+        );
+
+        UPDATE TACS_FILE_GRP
+        SET TFG_BIZ_SE_CD = 'IMPORT'
+        WHERE TFG_NO = V_TFG_NO
+        AND (
+        TFG_BIZ_SE_CD IS NULL
+        OR TFG_BIZ_SE_CD IN ('TRC_WAIT', 'TRC_DONE', 'TRC_REJECT')
+        );
+
+        INSERT INTO GOODS_GROUP (
+        GG_NO
+        )
+        SELECT V_TFG_NO
+        FROM DUAL
+        WHERE V_TFG_NO IS NOT NULL
+        AND NOT EXISTS (
+        SELECT 1
+        FROM GOODS_GROUP
+        WHERE GG_NO = V_TFG_NO
+        );
+
+        SELECT COUNT(*)
+        INTO V_WIR_EXISTS
+        FROM WH_IN_RPT
+        WHERE WIR_IO_SE_CD = 'IMPORT'
+        AND WIR_GG_NO = V_TFG_NO;
+
+        IF V_WIR_EXISTS = 0 THEN
+        INSERT INTO WH_IN_RPT (
+        WIR_NO,
+        WIR_GG_NO,
+        WIR_OWR_ID,
+        WIR_WM_ID,
+        WIR_WZ_NO,
+        WIR_IN_PLAN_DT,
+        WIR_STATUS_CD,
+        WIR_WH_REPLY_STATUS_CD,
+        WIR_CARGO_MGMT_NO,
+        WIR_INCO_TERMS_CD,
+        WIR_OWR_NM,
+        WIR_IO_SE_CD
+        )
+        SELECT
+        REGEXP_REPLACE(T.TRC_NO, '-[0-9]+$', '-') || LPAD(
+        NVL((
+        SELECT MAX(TO_NUMBER(REGEXP_SUBSTR(W3.WIR_NO, '[0-9]+$')))
+        FROM WH_IN_RPT W3
+        WHERE W3.WIR_IO_SE_CD = 'IMPORT'
+        AND W3.WIR_NO LIKE REGEXP_REPLACE(T.TRC_NO, '-[0-9]+$', '-%')
+        ), 9000) + 1,
+        4,
+        '0'
+        ) AS WIR_NO,
+        V_TFG_NO,
+        T.TRC_OWR_ID,
+        COALESCE(DFLT.WM_ID, (
+        SELECT MIN(WM.WM_ID)
+        FROM WAREHOUSE_MANAGER WM
+        WHERE NVL(WM.WM_USE_YN, 'Y') = 'Y'
+        )),
+        DFLT.WZ_NO,
+        NULL,
+        'WAIT',
+        'WAIT',
+        'CARGO-' || REGEXP_REPLACE(T.TRC_NO, '^TRC-', '', 1, 1, 'i'),
+        T.TRC_INCO_TERMS_CD,
+        O.OWR_NM,
+        'IMPORT'
+        FROM TRAN_RCP T
+        LEFT JOIN OWNER O
+        ON O.OWR_ID = T.TRC_OWR_ID
+        LEFT JOIN (
+        SELECT WM_ID, WZ_NO
+        FROM (
+        SELECT
+        Z.WM_ID,
+        Z.WZ_NO,
+        ROW_NUMBER() OVER (ORDER BY Z.WZ_NO) AS RN
+        FROM WAREHOUSE_ZONE Z
+        INNER JOIN WAREHOUSE_MANAGER WM
+        ON WM.WM_ID = Z.WM_ID
+        WHERE NVL(WM.WM_USE_YN, 'Y') = 'Y'
+        AND NVL(Z.WZ_USE_YN, 'Y') = 'Y'
+        AND NVL(Z.WZ_STATUS_CD, 'ACTIVE') = 'ACTIVE'
+        )
+        WHERE RN = 1
+        ) DFLT
+        ON 1 = 1
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD IN ('IMP', 'IMPORT');
+        ELSE
+        UPDATE WH_IN_RPT W
+        SET
+        W.WIR_OWR_ID = NVL(W.WIR_OWR_ID, (
+        SELECT T.TRC_OWR_ID
+        FROM TRAN_RCP T
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD IN ('IMP', 'IMPORT')
+        )),
+        W.WIR_CARGO_MGMT_NO = CASE
+            WHEN W.WIR_CARGO_MGMT_NO IS NULL OR TRIM(W.WIR_CARGO_MGMT_NO) = '' THEN 'CARGO-' || REGEXP_REPLACE(#{trcNo}, '^TRC-', '', 1, 1, 'i')
+            WHEN UPPER(W.WIR_CARGO_MGMT_NO) LIKE 'CARGO-TRC-%' THEN REGEXP_REPLACE(W.WIR_CARGO_MGMT_NO, '^CARGO-TRC-', 'CARGO-', 1, 1, 'i')
+            WHEN UPPER(W.WIR_CARGO_MGMT_NO) LIKE 'TRC-%' THEN REGEXP_REPLACE(W.WIR_CARGO_MGMT_NO, '^TRC-', 'CARGO-', 1, 1, 'i')
+            ELSE W.WIR_CARGO_MGMT_NO
+        END,
+        W.WIR_STATUS_CD = NVL(W.WIR_STATUS_CD, 'WAIT'),
+        W.WIR_WH_REPLY_STATUS_CD = NVL(W.WIR_WH_REPLY_STATUS_CD, 'WAIT')
+        WHERE W.WIR_IO_SE_CD = 'IMPORT'
+        AND W.WIR_GG_NO = V_TFG_NO;
+        END IF;
+        END;
+    </update>
+  <update id="updateImpTransportReqDetail">
+        UPDATE TRAN_RCP
+        SET TRC_TRDR_NM = NVL(TRIM(#{buyerNm,jdbcType=VARCHAR}), TRC_TRDR_NM)
+        , TRC_TRDR_COUNTRY_CD = NVL((
+            SELECT X.COUNTRY_CD
+            FROM (
+                SELECT C.COUNTRY_CD
+                FROM COUNTRY C
+                WHERE NVL(C.COUNTRY_USE_YN, 'Y') = 'Y'
+                  AND (
+                        UPPER(C.COUNTRY_CD) = UPPER(TRIM(#{buyerCountryCd,jdbcType=VARCHAR}))
+                     OR LOWER(C.COUNTRY_NM_KR) = LOWER(TRIM(#{buyerCountryCd,jdbcType=VARCHAR}))
+                     OR LOWER(C.COUNTRY_NM_EN) = LOWER(TRIM(#{buyerCountryCd,jdbcType=VARCHAR}))
+                     OR LOWER(C.COUNTRY_NM_EN) LIKE LOWER(TRIM(#{buyerCountryCd,jdbcType=VARCHAR})) || '%'
+                  )
+                ORDER BY
+                  CASE
+                    WHEN UPPER(C.COUNTRY_CD) = UPPER(TRIM(#{buyerCountryCd,jdbcType=VARCHAR})) THEN 0
+                    WHEN LOWER(C.COUNTRY_NM_KR) = LOWER(TRIM(#{buyerCountryCd,jdbcType=VARCHAR})) THEN 1
+                    WHEN LOWER(C.COUNTRY_NM_EN) = LOWER(TRIM(#{buyerCountryCd,jdbcType=VARCHAR})) THEN 1
+                    ELSE 2
+                  END
+            ) X
+            WHERE ROWNUM = 1
+        ), TRC_TRDR_COUNTRY_CD)
+        , TRC_TRAN_MN_CD = NVL(CASE TRIM(#{transportMeanCd,jdbcType=VARCHAR})
+        WHEN '해상' THEN 'SEA'
+        WHEN '항공' THEN 'AIR'
+        ELSE TRIM(#{transportMeanCd,jdbcType=VARCHAR})
+        END, TRC_TRAN_MN_CD)
+        , TRC_TRAN_TY_CD = NVL(CASE TRIM(#{transportTypeCd,jdbcType=VARCHAR})
+        WHEN 'LCL / Less than Container Load' THEN 'LCL'
+        WHEN 'FCL / Full Container Load' THEN 'FCL'
+        WHEN 'Less than Container Load' THEN 'LCL'
+        WHEN 'Full Container Load' THEN 'FCL'
+        WHEN '벌크' THEN 'BULK'
+        WHEN '항공화물' THEN 'AIR_CARGO'
+        WHEN '트럭운송' THEN 'TRUCK'
+        ELSE TRIM(#{transportTypeCd,jdbcType=VARCHAR})
+        END, TRC_TRAN_TY_CD)
+        , TRC_INCO_TERMS_CD = NVL(TRIM(#{incoTermsCd,jdbcType=VARCHAR}), TRC_INCO_TERMS_CD)
+        , TRC_DEPT_PORT_CD = NVL((
+            SELECT X.PORT_CD
+            FROM (
+                SELECT P.PORT_CD
+                FROM PORT P
+                WHERE NVL(P.PORT_USE_YN, 'Y') = 'Y'
+                  AND LENGTH(P.PORT_CD) <![CDATA[<=]]> 5
+                  AND (
+                        UPPER(P.PORT_CD) = UPPER(TRIM(#{deptPortCd,jdbcType=VARCHAR}))
+                     OR LOWER(P.PORT_NM) = LOWER(TRIM(#{deptPortCd,jdbcType=VARCHAR}))
+                     OR LOWER(P.PORT_NM) LIKE LOWER(TRIM(#{deptPortCd,jdbcType=VARCHAR})) || '%'
+                  )
+                ORDER BY
+                  CASE
+                    WHEN UPPER(P.PORT_CD) = UPPER(TRIM(#{deptPortCd,jdbcType=VARCHAR})) THEN 0
+                    WHEN LOWER(P.PORT_NM) = LOWER(TRIM(#{deptPortCd,jdbcType=VARCHAR})) THEN 1
+                    ELSE 2
+                  END,
+                  P.PORT_CD
+            ) X
+            WHERE ROWNUM = 1
+        ), NVL(CASE TRIM(#{deptPortCd,jdbcType=VARCHAR})
+            WHEN '부산항' THEN 'KRPUS'
+            WHEN '인천항' THEN 'KRINC'
+            WHEN '평택항' THEN 'KRPTK'
+            WHEN '오사카항' THEN 'OSAKA'
+            WHEN '도쿄항' THEN 'TOKYO'
+            WHEN '상하이항' THEN 'CNSHA'
+            ELSE SUBSTR(TRIM(#{deptPortCd,jdbcType=VARCHAR}), 1, 5)
+        END, TRC_DEPT_PORT_CD))
+        , TRC_ARVL_PORT_CD = NVL((
+            SELECT X.PORT_CD
+            FROM (
+                SELECT P.PORT_CD
+                FROM PORT P
+                WHERE NVL(P.PORT_USE_YN, 'Y') = 'Y'
+                  AND LENGTH(P.PORT_CD) <![CDATA[<=]]> 5
+                  AND (
+                        UPPER(P.PORT_CD) = UPPER(TRIM(#{arvlPortCd,jdbcType=VARCHAR}))
+                     OR LOWER(P.PORT_NM) = LOWER(TRIM(#{arvlPortCd,jdbcType=VARCHAR}))
+                     OR LOWER(P.PORT_NM) LIKE LOWER(TRIM(#{arvlPortCd,jdbcType=VARCHAR})) || '%'
+                  )
+                ORDER BY
+                  CASE
+                    WHEN UPPER(P.PORT_CD) = UPPER(TRIM(#{arvlPortCd,jdbcType=VARCHAR})) THEN 0
+                    WHEN LOWER(P.PORT_NM) = LOWER(TRIM(#{arvlPortCd,jdbcType=VARCHAR})) THEN 1
+                    ELSE 2
+                  END,
+                  P.PORT_CD
+            ) X
+            WHERE ROWNUM = 1
+        ), NVL(CASE TRIM(#{arvlPortCd,jdbcType=VARCHAR})
+            WHEN '부산항' THEN 'KRPUS'
+            WHEN '인천항' THEN 'KRINC'
+            WHEN '평택항' THEN 'KRPTK'
+            WHEN '오사카항' THEN 'OSAKA'
+            WHEN '도쿄항' THEN 'TOKYO'
+            WHEN '상하이항' THEN 'CNSHA'
+            ELSE SUBSTR(TRIM(#{arvlPortCd,jdbcType=VARCHAR}), 1, 5)
+        END, TRC_ARVL_PORT_CD))
+        , TRC_ITEM_CTGRY_NM = NVL(CASE TRIM(#{itemCategory,jdbcType=VARCHAR})
+          WHEN 'ELECTRONICS' THEN '전자기기'
+          WHEN '전자기기 / Electronics' THEN '전자기기'
+          WHEN 'FOOD' THEN '식품'
+          WHEN '식품 / Food' THEN '식품'
+          ELSE TRIM(#{itemCategory,jdbcType=VARCHAR})
+        END, TRC_ITEM_CTGRY_NM)
+        , TRC_RQST_CN = NVL(TRIM(#{requestCn,jdbcType=VARCHAR}), TRC_RQST_CN)
+        WHERE TRC_NO = #{trcNo}
+        AND TRC_SE_CD IN ('IMP', 'IMPORT')
+    </update>
+  <delete id="deleteImpTransportReqDetailGoods">
+        DELETE FROM CUSTOMS_GOODS CG
+        WHERE CG.GG_NO = (
+            SELECT T.TRC_TFG_NO
+            FROM TRAN_RCP T
+            WHERE T.TRC_NO = #{trcNo}
+            AND T.TRC_SE_CD IN ('IMP', 'IMPORT')
+            AND ROWNUM = 1
+        )
+    </delete>
+  <insert id="insertImpTransportReqDetailGoods">
+        DECLARE
+            V_GG_NO CUSTOMS_GOODS.GG_NO%TYPE;
+        BEGIN
+            SELECT T.TRC_TFG_NO
+            INTO V_GG_NO
+            FROM TRAN_RCP T
+            WHERE T.TRC_NO = #{trcNo}
+            AND T.TRC_SE_CD IN ('IMP', 'IMPORT')
+            AND ROWNUM = 1
+            FOR UPDATE;
+
+            IF V_GG_NO IS NULL THEN
+                SELECT NVL(MAX(TFG_NO), 0) + 1
+                INTO V_GG_NO
+                FROM TACS_FILE_GRP;
+
+                UPDATE TRAN_RCP T
+                SET T.TRC_TFG_NO = V_GG_NO
+                WHERE T.TRC_NO = #{trcNo}
+                AND T.TRC_SE_CD IN ('IMP', 'IMPORT');
+            END IF;
+
+            INSERT INTO TACS_FILE_GRP (
+                TFG_NO
+                , TFG_BIZ_SE_CD
+                , TFG_REGIST_DT
+            )
+            SELECT
+                V_GG_NO
+                , 'IMPORT'
+                , SYSDATE
+            FROM DUAL
+            WHERE V_GG_NO IS NOT NULL
+            AND NOT EXISTS (
+                SELECT 1
+                FROM TACS_FILE_GRP TFG
+                WHERE TFG.TFG_NO = V_GG_NO
+            );
+
+            INSERT INTO GOODS_GROUP (GG_NO)
+            SELECT V_GG_NO
+            FROM DUAL
+            WHERE V_GG_NO IS NOT NULL
+            AND NOT EXISTS (
+                SELECT 1
+                FROM GOODS_GROUP GG
+                WHERE GG.GG_NO = V_GG_NO
+            );
+
+            INSERT INTO CUSTOMS_GOODS (
+                CG_NO
+                , GOODS_NO
+                , GG_NO
+                , CG_QTY
+                , CG_PRICE
+                , CG_TOTAL_PRICE
+                , CG_WEIGHT
+                , CG_ORIGIN
+            ) VALUES (
+                #{goods.cgNo}
+                , #{goods.goodsNo}
+                , V_GG_NO
+                , NVL(#{goods.qty}, 0)
+                , NVL(#{goods.price}, 0)
+                , NVL(#{goods.goodsTotalPrice}, NVL(#{goods.weight}, 0) * NVL(#{goods.price}, 0))
+                , NVL(#{goods.weight}, 0)
+                , NVL(NULLIF(REGEXP_REPLACE(TRIM(#{goods.origin}), '^-+', ''), ''), 'KR')
+            );
+        END;
+    </insert>
+  <update id="updateImpTransportReqMasterBl">
+        BEGIN
+        /*
+        * 운송의뢰 상세화면에서 입력한 Master B/L 저장.
+        * - 사용자가 DB에서 BL_ISSU/GOODS_GROUP을 미리 만들 필요 없게 여기서 자동 보장한다.
+        * - B/L의 기준 저장소는 BL_ISSU이고, IMP_CARGO_MANIFEST는 기존 행이 있을 때만 동기화한다.
+        * - 신규 적하목록 행은 여기서 만들지 않는다. 적하목록은 조회/비교 흐름의 데이터이기 때문이다.
+        */
+        IF TRIM(#{mblNo,jdbcType=VARCHAR}) IS NOT NULL THEN
+
+        INSERT INTO GOODS_GROUP (GG_NO)
+        SELECT T.TRC_TFG_NO
+        FROM TRAN_RCP T
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD IN ('IMP', 'IMPORT')
+        AND T.TRC_TFG_NO IS NOT NULL
+        AND NOT EXISTS (
+        SELECT 1
+        FROM GOODS_GROUP GG
+        WHERE GG.GG_NO = T.TRC_TFG_NO
+        );
+
+        UPDATE BL_ISSU B
+        SET B.BI_MBL_NO = TRIM(#{mblNo,jdbcType=VARCHAR})
+        , B.BI_HBL_NO = NVL(B.BI_HBL_NO, CASE
+        WHEN REGEXP_LIKE(TRIM(#{mblNo,jdbcType=VARCHAR}), '^MBL[-_ ]', 'i')
+        THEN 'HBL-' || REGEXP_REPLACE(TRIM(#{mblNo,jdbcType=VARCHAR}), '^MBL[-_ ]+', '', 1, 1, 'i')
+        ELSE 'HBL-' || UPPER(REGEXP_REPLACE(TRIM(#{mblNo,jdbcType=VARCHAR}), '[^0-9A-Za-z]', ''))
+        END)
+        , B.BI_GG_NO = NVL(B.BI_GG_NO, (
+        SELECT T.TRC_TFG_NO
+        FROM TRAN_RCP T
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD IN ('IMP', 'IMPORT')
+        ))
+        , B.BI_STATUS_CD = NVL(B.BI_STATUS_CD, 'ISSUED')
+        , B.BI_STL_STATUS_CD = NVL(B.BI_STL_STATUS_CD, 'UNPAID')
+        WHERE B.BI_TRE_ID = #{trcNo};
+
+        IF SQL%ROWCOUNT = 0 THEN
+        INSERT INTO BL_ISSU (
+        BI_NO,
+        BI_TRE_ID,
+        BI_OWR_ID,
+        BI_TM_NO,
+        BI_GG_NO,
+        BI_MBL_NO,
+        BI_HBL_NO,
+        BI_STATUS_CD,
+        BI_STL_STATUS_CD,
+        BI_XPROT_FEE,
+        BI_WH_FEE,
+        BI_TTL_AMT,
+        BI_EXPLN
+        )
+        SELECT
+        NVL((SELECT MAX(B2.BI_NO) FROM BL_ISSU B2), 0) + 1,
+        T.TRC_NO,
+        T.TRC_OWR_ID,
+        T.TRC_TM_NO,
+        T.TRC_TFG_NO,
+        TRIM(#{mblNo,jdbcType=VARCHAR}),
+        CASE
+        WHEN REGEXP_LIKE(TRIM(#{mblNo,jdbcType=VARCHAR}), '^MBL[-_ ]', 'i')
+        THEN 'HBL-' || REGEXP_REPLACE(TRIM(#{mblNo,jdbcType=VARCHAR}), '^MBL[-_ ]+', '', 1, 1, 'i')
+        ELSE 'HBL-' || UPPER(REGEXP_REPLACE(TRIM(#{mblNo,jdbcType=VARCHAR}), '[^0-9A-Za-z]', ''))
+        END,
+        'ISSUED',
+        'UNPAID',
+        0,
+        0,
+        0,
+        '운송담당자 상세화면 Master B/L 등록'
+        FROM TRAN_RCP T
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD IN ('IMP', 'IMPORT')
+        AND T.TRC_TFG_NO IS NOT NULL;
+        END IF;
+
+        UPDATE IMP_CARGO_MANIFEST M
+        SET M.ICM_MBL_NO = TRIM(#{mblNo,jdbcType=VARCHAR})
+        , M.ICM_HBL_NO = NVL(M.ICM_HBL_NO, CASE
+        WHEN REGEXP_LIKE(TRIM(#{mblNo,jdbcType=VARCHAR}), '^MBL[-_ ]', 'i')
+        THEN 'HBL-' || REGEXP_REPLACE(TRIM(#{mblNo,jdbcType=VARCHAR}), '^MBL[-_ ]+', '', 1, 1, 'i')
+        ELSE 'HBL-' || UPPER(REGEXP_REPLACE(TRIM(#{mblNo,jdbcType=VARCHAR}), '[^0-9A-Za-z]', ''))
+        END)
+        WHERE M.ICM_GG_NO = (
+        SELECT T.TRC_TFG_NO
+        FROM TRAN_RCP T
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD IN ('IMP', 'IMPORT')
+        );
+
+        END IF;
+        END;
+    </update>
+  <insert id="insertImportTransportReject">
+        INSERT INTO RJCT_MNG (
+        RM_NO,
+        RM_REF_BIZ_CD,
+        RM_REF_NO,
+        RM_RJCT_DT,
+        RM_RJCT_CN,
+        RM_RJCTR_ID,
+        RM_TARGET_ID
+        )
+        SELECT
+        'RM-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' || LPAD(SEQ_RJCT_MNG_NO.NEXTVAL, 5, '0'),
+        'TRAN_RCP',
+        T.TRC_NO,
+        SYSDATE,
+        #{rejectReason,jdbcType=VARCHAR},
+        #{rejecterId,jdbcType=VARCHAR},
+        T.TRC_OWR_ID
+        FROM TRAN_RCP T
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD = 'IMPORT'
+        AND NOT EXISTS (
+        SELECT 1
+        FROM RJCT_MNG RM
+        WHERE RM.RM_REF_BIZ_CD = 'TRAN_RCP'
+        AND RM.RM_REF_NO = T.TRC_NO
+        AND RM.RM_RJCT_CN = #{rejectReason,jdbcType=VARCHAR}
+        )
+    </insert>
+  <insert id="insertImportSupplementRequest">
+        DECLARE
+        V_SR_NO SUPP_RQST.SR_NO%TYPE;
+        BEGIN
+        SELECT 'SR-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' || LPAD(SEQ_SUPP_RQST.NEXTVAL, 4, '0')
+        INTO V_SR_NO
+        FROM DUAL;
+
+        INSERT INTO SUPP_RQST (
+        SR_NO,
+        SR_REF_BIZ_CD,
+        SR_REF_NO,
+        SENDER_ID,
+        SENDER_TY_CD,
+        RECEIVER_ID,
+        RECEIVER_TY_CD,
+        SR_STATUS_CD,
+        SR_REQ_DT,
+        SR_REQ_CN
+        )
+        VALUES (
+        V_SR_NO,
+        #{refBizCd},
+        #{refNo},
+        #{senderId},
+        CASE #{senderTyCd}
+        WHEN 'TRANSPORT_MANAGER' THEN 'TRC'
+        WHEN 'TRANSPORT' THEN 'TRC'
+        WHEN 'WAREHOUSE_MANAGER' THEN 'WHM'
+        WHEN 'WAREHOUSE' THEN 'WHM'
+        WHEN 'OWNER' THEN 'OWR'
+        WHEN 'BROKER' THEN 'BRK'
+        ELSE #{senderTyCd}
+        END,
+        #{receiverId},
+        CASE #{receiverTyCd}
+        WHEN 'TRANSPORT_MANAGER' THEN 'TRC'
+        WHEN 'TRANSPORT' THEN 'TRC'
+        WHEN 'WAREHOUSE_MANAGER' THEN 'WHM'
+        WHEN 'WAREHOUSE' THEN 'WHM'
+        WHEN 'OWNER' THEN 'OWR'
+        WHEN 'BROKER' THEN 'BRK'
+        ELSE #{receiverTyCd}
+        END,
+        'REQ',
+        SYSDATE,
+        #{suppReqCn,jdbcType=VARCHAR}
+        );
+        END;
+    </insert>
+</mapper>

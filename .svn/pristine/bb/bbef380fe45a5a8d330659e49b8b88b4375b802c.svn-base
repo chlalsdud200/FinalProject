@@ -1,0 +1,1081 @@
+package kr.or.tacs.broker.declare.controller;
+
+import java.security.Principal;
+import org.springframework.core.env.Environment;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.embedding.EmbeddingResponse;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import kr.or.tacs.broker.declare.service.AiDocumentParserService;
+import kr.or.tacs.broker.declare.service.IBrokerDeclareService;
+import kr.or.tacs.vo.BrokerVO;
+import kr.or.tacs.vo.broker.declare.ImpDclrVO;
+import kr.or.tacs.vo.broker.declare.ImpRqstVO;
+import kr.or.tacs.vo.broker.declare.ImportDeclarationParsedDto;
+
+
+import kr.or.tacs.dto.FileInfoDTO;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.context.ApplicationContext;
+
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.VectorStore;
+/**
+ * 신고서 작성 Controller
+ *  - 페이지 GET    : /broker/declare/imp.do (?id=... 이어쓰기)
+ *  - 임시저장 POST : /broker/declare/saveImpDraft.do
+ */
+@Controller
+@RequestMapping("/broker")
+public class BrokerDeclareController {
+
+    @Autowired
+    private IBrokerDeclareService brokerDeclareService;
+    
+    @Value("${hs.ai-recommend.enabled:false}")
+    private boolean hsAiRecommendEnabled;
+
+    @Value("${hs.ai-recommend.health-url:http://127.0.0.1:9091/healthz}")
+    private String hsAiRecommendHealthUrl;
+
+    @Value("${hs.ai-recommend.timeout-ms:1500}")
+    private int hsAiRecommendTimeoutMs;
+
+    @Value("${hs.ai-recommend.attu-url:http://localhost:8000}")
+    private String hsAiRecommendAttuUrl;
+    
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Autowired
+    private AiDocumentParserService aiDocumentParserService;
+    
+    @Autowired
+    private ObjectProvider<EmbeddingModel> embeddingModelProvider;
+
+    @Autowired
+    private EmbeddingModel embeddingModel;
+    
+    @Autowired
+    private VectorStore vectorStore;
+    
+    @Autowired
+    private Environment environment;
+    /** Jackson ObjectMapper — Spring 빈 등록 여부와 무관하게 직접 인스턴스화 (thread-safe) */
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    // ==========================================================
+    // 페이지 GET
+    // ==========================================================
+
+    
+    @GetMapping("/declare/hsVector/beans.do")
+    @ResponseBody
+    public Map<String, Object> checkHsVectorBeans() {
+        Map<String, Object> result = new HashMap<>();
+
+        result.put("vectorStoreBeans",
+            java.util.Arrays.asList(applicationContext.getBeanNamesForType(org.springframework.ai.vectorstore.VectorStore.class)));
+
+        result.put("embeddingModelBeans",
+            java.util.Arrays.asList(applicationContext.getBeanNamesForType(org.springframework.ai.embedding.EmbeddingModel.class)));
+
+        result.put("chatClientBuilderBeans",
+            java.util.Arrays.asList(applicationContext.getBeanNamesForType(org.springframework.ai.chat.client.ChatClient.Builder.class)));
+
+        String commonKey = environment.getProperty("spring.ai.google.genai.api-key");
+        String embeddingKey = environment.getProperty("spring.ai.google.genai.embedding.api-key");
+
+        result.put("commonKeyExists", commonKey != null && !commonKey.isBlank());
+        result.put("commonKeyLength", commonKey == null ? 0 : commonKey.length());
+        result.put("commonKeyPrefix", commonKey == null || commonKey.length() < 6 ? "" : commonKey.substring(0, 6));
+
+        result.put("embeddingKeyExists", embeddingKey != null && !embeddingKey.isBlank());
+        result.put("embeddingKeyLength", embeddingKey == null ? 0 : embeddingKey.length());
+        result.put("embeddingKeyPrefix", embeddingKey == null || embeddingKey.length() < 6 ? "" : embeddingKey.substring(0, 6));
+        return result;
+    }
+    
+    /**
+     * 수입신고서 페이지
+     *  - id 파라미터가 있으면 해당 임시저장 데이터를 조회해 model 에 JSON 으로 담음
+     *  - declare.js 가 페이지 로드 시 fillImpForm() 으로 input 채움
+     */
+    @GetMapping("/declare/imp.do")
+    public String declareImp(@RequestParam(value = "id", required = false) String id,
+                             Model model,
+                             Principal principal) {
+        model.addAttribute("activeMenu", "declare");
+        model.addAttribute("activeSub",  "imp");
+
+        String brokerId = (principal != null) ? principal.getName() : null;
+
+        // 이어쓰기 모드 — 저장된 신고서 데이터
+        String impDclrJson = "null";
+        if (id != null && !id.isEmpty() && brokerId != null) {
+            ImpDclrVO vo = brokerDeclareService.findImpDclrById(brokerId, id);
+            if (vo != null) {
+                try {
+                    impDclrJson = objectMapper.writeValueAsString(vo);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        model.addAttribute("impDclrJson", impDclrJson);
+
+        // 로그인 사용자(관세사) 정보 — 신고인 영역 자동 채움
+        String currentBrokerJson = "null";
+        if (brokerId != null) {
+            BrokerVO broker = brokerDeclareService.findCurrentBroker(brokerId);
+            if (broker != null) {
+                // 비밀번호는 SELECT 에서 제외됨 (보안)
+                try {
+                    currentBrokerJson = objectMapper.writeValueAsString(broker);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        model.addAttribute("currentBrokerJson", currentBrokerJson);
+
+        return "broker/pages/declare";
+    }
+
+    @GetMapping("/declare/exp.do")
+    public String declareExp(Model model, Principal principal) {
+        model.addAttribute("activeMenu", "declare");
+        model.addAttribute("activeSub",  "exp");
+        model.addAttribute("impDclrJson", "null");
+
+        // 수출도 동일하게 로그인 사용자 정보 주입
+        String currentBrokerJson = "null";
+        if (principal != null) {
+            BrokerVO broker = brokerDeclareService.findCurrentBroker(principal.getName());
+            if (broker != null) {
+                try {
+                    currentBrokerJson = objectMapper.writeValueAsString(broker);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        model.addAttribute("currentBrokerJson", currentBrokerJson);
+
+        return "broker/pages/declare";
+    }
+
+    // ==========================================================
+    // 수입신고서 임시저장 (INSERT 또는 UPDATE — Service 에서 분기)
+    // ==========================================================
+
+    /**
+     * URL  : POST /broker/declare/saveImpDraft.do
+     * Body : ImpDclrVO JSON (idIrNo 가 있으면 UPDATE, 없으면 INSERT)
+     * Resp : { success, idIrNo, message, mode: "insert"|"update" }
+     */
+    @PostMapping("/declare/saveImpDraft.do")
+    @ResponseBody
+    public Map<String, Object> saveImpDraft(@RequestBody ImpDclrVO vo, Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            // 통관의뢰번호 필수
+            if (vo.getIdIrNo() == null || vo.getIdIrNo().trim().isEmpty()) {
+                result.put("success", false);
+                result.put("message", "통관의뢰번호가 없습니다.\n[기존 신고서 조회] 영역에서 의뢰번호를 먼저 조회해주세요.");
+                return result;
+            }
+
+            if (vo.getIdImprNm() == null || vo.getIdImprNm().trim().isEmpty()) {
+                result.put("success", false);
+                result.put("message", "수입자 상호는 필수 입력값입니다.");
+                return result;
+            }
+
+            // INSERT/UPDATE 판단 — service 안에서 selectImpDclrById 로 분기
+            String idIrNo = brokerDeclareService.saveImpDraft(vo, brokerId);
+
+            result.put("success", true);
+            result.put("idIrNo",  idIrNo);
+            result.put("message", "임시저장 완료\n통관의뢰번호: " + idIrNo);
+
+        } catch (IllegalArgumentException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        } catch (IllegalStateException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "저장 실패: " + e.getMessage());
+        }
+        return result;
+    }
+
+    // ==========================================================
+    // 의뢰서 단건 조회 — [조회] 버튼 응답 (8B)
+    // ==========================================================
+
+    /**
+     * URL  : GET /broker/declare/loadImpRqst.do?irNo=IMP-20260502-901
+     * Resp : { success, rqst: {...IMP_RQST...}, message }
+     *
+     * 화면의 [조회] 버튼이 호출 → 결과를 받아 신고서 폼의 일부 필드 자동 채움.
+     */
+    @GetMapping("/declare/loadImpRqst.do")
+    @ResponseBody
+    public Map<String, Object> loadImpRqst(@RequestParam("irNo") String irNo,
+                                           Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            ImpRqstVO rqst = brokerDeclareService.findImpRqstById(brokerId, irNo);
+            if (rqst == null) {
+                result.put("success", false);
+                result.put("message", "해당 통관의뢰번호를 찾을 수 없습니다.\n(존재하지 않거나 본인 담당 의뢰서가 아닙니다)");
+                return result;
+            }
+
+            result.put("success", true);
+            result.put("rqst",    rqst);
+            result.put("message", "✅ 의뢰서를 불러왔습니다.");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "조회 실패: " + e.getMessage());
+        }
+        return result;
+    }
+
+    // ==========================================================
+    // 의뢰서 검색 — 돋보기 모달 응답 (8C)
+    // ==========================================================
+
+    /**
+     * URL  : GET /broker/declare/searchImpRqst.do?keyword=삼성
+     * Resp : { success, list: [{...IMP_RQST...}, ...], count }
+     *
+     * 화면의 돋보기 모달이 호출 → 결과 list 를 받아 모달 테이블에 표시.
+     */
+    @GetMapping("/declare/searchImpRqst.do")
+    @ResponseBody
+    public Map<String, Object> searchImpRqst(@RequestParam(value = "keyword", required = false) String keyword,
+                                             Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            java.util.List<ImpRqstVO> list = brokerDeclareService.findImpRqstList(brokerId, keyword);
+
+            result.put("success", true);
+            result.put("list",    list);
+            result.put("count",   (list != null) ? list.size() : 0);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "검색 실패: " + e.getMessage());
+        }
+        return result;
+    }
+    
+    
+    @GetMapping("/declare/hsVector/embedSmallTest.do")
+    @ResponseBody
+    public Map<String, Object> embedSmallTest() {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            EmbeddingModel embeddingModel = embeddingModelProvider.getIfAvailable();
+
+            if (embeddingModel == null) {
+                result.put("success", false);
+                result.put("message", "EmbeddingModel Bean을 찾을 수 없습니다.");
+                return result;
+            }
+
+            // 아주 짧은 문장 1개만 테스트
+            String text = "rice";
+
+            EmbeddingResponse response =
+                    embeddingModel.embedForResponse(List.of(text));
+
+            int dimension = 0;
+
+            if (response != null
+                    && response.getResults() != null
+                    && !response.getResults().isEmpty()
+                    && response.getResults().get(0).getOutput() != null) {
+                dimension = response.getResults().get(0).getOutput().length;
+            }
+
+            result.put("success", true);
+            result.put("text", text);
+            result.put("dimension", dimension);
+            result.put("message", "작은 임베딩 테스트 성공");
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            result.put("success", false);
+            result.put("message", "작은 임베딩 테스트 실패: " + e.getMessage());
+            return result;
+        }
+    }
+    
+
+    // ==========================================================
+    // AI 자동 채움 — 첨부 PDF (Invoice/Packing/BL/Phyto) 종합 파싱 (10E)
+    // ==========================================================
+
+    /**
+     * URL  : GET /broker/declare/aiParseImpRqst.do?irNo=IMP-20260502-901
+     * Resp : { success, parsed: ImportDeclarationParsedDto, message }
+     *
+     * 의뢰서의 IR_TFG_NO 로 첨부 PDF 들을 조회 → Gemini 가 종합 파싱 →
+     * 응답 받은 데이터를 화면에서 form 자동 채움.
+     * DB 저장은 사용자 검토 후 [임시저장] 시 기존 흐름 그대로.
+     */
+    @GetMapping("/declare/aiParseImpRqst.do")
+    @ResponseBody
+    public Map<String, Object> aiParseImpRqst(@RequestParam("irNo") String irNo,
+                                              Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            // 1) 본인 의뢰서 확인 + IR_TFG_NO 가져오기
+            ImpRqstVO rqst = brokerDeclareService.findImpRqstById(brokerId, irNo);
+            if (rqst == null) {
+                result.put("success", false);
+                result.put("message", "해당 의뢰번호를 찾을 수 없습니다.");
+                return result;
+            }
+            if (rqst.getIrTfgNo() == null) {
+                result.put("success", false);
+                result.put("message", "이 의뢰서에는 첨부파일이 없습니다.");
+                return result;
+            }
+
+            // 2) AI 파싱 (Gemini)
+            ImportDeclarationParsedDto parsed =
+                aiDocumentParserService.parseFromTfg(rqst.getIrTfgNo());
+
+            if (parsed == null) {
+                result.put("success", false);
+                result.put("message", "AI 파싱에 실패했습니다. (PDF 파일이 없거나 읽을 수 없는 형식)");
+                return result;
+            }
+
+            result.put("success", true);
+            result.put("parsed",  parsed);
+            result.put("message", "✅ AI 가 첨부 문서를 분석했습니다. 폼을 확인 후 저장하세요.");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "AI 파싱 실패: " + e.getMessage());
+        }
+        return result;
+    }
+
+    // ==========================================================
+    // 수입신고서 전송 (TEMP → SUBMIT)
+    // ==========================================================
+
+    /**
+     * URL  : POST /broker/declare/sendImp.do
+     * Body : ImpDclrVO JSON (현재 폼 데이터)
+     * Resp : { success, idIrNo, message }
+     *
+     * - 현재 폼 데이터를 마지막으로 저장 (insert/update) 한 뒤
+     *   status_cd 를 SUBMIT 으로 변경. 트랜잭션 안에서 일괄 처리.
+     * - 전송 후엔 임시문서함에서 사라지고, 임시저장 흐름으로는 더 수정 불가.
+     */
+    @PostMapping("/declare/sendImp.do")
+    @ResponseBody
+    public Map<String, Object> sendImp(@RequestBody ImpDclrVO vo, Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            if (vo.getIdImprNm() == null || vo.getIdImprNm().trim().isEmpty()) {
+                result.put("success", false);
+                result.put("message", "수입자 상호는 필수 입력값입니다.");
+                return result;
+            }
+
+            String idIrNo = brokerDeclareService.sendImp(vo, brokerId);
+
+            result.put("success", true);
+            result.put("idIrNo",  idIrNo);
+            result.put("message", "✅ 신고서 전송 완료\n통관의뢰번호: " + idIrNo);
+
+        } catch (IllegalStateException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "전송 실패: " + e.getMessage());
+        }
+        return result;
+    }
+    
+    @GetMapping("/declare/countryList.do")
+    @ResponseBody
+    public Map<String, Object> countryList(@RequestParam(required = false) String keyword) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            List<Map<String, Object>> list = brokerDeclareService.selectCountryList(keyword);
+
+            result.put("success", true);
+            result.put("list", list);
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", "국가 목록 조회 중 오류가 발생했습니다.");
+        }
+
+        return result;
+    }
+    
+    
+  
+    
+    @GetMapping("/declare/ownerList.do")
+    @ResponseBody
+    public Map<String, Object> ownerList(@RequestParam(required = false) String keyword) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            List<Map<String, Object>> list = brokerDeclareService.selectOwnerList(keyword);
+
+            result.put("success", true);
+            result.put("list", list);
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "화주 목록 조회 중 오류가 발생했습니다.");
+        }
+
+        return result;
+    }
+    
+    
+    
+    /**
+ 
+     */
+    @GetMapping("/declare/exchangeRate.do")
+    @ResponseBody
+    public Map<String, Object> exchangeRate(@RequestParam String currency) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            Map<String, Object> rate = brokerDeclareService.findExchangeRate(currency);
+
+            if (rate == null) {
+                result.put("success", false);
+                result.put("message", "해당 통화의 환율을 찾을 수 없습니다.");
+                return result;
+            }
+
+            result.put("success", true);
+            result.put("rate", rate);
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "환율 조회 중 오류가 발생했습니다.");
+        }
+
+        return result;
+    }
+    
+    
+    
+    
+    
+
+    /**
+     * HS AI추천 후보 조회
+     * URL : POST /broker/declare/hsRecommend.do
+     *
+     * - 화면 보조 기능이므로 DB 저장 없음
+     * - 로그인한 관세사만 사용 가능
+     * - 기능 OFF / Milvus 없음 / 예외 발생 시에도 JSON으로 응답
+     */
+    @PostMapping(
+    	    value = {"/declare/hsRecommend.do", "/declare/recommendHsCode.do"},
+    	    consumes = "application/json",
+    	    produces = "application/json"
+    	)
+    @ResponseBody
+    public Map<String, Object> recommendHsCode(@RequestBody Map<String, Object> param,
+                                               Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("enabled", false);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            if (!brokerDeclareService.isHsAiRecommendEnabled()) {
+                result.put("success", false);
+                result.put("enabled", false);
+                result.put("list", java.util.Collections.emptyList());
+                result.put("message", "HS AI추천 기능이 비활성화되어 있습니다.");
+                return result;
+            }
+
+            param.put("brokerId", brokerId);
+
+            List<Map<String, Object>> list = brokerDeclareService.recommendHsCode(param);
+
+            result.put("success", true);
+            result.put("enabled", true);
+            result.put("list", list);
+            result.put("message", "HS코드 추천 후보를 조회했습니다.");
+
+        } catch (IllegalArgumentException e) {
+            result.put("success", false);
+            result.put("enabled", true);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("message", e.getMessage());
+
+        } catch (IllegalStateException e) {
+            result.put("success", false);
+            result.put("enabled", false);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("message", e.getMessage());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("enabled", true);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("message", "HS AI추천 중 오류가 발생했습니다.");
+        }
+
+        return result;
+    }
+    
+    
+    /**
+     * HS 벡터 재적재 테스트 API
+     *
+     * URL : POST /broker/declare/hsVector/reindex.do
+     *
+     * 주의:
+     * - 개발/시연용 API
+     * - 운영에서는 관리자 권한 또는 내부 배치로 분리하는 것이 안전함
+     */
+    @PostMapping(
+        value = "/declare/hsVector/reindex.do",
+        produces = "application/json"
+    )
+    @ResponseBody
+    public Map<String, Object> reindexHsVector(Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("count", 0);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            return brokerDeclareService.reindexHsRecommendVector(brokerId);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            result.put("success", false);
+            result.put("count", 0);
+            result.put("message", "HS 벡터 재적재 실패: " + e.getMessage());
+
+            return result;
+        }
+    }
+    
+    
+    
+    @GetMapping("/declare/hsCodeList.do")
+    @ResponseBody
+    public Map<String, Object> hsCodeList(@RequestParam(required = false) String keyword) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            List<Map<String, Object>> list = brokerDeclareService.selectHsCodeList(keyword);
+
+            result.put("success", true);
+            result.put("list", list);
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "HS코드 목록 조회 중 오류가 발생했습니다.");
+        }
+
+        return result;
+    }
+    
+    
+    
+    @GetMapping("/declare/hsCodeInfo.do")
+    @ResponseBody
+    public Map<String, Object> hsCodeInfo(@RequestParam String hsCode,
+                                          @RequestParam(required = false) String countryCd,
+                                          @RequestParam(required = false) String orgnCertYn) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            Map<String, Object> data = brokerDeclareService.findHsCodeInfo(hsCode, countryCd, orgnCertYn);
+
+            if (data == null) {
+                result.put("success", false);
+                result.put("message", "HS코드 정보를 찾을 수 없습니다.");
+                return result;
+            }
+
+            result.put("success", true);
+            result.put("data", data);
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "HS코드 정보 조회 중 오류가 발생했습니다.");
+        }
+
+        return result;
+    }
+    
+    
+    @GetMapping("/declare/hsClassChildren.do")
+    @ResponseBody
+    public Map<String, Object> hsClassChildren(@RequestParam(value = "parentCd", required = false) String parentCd) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            List<Map<String, Object>> list = brokerDeclareService.selectHsClassChildren(parentCd);
+
+            result.put("success", true);
+            result.put("list", list);
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "HS분류계층 조회 중 오류가 발생했습니다.");
+        }
+
+        return result;
+    }
+    
+    @GetMapping("/declare/commonCodeList.do")
+    @ResponseBody
+    public Map<String, Object> commonCodeList(@RequestParam String groupId,
+                                               @RequestParam(required = false) String keyword) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            List<Map<String, Object>> list = brokerDeclareService.selectCommonCodeList(groupId, keyword);
+
+            result.put("success", true);
+            result.put("list", list);
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "공통코드 목록 조회 중 오류가 발생했습니다.");
+        }
+
+        return result;
+    }
+    
+    
+
+    
+    
+    /**
+     * HS AI추천 기능 상태 확인
+     * - 설정 OFF이면 false
+     * - 설정 ON이어도 Milvus health check 실패하면 false
+     * - Milvus가 꺼져 있어도 프로젝트 전체에는 영향 없음
+     */
+    @GetMapping("/declare/hsAiStatus.do")
+    @ResponseBody
+    public Map<String, Object> hsAiStatus() {
+        Map<String, Object> result = new HashMap<>();
+
+        boolean alive = false;
+
+        if (hsAiRecommendEnabled) {
+            alive = checkMilvusHealth();
+        }
+
+        boolean enabled = hsAiRecommendEnabled && alive;
+
+        result.put("success", true);
+        result.put("enabled", enabled);
+        result.put("configured", hsAiRecommendEnabled);
+        result.put("alive", alive);
+        result.put("healthUrl", hsAiRecommendHealthUrl);
+        result.put("attuUrl", hsAiRecommendAttuUrl);
+
+        if (!hsAiRecommendEnabled) {
+            result.put("message", "HS AI추천 기능이 설정에서 비활성화되어 있습니다.");
+        } else if (!alive) {
+            result.put("message", "Milvus가 실행 중이 아니거나 health check에 실패했습니다.");
+        } else {
+            result.put("message", "HS AI추천 기능을 사용할 수 있습니다.");
+        }
+
+        return result;
+    }
+
+    /**
+     * Milvus standalone health check
+     * docker-compose-milvus.yml 기준 9091 포트의 /healthz 확인
+     */
+    private boolean checkMilvusHealth() {
+        HttpURLConnection conn = null;
+
+        try {
+            URL url = new URL(hsAiRecommendHealthUrl);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(hsAiRecommendTimeoutMs);
+            conn.setReadTimeout(hsAiRecommendTimeoutMs);
+            conn.setRequestMethod("GET");
+
+            int code = conn.getResponseCode();
+            if (code != 200) {
+                return false;
+            }
+
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+
+                String body = br.readLine();
+
+                /*
+                 * Milvus /healthz 응답은 환경에 따라 "OK" 또는 기타 정상 문자열일 수 있으므로
+                 * 200 응답 + 본문 존재를 정상으로 본다.
+                 */
+                return body != null && !body.trim().isEmpty();
+            }
+
+        } catch (IOException e) {
+            return false;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+    
+    
+  
+    
+    
+    // ==========================================================
+    // 8D-ATTACH — 수입신고서 첨부파일 관리
+    // ==========================================================
+
+    /**
+     * 8D-ATTACH
+     * URL  : GET /broker/declare/impDocs.do?irNo=IMP-...
+     * Resp : { success, list: [...] }
+     *
+     * 현재 수입의뢰번호(IR_NO)에 연결된 IMP_RQST.IR_TFG_NO 기준으로
+     * 공통 파일 목록을 조회한다.
+     */
+    @GetMapping("/declare/impDocs.do")
+    @ResponseBody
+    public Map<String, Object> getImpDocs(@RequestParam("irNo") String irNo,
+                                          Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            List<FileInfoDTO> list = brokerDeclareService.getImpDocList(irNo, brokerId);
+
+            result.put("success", true);
+            result.put("list", list);
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "첨부파일 조회 실패: " + e.getMessage());
+            return result;
+        }
+    }
+
+    /**
+     * 8D-ATTACH
+     * URL  : POST /broker/declare/uploadImpDocs.do
+     * Form : irNo, files
+     *
+     * IR_TFG_NO가 있으면 기존 파일그룹에 추가,
+     * 없으면 새 파일그룹 생성 후 IMP_RQST.IR_TFG_NO 업데이트.
+     */
+    @PostMapping("/declare/uploadImpDocs.do")
+    @ResponseBody
+    public Map<String, Object> uploadImpDocs(@RequestParam("irNo") String irNo,
+                                             @RequestParam("files") List<MultipartFile> files,
+                                             Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            Long tfgNo = brokerDeclareService.uploadImpDocs(irNo, files, brokerId);
+
+            result.put("success", true);
+            result.put("message", "첨부서류가 업로드되었습니다.");
+            result.put("tfgNo", tfgNo);
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "첨부파일 업로드 실패: " + e.getMessage());
+            return result;
+        }
+    }
+
+    /**
+     * 8D-ATTACH
+     * URL  : POST /broker/declare/deleteImpDoc.do
+     * Form : irNo, fileNo
+     *
+     * 현재 MVP에서는 fileNo 기준 공통 파일 삭제.
+     */
+    @PostMapping("/declare/deleteImpDoc.do")
+    @ResponseBody
+    public Map<String, Object> deleteImpDoc(@RequestParam("irNo") String irNo,
+                                            @RequestParam("fileNo") Long fileNo,
+                                            Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            brokerDeclareService.deleteImpDoc(irNo, fileNo, brokerId);
+
+            result.put("success", true);
+            result.put("message", "첨부파일이 삭제되었습니다.");
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", "첨부파일 삭제 실패: " + e.getMessage());
+            return result;
+        }
+    }
+    
+    
+    /*
+     * 8E-DELETE
+     * 수입신고서 임시저장 삭제
+     *
+     * URL  : POST /broker/declare/deleteImpDraft.do
+     * Param: idIrNo
+     */
+    @PostMapping("/declare/deleteImpDraft.do")
+    @ResponseBody
+    public Map<String, Object> deleteImpDraft(@RequestParam("idIrNo") String idIrNo,
+                                              Principal principal) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            String brokerId = (principal != null) ? principal.getName() : null;
+
+            if (brokerId == null) {
+                result.put("success", false);
+                result.put("message", "로그인이 필요합니다.");
+                return result;
+            }
+
+            brokerDeclareService.deleteImpDraft(idIrNo, brokerId);
+
+            result.put("success", true);
+            result.put("message", "임시저장 신고서가 삭제되었습니다.");
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            return result;
+        }
+    }
+    
+    /**
+     * HS AI 추천용 임베딩 차원 테스트
+     * URL: GET /broker/declare/testEmbedding.do?text=rice
+     */
+    @GetMapping("/declare/testEmbedding.do")
+    @ResponseBody
+    public Map<String, Object> testEmbedding(
+            @RequestParam(value = "text", defaultValue = "rice") String text) {
+
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            float[] vector = embeddingModel.embed(text);
+
+            result.put("success", true);
+            result.put("text", text);
+            result.put("dimension", vector.length);
+            result.put("message", "작은 임베딩 테스트 성공");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            result.put("success", false);
+            result.put("text", text);
+            result.put("dimension", 0);
+            result.put("message", "작은 임베딩 테스트 실패: " + e.getMessage());
+        }
+
+        return result;
+    }
+    
+    
+    /**
+     * Milvus 저장 테스트
+     * URL: GET /broker/declare/testMilvusAdd.do?text=rice
+     */
+    @GetMapping("/declare/testMilvusAdd.do")
+    @ResponseBody
+    public Map<String, Object> testMilvusAdd(
+            @RequestParam(value = "text", defaultValue = "rice") String text) {
+
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("doc_id", "TEST-RICE-001");
+            metadata.put("hs_code", "1006300000");
+            metadata.put("source", "TEST");
+
+            Document doc = new Document(
+                "TEST-RICE-001",
+                text,
+                metadata
+            );
+
+            vectorStore.add(List.of(doc));
+
+            result.put("success", true);
+            result.put("text", text);
+            result.put("message", "Milvus 테스트 문서 저장 성공");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            result.put("success", false);
+            result.put("message", "Milvus 테스트 문서 저장 실패: " + e.getMessage());
+        }
+
+        return result;
+    }
+    
+    
+    /**
+     * HS 기준문서 Milvus 전체 재적재
+     * URL: GET /broker/declare/reloadHsVectorStore.do
+     */
+    @GetMapping("/declare/reloadHsVectorStore.do")
+    @ResponseBody
+    public Map<String, Object> reloadHsVectorStore() {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            return brokerDeclareService.reloadHsVectorStore();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            result.put("success", false);
+            result.put("count", 0);
+            result.put("message", "HS 기준문서 Milvus 재적재 실패: " + e.getMessage());
+
+            return result;
+        }
+    }
+}

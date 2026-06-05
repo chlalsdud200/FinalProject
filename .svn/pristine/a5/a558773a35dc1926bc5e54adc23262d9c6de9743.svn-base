@@ -1,0 +1,22 @@
+// warehouseCargoTracking.js - 창고 조회 / 화물 추적 전용
+(function () {
+  function toggleSimpleDetail(btn, rowClass) {
+    var row = btn.closest('tr');
+    if (!row) return;
+
+    var detailRow = row.nextElementSibling;
+    if (!detailRow || !detailRow.classList.contains(rowClass)) return;
+
+    var isOpen = detailRow.style.display !== 'none';
+
+    document.querySelectorAll('tr.' + rowClass).forEach(function (r) {
+      r.style.display = 'none';
+    });
+
+    if (!isOpen) {
+      detailRow.style.display = '';
+    }
+  }
+
+  window.toggleSimpleDetail = toggleSimpleDetail;
+})();

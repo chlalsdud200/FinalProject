@@ -1,0 +1,33 @@
+@charset "UTF-8";
+
+/* ── Mini Buttons ── */
+.mini { padding: 5px 12px; font-size: 10px; font-weight: 700; border: none; cursor: pointer; transition: all .12s; white-space: nowrap; }
+.mini-view { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.mini-view:hover { background: #e2e8f0; }
+.mini-accept { background: #d1fae5; color: #065f46; }
+.mini-accept:hover { background: #a7f3d0; }
+.mini-reject { background: #fecaca; color: #991b1b; }
+.mini-reject:hover { background: #fca5a5; }
+.mini-sup { background: #fef3c7; color: #92400e; }
+.mini-sup:hover { background: #fde68a; }
+.mini-primary { background: #565e74; color: #fff; }
+.mini-primary:hover { background: #4a5268; }
+
+/* ── Buttons ── */
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { padding: 9px 18px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all .12s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn .material-symbols-outlined { font-size: 16px; }
+.btn-primary { background: #565e74; color: #f7f7ff; }
+.btn-primary:hover { background: #4a5268; }
+.btn-secondary { background: #fff; color: #475569; border: 1px solid #e2e8f0; }
+.btn-secondary:hover { background: #f1f5f9; }
+.btn-danger { background: #9f403d; color: #fff; }
+.btn-danger:hover { background: #7d302e; }
+.btn-outline { background: transparent; border: 1px solid #94a3b8; color: #475569; }
+.btn-outline:hover { background: #f1f5f9; }
+.btn-success { background: #1d6b4f; color: #fff; }
+.btn-success:hover { background: #145239; }
+.btn-dark { background: #373f54; color: #f7f7ff; }
+.btn-dark:hover { background: #2a3142; }
+.btn-warn { background: #d97706; color: #fff; }
+.btn-warn:hover { background: #b45309; }

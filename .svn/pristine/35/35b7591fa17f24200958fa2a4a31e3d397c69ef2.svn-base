@@ -1,0 +1,1831 @@
+@charset "UTF-8";
+
+/* ===== 신고서 작성 전용 스타일 =====
+ * 공통 스타일은 common.css 사용. (현재는 비어있음)
+ */
+.mdlspec-row input,
+.mdlspec-row textarea {
+  font-size: 11px;
+  height: 30px;
+}
+
+.mdlspec-row textarea {
+  min-height: 30px;
+  resize: vertical;
+}
+
+#mdlspec-tbody td {
+  padding: 4px;
+  vertical-align: top;
+}
+
+#mdlspec-current-item-label {
+  white-space: nowrap;
+}
+
+
+/* ===== 수입신고서 모델/규격 테이블 ===== */
+.mdlspec-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.mdlspec-table th {
+  height: 32px;
+  padding: 6px 8px;
+  background: #f5f7fa;
+  color: #203444;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.mdlspec-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid #dbe6f2;
+  vertical-align: middle;
+}
+
+.mdlspec-table input,
+.mdlspec-table textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #a0b4c8;
+  padding: 4px 6px;
+  font-size: 11px;
+  color: #203444;
+  background: #fff;
+}
+
+.mdlspec-table input {
+  height: 32px;
+  line-height: 22px;
+}
+
+.mdlspec-table textarea {
+  height: 32px;
+  min-height: 32px;
+  max-height: 70px;
+  resize: vertical;
+  line-height: 20px;
+  overflow-y: auto;
+}
+
+.mdlspec-table .mdlspec-mdlspec-no {
+  text-align: center;
+  font-weight: 700;
+}
+
+.mdlspec-table .mdlspec-qty1,
+.mdlspec-table .mdlspec-unit-prc,
+.mdlspec-table .mdlspec-amt {
+  text-align: right;
+}
+
+.mdlspec-table .mdlspec-qty1-unit-cd {
+  text-align: center;
+}
+
+.mdlspec-table .btn {
+  height: 28px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+#mdlspec-current-item-label {
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   HS코드 검색 모달
+   ============================================================ */
+.hs-mode-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.hs-mode-btn {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.hs-mode-btn.active {
+  background: #373f54;
+  color: #fff;
+  border-color: #373f54;
+}
+
+.hs-class-path {
+  min-height: 34px;
+  padding: 7px 8px;
+  margin-bottom: 8px;
+  border: 1px solid #d7e0ea;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hs-path-btn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hs-path-btn:hover {
+  background: #e2e8f0;
+}
+
+.hs-path-sep {
+  color: #64748b;
+  font-weight: 800;
+  padding: 0 2px;
+}
+
+.hs-class-level {
+  margin-top: 3px;
+  font-size: 9px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.hs-class-desc {
+  margin-top: 3px;
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.35;
+}
+.hs-search-name-main {
+  font-weight: 700;
+  color: #111827;
+}
+
+.hs-search-path {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.hs-search-desc {
+  margin-top: 2px;
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+.hs-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 9999;
+}
+
+.hs-modal-box {
+  width: 860px;
+  max-width: calc(100vw - 48px);
+  max-height: 640px;
+  background: #fff;
+  margin: 64px auto;
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+}
+
+.hs-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.hs-modal-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.hs-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #0f172a;
+}
+
+.hs-search-row {
+  display: grid;
+  grid-template-columns: 1fr 54px;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.hs-search-row input {
+  height: 34px;
+  padding: 6px 9px;
+  border: 1px solid #94a3b8;
+  font-size: 13px;
+}
+
+.hs-search-row button {
+  height: 34px;
+  border: 1px solid #a9bad1;
+  background: #eef4fb;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hs-search-help {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+.hs-result-wrap {
+  max-height: 430px;
+  overflow-y: auto;
+  border: 1px solid #d7e0ea;
+}
+
+.hs-result-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+}
+
+.hs-result-table th {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 800;
+  padding: 9px 8px;
+  border-bottom: 1px solid #d7e0ea;
+  text-align: center;
+}
+
+.hs-result-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.hs-result-table .col-code {
+  width: 150px;
+}
+
+.hs-result-table .col-name {
+  width: auto;
+}
+
+.hs-result-table .col-rate {
+  width: 100px;
+}
+
+.hs-result-table .col-select {
+  width: 74px;
+}
+
+.hs-code-cell {
+  font-family: monospace;
+  font-weight: 800;
+  color: #111827;
+}
+
+.hs-rate-cell {
+  text-align: right;
+  padding-right: 18px !important;
+}
+
+.hs-select-cell {
+  text-align: center;
+}
+
+.hs-select-btn {
+  padding: 4px 9px;
+  border: none;
+  background: #565e74;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hs-empty-row {
+  padding: 26px !important;
+  text-align: center;
+  color: #94a3b8;
+}
+
+
+
+/* ===== HS AI추천 버튼 ===== */
+.hs-ai-recommend-btn.hs-ai-disabled,
+.hs-ai-recommend-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hs-ai-recommend-btn:not(:disabled) {
+  background: #eef4fb;
+  color: #334155;
+}
+
+.declare-notice-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.declare-notice-box {
+  width: min(520px, 100%);
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+  border: 1px solid #e5eaf0;
+  overflow: hidden;
+  animation: declareNoticePop 0.16s ease-out;
+}
+
+.declare-notice-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.declare-notice-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  background: #eef4ff;
+  color: #2563eb;
+}
+
+.declare-notice-warning .declare-notice-icon {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.declare-notice-success .declare-notice-icon {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.declare-notice-error .declare-notice-icon {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.declare-notice-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #172033;
+  line-height: 1.3;
+}
+
+.declare-notice-subtitle {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #7b8a9a;
+}
+
+.declare-notice-body {
+  padding: 18px 20px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: #334155;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.declare-notice-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 20px 18px;
+  background: #f8fafc;
+}
+
+.declare-notice-btn {
+  min-width: 86px;
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 16px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.declare-notice-btn:hover {
+  background: #1d4ed8;
+}
+
+@keyframes declareNoticePop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
+
+/* ============================================================
+   수입신고서 Compact Layout
+   - 신고서 입력폼 스크롤 최소화
+   - 기본 필드는 3열 배치
+   - 모달/공통 레이아웃 영향 방지
+   ============================================================ */
+
+/* 수입신고서 전체 폭 활용 */
+#declare-form-imp {
+  font-size: 12px;
+}
+
+/* 기본 form-grid를 3열로 통일 */
+#declare-form-imp .form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px 10px !important;
+  align-items: end;
+}
+
+/* 입력 그룹 자체 여백 축소 */
+#declare-form-imp .form-item {
+  min-width: 0;
+  margin: 0 !important;
+}
+
+/* 라벨 간격 축소 */
+#declare-form-imp .form-item label {
+  display: block;
+  margin-bottom: 3px !important;
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+  font-weight: 700;
+  color: #4d6172;
+  white-space: nowrap;
+}
+
+/* input/select/textarea 기본 크기 압축 */
+#declare-form-imp input,
+#declare-form-imp select,
+#declare-form-imp textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 30px !important;
+  padding: 4px 7px !important;
+  font-size: 11px !important;
+  line-height: 20px !important;
+}
+
+/* textarea는 너무 작아지면 입력이 불편하므로 최소 높이만 별도 */
+#declare-form-imp textarea {
+  min-height: 46px !important;
+  height: 46px !important;
+  resize: vertical;
+}
+
+/* 검색 버튼/소형 버튼도 input 높이에 맞춤 */
+#declare-form-imp .btn,
+#declare-form-imp button.btn {
+  min-height: 30px !important;
+  height: 30px !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  white-space: nowrap;
+}
+
+/* 버튼 안 아이콘 크기 정렬 */
+#declare-form-imp .btn .material-symbols-outlined,
+#declare-form-imp button .material-symbols-outlined {
+  font-size: 14px !important;
+  line-height: 1 !important;
+  vertical-align: middle;
+}
+
+/* 섹션 제목/박스 간격 압축 */
+#declare-form-imp h3,
+#declare-form-imp h4 {
+  margin-top: 0 !important;
+  margin-bottom: 7px !important;
+}
+
+#declare-form-imp h4 {
+  font-size: 12px !important;
+}
+
+/* border-left가 들어간 내부 섹션 간격 축소 */
+#declare-form-imp div[style*="border-left"] {
+  margin-bottom: 10px !important;
+  padding-left: 10px !important;
+}
+
+/* 탭 내부 상하 여백 축소 */
+#declare-form-imp .tab-pane,
+#declare-form-imp [id^="imp-"] {
+  scroll-margin-top: 12px;
+}
+
+/* flex 조합 필드 정렬: 주소/국가/HS/포장단위 검색 */
+#declare-form-imp .form-item > div[style*="display:flex"] {
+  align-items: center !important;
+  gap: 4px !important;
+  min-width: 0;
+}
+
+#declare-form-imp .form-item > div[style*="display:flex"] input,
+#declare-form-imp .form-item > div[style*="display:flex"] select {
+  min-width: 0;
+}
+
+/* 우편번호/국가코드/단위코드 같은 짧은 코드칸 */
+#declare-form-imp #imp-taxpyr-zip,
+#declare-form-imp #imp-ovrss-cntry-cd,
+#declare-form-imp #imp-shipout-cntry-cd,
+#declare-form-imp #imp-tot-pkg-unit-cd,
+#declare-form-imp #imp-item-orgn-cntry-cd,
+#declare-form-imp #imp-orgn-cert-issu-cntry-cd {
+  width: 82px !important;
+  flex: 0 0 82px !important;
+  text-align: center;
+  font-family: monospace;
+}
+
+/* 국가명/주소명처럼 보조 표시칸은 너무 길어지지 않게 */
+#declare-form-imp #imp-ovrss-cntry-nm,
+#declare-form-imp #imp-shipout-cntry-nm,
+#declare-form-imp #imp-tot-pkg-unit-nm,
+#declare-form-imp #imp-item-orgn-cntry-nm,
+#declare-form-imp #imp-orgn-cert-issu-cntry-nm {
+  min-width: 110px;
+}
+
+/* 주소는 긴 값이므로 한 줄 안에서 자연스럽게 넓게 */
+#declare-form-imp #imp-taxpyr-addr,
+#declare-form-imp #imp-taxpyr-dtl-addr {
+  min-width: 160px;
+}
+
+/* 숫자/금액/세율 필드 우측 정렬 */
+#declare-form-imp #imp-stlm-amt,
+#declare-form-imp #imp-exrt,
+#declare-form-imp #imp-tot-taxt-prc-krw,
+#declare-form-imp #imp-tot-taxt-prc-usd,
+#declare-form-imp #imp-tot-cstms-amt,
+#declare-form-imp #imp-vat-base-amt,
+#declare-form-imp #imp-tot-vat-amt,
+#declare-form-imp #imp-tot-tax-amt,
+#declare-form-imp #imp-tot-pkg-cnt,
+#declare-form-imp #imp-tot-wt,
+#declare-form-imp .item-taxt-rt,
+#declare-form-imp .item-taxt-prc-krw,
+#declare-form-imp .item-taxt-prc-usd,
+#declare-form-imp .item-net-wt,
+#declare-form-imp .item-qty,
+#declare-form-imp .item-cstms-display-amt,
+#declare-form-imp .item-vat-display-amt {
+  text-align: right;
+}
+
+/* HS/국가/코드류는 가운데 또는 monospace */
+#declare-form-imp .item-hs-cd,
+#declare-form-imp .item-cstms-dvsn-cd,
+#declare-form-imp .item-taxt-stndrd-cd,
+#declare-form-imp .item-orgn-cntry-cd,
+#declare-form-imp .item-orgn-dtrmn-cd {
+  font-family: monospace;
+}
+
+/* 란사항 입력 row 내부도 3열 기준으로 정리 */
+#declare-form-imp .imp-item-row .form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+/* 란사항 설명/안내 문구는 작게 */
+#declare-form-imp .item-tariff-applied-info {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px !important;
+  line-height: 1.35;
+}
+
+/* 란 목록 테이블 압축 */
+#declare-form-imp #imp-item-list-tbody td,
+#declare-form-imp #imp-item-list-tbody th {
+  padding: 6px 7px !important;
+  font-size: 11px !important;
+}
+
+/* 목록/테이블 안 버튼 압축 */
+#declare-form-imp .mini,
+#declare-form-imp .hs-select-btn {
+  min-height: 24px !important;
+  height: 24px !important;
+  padding: 3px 7px !important;
+  font-size: 10px !important;
+}
+
+/* 모델/규격 테이블은 기존 스타일을 유지하되 살짝만 더 압축 */
+#declare-form-imp .mdlspec-table th {
+  height: 28px !important;
+  padding: 4px 6px !important;
+}
+
+#declare-form-imp .mdlspec-table td {
+  padding: 4px 5px !important;
+}
+
+#declare-form-imp .mdlspec-table input,
+#declare-form-imp .mdlspec-table textarea {
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 3px 5px !important;
+  font-size: 10.5px !important;
+}
+
+/* ===== 모델 및 규격 영역 상단 공백 보정 ===== */
+
+/* 모델/규격 섹션 전체 여백 축소 */
+#declare-form-imp #mdlspec-tbody {
+  margin-top: 0 !important;
+}
+
+/* 모델/규격 제목이 들어있는 border-left 섹션의 불필요한 높이 축소 */
+#declare-form-imp div[style*="모델 및 규격"],
+#declare-form-imp h4:has(+ .mdlspec-table),
+#declare-form-imp h4:has(+ div .mdlspec-table) {
+  margin-bottom: 4px !important;
+}
+
+/* 모델/규격 테이블 위 여백 제거 */
+#declare-form-imp .mdlspec-table {
+  margin-top: 4px !important;
+}
+
+/* 모델/규격 영역 안의 + 행추가 버튼 위치/크기 보정 */
+#declare-form-imp button[onclick^="addMdlspecRow"] {
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  margin-bottom: 4px !important;
+}
+
+/* 모델/규격 영역에서 버튼이 오른쪽에 떠도 위아래 공백이 과하지 않게 */
+#declare-form-imp .mdlspec-table + *,
+#declare-form-imp *:has(> .mdlspec-table) {
+  margin-top: 0 !important;
+}
+
+/* 1360px 이하에서는 2열로 자동 완화 */
+@media (max-width: 1360px) {
+  #declare-form-imp .form-grid,
+  #declare-form-imp .imp-item-row .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* 900px 이하에서는 1열 */
+@media (max-width: 900px) {
+  #declare-form-imp .form-grid,
+  #declare-form-imp .imp-item-row .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  #declare-form-imp .form-item > div[style*="display:flex"] {
+    flex-wrap: wrap;
+  }
+
+  #declare-form-imp #imp-taxpyr-addr,
+  #declare-form-imp #imp-taxpyr-dtl-addr {
+    min-width: 100%;
+  }
+}
+
+/* 모델/규격 제목 + 행추가 버튼 한 줄 정렬 */
+#declare-form-imp .mdlspec-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 6px 0 !important;
+}
+
+#declare-form-imp .mdlspec-section-head h4 {
+  margin: 0 !important;
+  font-size: 12px !important;
+  line-height: 30px !important;
+}
+
+#declare-form-imp .mdlspec-section-head .btn {
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+}
+/* ===== 공통사항2 결제금액 / 인도조건 한 줄 배치 ===== */
+
+/*
+   결제금액/인도조건 form-item
+   - 통화
+   - 환율조회 버튼
+   - 환율
+   - 결제금액
+   - 인도조건
+   을 한 줄에 배치
+*/
+#declare-form-imp .form-item:has(#imp-stlm-curr-cd) {
+  grid-column: span 2 !important;
+}
+
+/* 해당 form-item 내부 flex 줄 보정 */
+#declare-form-imp .form-item:has(#imp-stlm-curr-cd) > div {
+  display: grid !important;
+  grid-template-columns: 78px 66px 100px minmax(120px, 1fr) 92px !important;
+  gap: 4px !important;
+  align-items: center !important;
+}
+
+/* 통화 */
+#declare-form-imp #imp-stlm-curr-cd {
+  width: 78px !important;
+  min-width: 78px !important;
+}
+
+/* 환율조회 버튼 */
+#declare-form-imp .form-item:has(#imp-stlm-curr-cd) button {
+  width: 66px !important;
+  min-width: 66px !important;
+  padding: 4px 6px !important;
+}
+
+/* 환율 */
+#declare-form-imp #imp-exrt {
+  width: 100px !important;
+  min-width: 100px !important;
+}
+
+/* 결제금액 */
+#declare-form-imp #imp-stlm-amt {
+  min-width: 120px !important;
+}
+
+/* 인도조건 */
+#declare-form-imp #imp-dlvr-cndtn-cd {
+  width: 92px !important;
+  min-width: 92px !important;
+}
+
+
+/* ===== 공통사항2 결제금액 / 환율 / 인도조건 한 줄 배치 ===== */
+#declare-form-imp .imp-payment-line {
+  display: grid !important;
+  grid-template-columns: 70px 70px 90px minmax(120px, 1fr) 90px;
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+}
+
+#declare-form-imp .imp-payment-line select,
+#declare-form-imp .imp-payment-line input,
+#declare-form-imp .imp-payment-line button {
+  height: 30px !important;
+  min-width: 0;
+  box-sizing: border-box;
+  font-size: 11px !important;
+}
+
+#declare-form-imp .imp-payment-line button {
+  width: 70px;
+  padding: 4px 6px !important;
+  white-space: nowrap;
+}
+
+#declare-form-imp .imp-payment-line #imp-stlm-curr-cd {
+  width: 70px !important;
+}
+
+#declare-form-imp .imp-payment-line #imp-exrt {
+  width: 90px !important;
+  text-align: right;
+}
+
+#declare-form-imp .imp-payment-line #imp-stlm-amt {
+  width: 100% !important;
+  text-align: right;
+}
+
+#declare-form-imp .imp-payment-line #imp-dlvr-cndtn-cd {
+  width: 90px !important;
+}
+
+
+/* ===== 란사항 세율 / 신고품명 / 상표 행 재정렬 ===== */
+
+/*
+   핵심:
+   - form-grid의 3열은 유지
+   - 각 form-item은 자기 칸을 100% 사용
+   - input/button만 내부에서 자연스럽게 배치
+*/
+#declare-form-imp .imp-item-row .imp-rate-field,
+#declare-form-imp .imp-item-row .imp-goods-name-field,
+#declare-form-imp .imp-item-row .imp-brand-field {
+  width: 100% !important;
+  max-width: none !important;
+  align-self: start;
+}
+
+/* 세율칸은 부모칸 전체를 쓰되 input도 꽉 채움 */
+#declare-form-imp .imp-item-row .imp-rate-field .item-taxt-rt {
+  width: 100% !important;
+  max-width: none !important;
+  height: 30px !important;
+  text-align: right;
+  padding-right: 8px !important;
+}
+
+/* 세율 안내문 */
+#declare-form-imp .imp-item-row .imp-rate-field .rate-help-text {
+  margin-top: 3px;
+  font-size: 10px !important;
+  line-height: 1.25;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* 신고품명: input + 거래품명조회 */
+#declare-form-imp .imp-item-row .imp-goods-name-field > div {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 88px !important;
+  gap: 4px !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+#declare-form-imp .imp-item-row .imp-goods-name-field .item-dclr-gdsnm {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+#declare-form-imp .imp-item-row .imp-goods-name-field .btn {
+  width: 88px !important;
+  min-width: 88px !important;
+  height: 30px !important;
+  padding: 4px 6px !important;
+  font-size: 11px !important;
+  white-space: nowrap;
+}
+
+/* 상표: 상표명 + 코드 */
+#declare-form-imp .imp-item-row .imp-brand-field > div {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 86px !important;
+  gap: 4px !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+#declare-form-imp .imp-item-row .imp-brand-field .item-trdmk-nm {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+#declare-form-imp .imp-item-row .imp-brand-field .item-trdmk-cd {
+  width: 86px !important;
+  min-width: 86px !important;
+  text-align: center;
+}
+
+/* ============================================================
+   8D-ATTACH — 수입신고서 첨부파일 영역
+   - 파일 선택 / 문서 업로드 / 선택 초기화 / 목록 새로고침 재배치
+   ============================================================ */
+
+#declare-form-imp .imp-doc-upload-box {
+  border: 1px solid #dbe6f2;
+  background: #ffffff;
+  padding: 12px;
+}
+
+#declare-form-imp .imp-doc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+#declare-form-imp .imp-doc-title-wrap h4 {
+  margin: 0 !important;
+  font-size: 13px !important;
+  color: #203444;
+  font-weight: 800;
+}
+
+#declare-form-imp .imp-doc-title-wrap p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #64748b;
+}
+
+#declare-form-imp .imp-doc-refresh-btn {
+  height: 32px !important;
+  padding: 5px 12px !important;
+  font-size: 11px !important;
+  white-space: nowrap;
+}
+
+/* 파일 선택 + 업로드 + 초기화 묶음 */
+#declare-form-imp .imp-doc-upload-panel {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+#declare-form-imp .imp-doc-upload-label {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #334155;
+}
+
+/* ===== 8D-ATTACH 파일 선택 버튼형 UI ===== */
+
+#declare-form-imp .imp-doc-upload-line {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+#declare-form-imp .imp-doc-selected-box {
+  min-height: 34px;
+  padding: 7px 8px;
+  border: 1px solid #b6c6d8;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+#declare-form-imp .imp-doc-selected-summary {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+}
+
+#declare-form-imp .imp-doc-selected-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+#declare-form-imp .imp-doc-selected-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 260px;
+  padding: 3px 6px;
+  border: 1px solid #d7e0ea;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+#declare-form-imp .imp-doc-selected-chip button {
+  border: none;
+  background: transparent;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+#declare-form-imp .imp-doc-action-buttons {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+  align-items: center;
+  white-space: nowrap;
+}
+
+#declare-form-imp .imp-doc-select-btn,
+#declare-form-imp .imp-doc-upload-btn,
+#declare-form-imp .imp-doc-clear-btn {
+  height: 34px !important;
+  padding: 5px 10px !important;
+  font-size: 11px !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+#declare-form-imp .imp-doc-upload-msg {
+  margin-top: 7px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* 첨부파일 목록 */
+#declare-form-imp .imp-doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 11px;
+}
+
+#declare-form-imp .imp-doc-table th {
+  height: 30px;
+  padding: 6px 7px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #d7e0ea;
+  color: #203444;
+  font-weight: 800;
+  text-align: center;
+}
+
+#declare-form-imp .imp-doc-table td {
+  padding: 8px 7px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+#declare-form-imp .imp-doc-empty {
+  padding: 18px !important;
+  text-align: center;
+  color: #94a3b8;
+}
+
+#declare-form-imp .imp-doc-empty.error {
+  color: #dc2626;
+}
+
+#declare-form-imp .imp-doc-table .mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 3px 8px !important;
+  font-size: 10px !important;
+  margin: 0 2px;
+  text-decoration: none;
+}
+
+
+
+/* ============================================================
+   8E-PREVIEW — 수입신고서 미리보기 모달
+   ============================================================ */
+
+#declare-form-imp .imp-bottom-actions {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 2px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.imp-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(15, 23, 42, 0.42);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.imp-preview-box {
+  width: min(1120px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  background: #ffffff;
+  border: 1px solid #dbe6f2;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+  display: flex;
+  flex-direction: column;
+}
+
+.imp-preview-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.imp-preview-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: #172033;
+}
+
+.imp-preview-head p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.imp-preview-close {
+  border: 0;
+  background: transparent;
+  font-size: 24px;
+  font-weight: 800;
+  cursor: pointer;
+  color: #334155;
+}
+
+.imp-preview-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+
+.imp-preview-section {
+  margin-bottom: 16px;
+}
+
+.imp-preview-section h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #203444;
+  border-left: 4px solid #64748b;
+  padding-left: 8px;
+}
+
+.imp-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #e2e8f0;
+  border-left: 1px solid #e2e8f0;
+}
+
+.imp-preview-item {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  min-height: 32px;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.imp-preview-label {
+  padding: 8px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.imp-preview-value {
+  padding: 8px;
+  color: #111827;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.imp-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 11px;
+}
+
+.imp-preview-table th {
+  background: #f1f5f9;
+  color: #203444;
+  font-weight: 800;
+  border: 1px solid #d7e0ea;
+  padding: 7px;
+  text-align: center;
+}
+
+.imp-preview-table td {
+  border: 1px solid #e2e8f0;
+  padding: 7px;
+  vertical-align: middle;
+}
+
+.imp-preview-empty {
+  padding: 16px;
+  text-align: center;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 11px;
+}
+
+.imp-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 14px 18px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+
+/* 수입신고서 란목록 선택 칸 정렬 */
+#imp-item-list-tbody td:first-child {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* 수입신고서 란목록 선택 라디오 크기 조정 */
+#imp-item-list-tbody input[type="radio"][name="impItemSelect"] {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+    transform: scale(0.75);
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+/* 수입신고서 란목록 헤더 줄바꿈 방지 */
+.imp-item-list-table th {
+    white-space: nowrap;
+    word-break: keep-all;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* 선택/란번호 컬럼 폭 고정 */
+.imp-item-list-table th:nth-child(1),
+.imp-item-list-table td:nth-child(1) {
+    width: 58px;
+    min-width: 58px;
+    max-width: 58px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.imp-item-list-table th:nth-child(2),
+.imp-item-list-table td:nth-child(2) {
+    width: 70px;
+    min-width: 70px;
+    max-width: 70px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* 선택 라디오 크기 조정 */
+.imp-item-list-table input[type="radio"][name="impItemSelect"] {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+    transform: scale(0.8);
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+
+
+
+/* ===== Tacs On : 입력칸 가이드 챗봇 ===== */
+.tacson-floating {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 8500;
+  width: 92px;
+  height: 42px;
+  border: none;
+  border-radius: 999px;
+  background: #1f2a44;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.28);
+}
+
+.tacson-panel {
+  position: fixed;
+  right: 28px;
+  bottom: 82px;
+  z-index: 8500;
+  width: 360px;
+  height: 480px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 18px;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.25);
+  display: none;
+  overflow: hidden;
+}
+
+.tacson-panel.show {
+  display: flex;
+  flex-direction: column;
+}
+
+.tacson-header {
+  height: 58px;
+  padding: 12px 16px;
+  background: #1f2a44;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tacson-header strong {
+  display: block;
+  font-size: 16px;
+}
+
+.tacson-header span {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.tacson-close {
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.tacson-messages {
+  flex: 1;
+  padding: 14px;
+  overflow-y: auto;
+  background: #f8fafc;
+}
+
+.tacson-msg {
+  max-width: 92%;
+  margin-bottom: 10px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.tacson-msg.bot {
+  background: #fff;
+  border: 1px solid #dbe3ef;
+  color: #243044;
+}
+
+.tacson-msg.user {
+  margin-left: auto;
+  background: #25314f;
+  color: #fff;
+}
+
+.tacson-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.tacson-input-row input {
+  flex: 1;
+  height: 36px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 10px;
+}
+
+.tacson-input-row button {
+  width: 58px;
+  border: none;
+  border-radius: 8px;
+  background: #1f2a44;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tacson-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(15, 23, 42, 0.52);
+  display: none;
+  pointer-events: auto;
+}
+
+.tacson-dim.show {
+  display: block;
+}
+
+.tacson-highlight {
+  position: relative !important;
+  z-index: 9001 !important;
+  background: #fff !important;
+  outline: 3px solid #2563eb !important;
+  box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.22) !important;
+}
+
+.tacson-highlight {
+  outline: 3px solid #2563eb !important;
+  box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.22) !important;
+  background: #fff !important;
+}
+.tacson-bubble {
+  position: fixed;
+  z-index: 9002;
+  width: 340px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.28);
+  display: none;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.tacson-bubble.show {
+  display: block;
+}
+
+.tacson-bubble-title {
+  font-weight: 800;
+  color: #1f2a44;
+  margin-bottom: 6px;
+}
+
+.tacson-bubble-example {
+  margin-top: 8px;
+  padding: 8px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  color: #475569;
+}
+
+.tacson-bubble-close {
+  margin-top: 10px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+
+/* ===== Tacs On : 입력칸 위치 스포트라이트 ===== */
+.tacson-spotlight-box {
+  position: fixed;
+  z-index: 9001;
+  border: 3px solid #2563eb;
+  border-radius: 10px;
+  background: transparent;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 9999px rgba(15, 23, 42, 0.55),
+    0 0 0 8px rgba(37, 99, 235, 0.22),
+    0 18px 45px rgba(15, 23, 42, 0.22);
+}
+
+.tacson-bubble-step {
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.tacson-bubble-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tacson-nav-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tacson-nav-btn.primary {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.tacson-nav-btn.danger {
+  border-color: #dc2626;
+  background: #fff;
+  color: #dc2626;
+}
+
+
+/* ===== HS AI추천 전용 모달 - 행정시스템형 ===== */
+.hs-ai-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(17, 24, 39, 0.24);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.hs-ai-modal-card {
+  width: min(1040px, 96vw);
+  max-height: 86vh;
+  background: #fff;
+  border: 1px solid #cfd6df;
+  border-radius: 6px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.hs-ai-modal-header {
+  height: 58px;
+  padding: 0 18px;
+  border-bottom: 1px solid #d8dee6;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hs-ai-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hs-ai-modal-icon {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #d4dae3;
+  border-radius: 4px;
+  background: #fff;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+
+.hs-ai-modal-title-wrap h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hs-ai-modal-title-wrap p {
+  margin: 2px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.hs-ai-modal-close {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #d4dae3;
+  border-radius: 4px;
+  background: #fff;
+  color: #374151;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hs-ai-modal-close:hover {
+  background: #eef1f5;
+}
+
+.hs-ai-recommend-summary {
+  margin: 14px 18px 10px;
+  padding: 10px 12px;
+  border: 1px solid #d8dee6;
+  border-left: 3px solid #6b7280;
+  border-radius: 2px;
+  background: #fafafa;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.hs-ai-recommend-summary strong {
+  color: #111827;
+  font-weight: 700;
+}
+
+.hs-ai-recommend-table-wrap {
+  padding: 0 18px 18px;
+  overflow: auto;
+}
+
+.hs-ai-recommend-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+  border: 1px solid #d8dee6;
+  background: #fff;
+}
+
+.hs-ai-recommend-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 36px;
+  padding: 0 8px;
+  background: #f1f3f5;
+  color: #374151;
+  font-weight: 700;
+  text-align: center;
+  border-bottom: 1px solid #cfd6df;
+  border-right: 1px solid #d8dee6;
+  white-space: nowrap;
+}
+
+.hs-ai-recommend-table thead th:last-child {
+  border-right: 0;
+}
+
+.hs-ai-recommend-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #eef0f3;
+  vertical-align: middle;
+  color: #374151;
+  background: #fff;
+}
+
+.hs-ai-recommend-table td:last-child {
+  border-right: 0;
+}
+
+.hs-ai-recommend-table tbody tr:hover td {
+  background: #f9fafb;
+}
+
+.hs-ai-recommend-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.hs-ai-recommend-table .col-rank {
+  width: 52px;
+}
+
+.hs-ai-recommend-table .col-code {
+  width: 130px;
+}
+
+.hs-ai-recommend-table .col-name {
+  width: auto;
+}
+
+.hs-ai-recommend-table .col-rate {
+  width: 74px;
+}
+
+.hs-ai-recommend-table .col-usage {
+  width: 86px;
+}
+
+.hs-ai-recommend-table .col-action {
+  width: 76px;
+}
+
+.hs-ai-rank-cell,
+.hs-ai-code-cell,
+.hs-ai-rate-cell,
+.hs-ai-usage-cell,
+.hs-ai-action-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hs-ai-rank-badge {
+  display: inline;
+  min-width: auto;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #374151;
+  font-weight: 600;
+}
+
+.hs-ai-code-badge {
+  display: inline;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #111827;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.hs-ai-name {
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.hs-ai-reason {
+  color: #6b7280;
+  font-size: 11px;
+  line-height: 1.4;
+  word-break: keep-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hs-ai-score {
+  display: block;
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.hs-ai-rate-badge,
+.hs-ai-usage-badge {
+  display: inline;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #374151;
+  font-weight: 600;
+}
+
+.hs-ai-select-btn {
+  min-width: 48px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #9ca3af;
+  border-radius: 3px;
+  background: #fff;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.hs-ai-select-btn:hover {
+  background: #f3f4f6;
+  border-color: #6b7280;
+}
+
+.hs-ai-empty-row {
+  padding: 30px 0 !important;
+  text-align: center;
+  color: #6b7280;
+}

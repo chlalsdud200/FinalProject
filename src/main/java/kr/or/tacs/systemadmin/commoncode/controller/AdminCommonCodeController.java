@@ -1,0 +1,95 @@
+package kr.or.tacs.systemadmin.commoncode.controller;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import kr.or.tacs.systemadmin.commoncode.service.IAdminCommonCodeService;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeGroupRequestVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeGroupSearchVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeGroupVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeRequestVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeSearchVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeUseYnRequestVO;
+import kr.or.tacs.vo.systemadmin.commoncode.AdminCommonCodeVO;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/tacs/admin/common-code")
+public class AdminCommonCodeController {
+
+    private final IAdminCommonCodeService commonCodeService;
+
+    @GetMapping("/groups")
+    public List<AdminCommonCodeGroupVO> retrieveGroups(@ModelAttribute AdminCommonCodeGroupSearchVO search) {
+        return commonCodeService.retrieveGroupList(search);
+    }
+
+    @GetMapping("/groups/{ccgId}")
+    public AdminCommonCodeGroupVO retrieveGroup(@PathVariable String ccgId) {
+        return commonCodeService.retrieveGroup(ccgId);
+    }
+
+    @PostMapping("/groups")
+    public Map<String, Object> registGroup(@RequestBody AdminCommonCodeGroupRequestVO request) {
+        commonCodeService.registGroup(request);
+        return Map.of("success", true);
+    }
+
+    @PutMapping("/groups/{ccgId}")
+    public Map<String, Object> modifyGroup(@PathVariable String ccgId, @RequestBody AdminCommonCodeGroupRequestVO request) {
+        commonCodeService.modifyGroup(ccgId, request);
+        return Map.of("success", true);
+    }
+
+    @PutMapping("/groups/{ccgId}/use-yn")
+    public Map<String, Object> modifyGroupUseYn(@PathVariable String ccgId, @RequestBody AdminCommonCodeUseYnRequestVO request) {
+        commonCodeService.modifyGroupUseYn(ccgId, request == null ? null : request.getUseYn());
+        return Map.of("success", true);
+    }
+
+    @GetMapping("/codes")
+    public List<AdminCommonCodeVO> retrieveCodes(@ModelAttribute AdminCommonCodeSearchVO search) {
+        return commonCodeService.retrieveCodeList(search);
+    }
+
+    @GetMapping("/codes/{ccgId}/{ccCd}")
+    public AdminCommonCodeVO retrieveCode(@PathVariable String ccgId, @PathVariable String ccCd) {
+        return commonCodeService.retrieveCode(ccgId, ccCd);
+    }
+
+    @PostMapping("/codes")
+    public Map<String, Object> registCode(@RequestBody AdminCommonCodeRequestVO request) {
+        commonCodeService.registCode(request);
+        return Map.of("success", true);
+    }
+
+    @PutMapping("/codes/{ccgId}/{ccCd}")
+    public Map<String, Object> modifyCode(
+            @PathVariable String ccgId,
+            @PathVariable String ccCd,
+            @RequestBody AdminCommonCodeRequestVO request
+    ) {
+        commonCodeService.modifyCode(ccgId, ccCd, request);
+        return Map.of("success", true);
+    }
+
+    @PutMapping("/codes/use-yn")
+    public Map<String, Object> modifyCodeUseYn(@RequestBody AdminCommonCodeUseYnRequestVO request) {
+        commonCodeService.modifyCodeUseYn(
+                request == null ? null : request.getCcgId(),
+                request == null ? null : request.getCcCd(),
+                request == null ? null : request.getUseYn()
+        );
+        return Map.of("success", true);
+    }
+}

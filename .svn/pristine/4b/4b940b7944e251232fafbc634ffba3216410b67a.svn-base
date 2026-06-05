@@ -1,0 +1,45 @@
+package kr.or.tacs.officer.dash.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+
+@Controller
+@RequestMapping("/officer")
+public class OfficerController {
+	
+	
+    @GetMapping("/dashboard.do")
+    public String main(Model model) {
+    model.addAttribute("menuKey", "dashboard");
+    	   	
+    	
+        return "officer/dashboard";
+    }
+
+    @GetMapping("/docs.do")
+    public String retriveDocs(Model model) {
+        model.addAttribute("menuKey", "docs");
+        model.addAttribute("activeSub", "myDocs");
+        return "officer/docs";
+    }
+
+    @GetMapping("/docs/trash.do")
+    public String trash(Model model) {
+        model.addAttribute("menuKey", "docs");
+        model.addAttribute("activeSub", "trash");
+        return "officer/docs";
+    }
+}
+
+
+
+    
+
+	
+ 	

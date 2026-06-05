@@ -1,0 +1,360 @@
+package kr.or.tacs.officer.basicscreen.controller;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Controller;
+import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import kr.or.tacs.officer.basicscreen.service.IWorkHistoryService;
+import kr.or.tacs.officer.basicscreen.service.IAiRiskService;
+import kr.or.tacs.common.file.service.IFileService;
+import kr.or.tacs.dto.FileInfoDTO;
+import kr.or.tacs.dto.officer.BasicScreenDetailDTO;
+import kr.or.tacs.dto.officer.AIRiskDTO;
+import kr.or.tacs.dto.officer.BasicScreenListDTO;
+import kr.or.tacs.dto.officer.BasicScreenSearchDTO;
+import kr.or.tacs.dto.officer.ReceiptListDTO;
+import kr.or.tacs.vo.common.PaginationInfoVO;
+import kr.or.tacs.officer.basicscreen.service.IBasicService;
+import kr.or.tacs.officer.basicscreen.service.IScreenDetailService;
+import kr.or.tacs.officer.basicscreen.service.IScreenListService;
+import lombok.RequiredArgsConstructor;
+
+@Controller
+@RequestMapping("/officer")
+@RequiredArgsConstructor
+public class BasicScreenController {
+
+    @Autowired
+    private IBasicService service;
+    @Autowired
+    private IScreenListService serviceList;
+    @Autowired
+    private IScreenDetailService serviceDetail;
+    @Autowired
+    private IFileService fileService;
+    @Autowired
+    private IWorkHistoryService workService;
+
+    @Autowired
+    private IAiRiskService aiRiskService;
+
+
+    // 기본접수목록
+    @GetMapping("/reportReceiptList.do")
+    public String main(ReceiptListDTO search, Model model) {
+
+        List<ReceiptListDTO> list = service.selectReceiptList(search);
+
+        model.addAttribute("menuKey", "reportReceiptList");
+        model.addAttribute("list", list);
+        model.addAttribute("search", search);
+        model.addAttribute("totalCount", list.size());
+
+        return "officer/reportReceiptList";
+    }
+
+    // 단건 접수
+    @PostMapping("/receiptAccept.do")
+    public String receiptAccept(@RequestParam String reqNo,
+                                @RequestParam String declareType,
+                                @RequestParam(required = false, defaultValue = "list") String source,
+                                @AuthenticationPrincipal UserDetails userDetails) {
+
+        String officerId = userDetails.getUsername();
+        service.acceptReceipt(reqNo, declareType, officerId);
+
+        if ("detail".equals(source)) {
+            return "redirect:/officer/basicScreenDetail.do?reqNo=" + reqNo + "&mode=edit";
+        }
+        
+        return "redirect:/officer/reportReceiptList.do";
+    }
+
+    // 일괄 접수
+    @PostMapping("/receiptBatchAccept.do")
+    public String receiptBatchAccept(@RequestParam List<String> reqNoList,
+                                     @RequestParam List<String> declareTypeList,
+                                     @AuthenticationPrincipal UserDetails userDetails) {
+
+        String officerId = userDetails.getUsername();
+        service.acceptReceiptBatch(reqNoList, declareTypeList, officerId);
+        return "redirect:/officer/reportReceiptList.do";
+    }
+
+    // 반려
+    @PostMapping("/receiptReject.do")
+    public String receiptReject(@RequestParam String reqNo,
+                                @RequestParam String declareType,
+                                @RequestParam String rejectReason,
+                                @RequestParam(required = false, defaultValue = "list") String source,
+                                @AuthenticationPrincipal UserDetails userDetails) {
+
+        String officerId = userDetails.getUsername();
+        service.rejectReceipt(reqNo, declareType, rejectReason, officerId);
+        return "redirect:/officer/reportReceiptList.do";
+    }
+
+
+    // 기본심사목록
+    @GetMapping("/basicScreenList.do")
+    public String retriveDocs(BasicScreenSearchDTO search,
+                              @AuthenticationPrincipal UserDetails userDetails,
+                              Model model) {
+
+        String loginOfficerId = userDetails.getUsername();
+        PaginationInfoVO<BasicScreenListDTO> result =
+                serviceList.selectBasicList(loginOfficerId, search);
+
+        // 전체 건수
+        int totalCount   = result.getTotalRecord();
+        // 페이지당 건수 (기본 10)
+        int pageSize     = result.getScreenSize() > 0 ? result.getScreenSize() : 10;
+        // 전체 페이지 수
+        int totalPage    = (totalCount == 0) ? 0 : (int) Math.ceil((double) totalCount / pageSize);
+        // 현재 페이지
+        int currentPage  = result.getCurrentPage() > 0 ? result.getCurrentPage() : 1;
+        // 페이지 블록 크기 (10개씩 표시)
+        int blockSize    = 10;
+        // 현재 블록의 시작/끝 페이지
+        int startPage    = ((currentPage - 1) / blockSize) * blockSize + 1;
+        int endPage      = Math.min(startPage + blockSize - 1, totalPage);
+
+        model.addAttribute("list",          result.getDataList());
+        model.addAttribute("search",        search);
+        model.addAttribute("totalCount",    totalCount);
+        model.addAttribute("totalPage",     totalPage);
+        model.addAttribute("currentPage",   currentPage);
+        model.addAttribute("startPage",     startPage);
+        model.addAttribute("endPage",       endPage);
+        model.addAttribute("loginOfficerId", loginOfficerId);
+        return "officer/basicScreenList";
+    }
+
+
+    // 기본심사상세
+    @GetMapping("/basicScreenDetail.do")
+    public String basicScreenDetail(@RequestParam("reqNo") String reqNo,
+                                    @RequestParam(required = false, defaultValue = "edit") String mode,
+                                    Model model) {
+
+        BasicScreenDetailDTO detail = serviceDetail.selectBasicDetail(reqNo);
+
+        // ★ null이면 목록으로 복귀 (알 수 없는 신고번호 형식 방어)
+        if (detail == null) {
+            return "redirect:/officer/basicScreenList.do";
+        }
+
+        // 심사메모는 상세조회 SQL에서 NULL로 들어오므로 REVIEW_MEMO 테이블에서 별도 조회해서 세팅
+        detail.setReviewMemo(serviceDetail.selectReviewMemo(reqNo));
+
+        // AI 위험도 결과 조회/생성
+        // 기존 결과가 있으면 그대로 사용하고, 없으면 현재 규칙 기반 분석을 1회 실행한 뒤 다시 조회한다.
+        String bizTypeCd = resolveBizTypeCd(reqNo, detail.getDeclareType());
+        AIRiskDTO aiRisk = aiRiskService.getAiRiskResult(bizTypeCd, reqNo);
+
+        if (aiRisk == null) {
+            try {
+                aiRiskService.aiResultSave(bizTypeCd, reqNo);
+                aiRisk = aiRiskService.getAiRiskResult(bizTypeCd, reqNo);
+            } catch (Exception e) {
+                // AI 분석 실패 때문에 상세화면 전체가 죽지 않도록 화면에는 실패 상태만 표시한다.
+                aiRisk = new AIRiskDTO();
+                aiRisk.setArrBizTypeCd(bizTypeCd);
+                aiRisk.setArrRefNo(reqNo);
+                aiRisk.setArrStatusCd("ERROR");
+                aiRisk.setArrGradeCd("분석실패");
+                aiRisk.setArrResultCn("AI 위험도 분석 중 오류가 발생했습니다.");
+                aiRisk.setArrDetailCn(e.getMessage());
+            }
+        }
+
+        model.addAttribute("detail", detail);
+        model.addAttribute("aiRisk", aiRisk);
+        model.addAttribute("itemList", serviceDetail.selectItemList(reqNo));
+        model.addAttribute("tax",      serviceDetail.selectTaxInfo(reqNo));
+        model.addAttribute("certificateIssued", serviceDetail.isCertificateIssued(reqNo));
+
+        if (detail.getTfgNo() != null) {
+            List<FileInfoDTO> fileList = fileService.getFileList(detail.getTfgNo());
+            model.addAttribute("fileList", fileList);
+        }
+
+        model.addAttribute("workHistoryList", workService.getList(reqNo));
+        model.addAttribute("mode", mode);
+        return "officer/basicScreenDetail";
+    }
+
+
+    private String resolveBizTypeCd(String reqNo, String declareType) {
+        if (declareType != null) {
+            if (declareType.contains("수출") || "EXPORT".equalsIgnoreCase(declareType)) {
+                return "EXPORT";
+            }
+            if (declareType.contains("수입") || "IMPORT".equalsIgnoreCase(declareType)) {
+                return "IMPORT";
+            }
+        }
+
+        if (reqNo != null && reqNo.toUpperCase().startsWith("EXP")) {
+            return "EXPORT";
+        }
+        return "IMPORT";
+    }
+
+
+    // 세금탭 품목별 최신 세율·세액 AJAX 조회
+    @GetMapping("/tax/itemRates")
+    @ResponseBody
+    public ResponseEntity<Object> getTaxItems(@RequestParam String reqNo) {
+        return ResponseEntity.ok(serviceDetail.selectTaxItems(reqNo));
+    }
+
+
+    // 세금납부 탭 AJAX 데이터 조회
+    @GetMapping("/tax/info")
+    @ResponseBody
+    public ResponseEntity<Object> getTaxInfo(@RequestParam String reqNo) {
+        kr.or.tacs.dto.officer.TaxDTO tax = serviceDetail.selectTaxInfo(reqNo);
+        return ResponseEntity.ok(tax != null ? tax : java.util.Collections.emptyMap());
+    }
+
+
+    // 관세사에게 세금정보 전달 (전달일시 기록)
+    @PostMapping("/tax/sendToBroker")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> sendToBroker(
+            @RequestParam String reqNo) {
+
+        serviceDetail.sendTaxToBroker(reqNo);
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("result", "ok");
+        result.put("taxStatusCd", "TAX_UNPAID");
+        result.put("taxStatus", "납부대기");
+        return ResponseEntity.ok(result);
+    }
+
+
+    // 세율 재조회 결과 DB 저장 (IDI_TAXT_RT 업데이트)
+    @PostMapping("/api/tariff/saveRate")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> saveTaxRate(
+            @RequestParam String reqNo,
+            @RequestParam int    itemNo,
+            @RequestParam double taxRate) {
+
+        java.util.Map<String, Object> param = new java.util.HashMap<>();
+        param.put("reqNo",   reqNo);
+        param.put("itemNo",  itemNo);
+        param.put("taxRate", taxRate);
+        serviceDetail.updateItemTaxRate(param);
+
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("result", "ok");
+        return ResponseEntity.ok(result);
+    }
+
+
+    // 세금납부 완료 처리 (CUSTOMS_TAX.TAX_PAY_STATUS = TAX_PAID, CT_PAY_DONE_YN = Y)
+    @PostMapping("/taxPayComplete.do")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> taxPayComplete(
+            @RequestParam String reqNo,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        serviceDetail.taxPayComplete(reqNo);
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("result", "ok");
+        result.put("taxStatusCd", "TAX_PAID");
+        result.put("taxStatus", "납부완료");
+        return ResponseEntity.ok(result);
+    }
+
+    // 기본심사 승인 + 필증발급
+    @PostMapping("/approve.do")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> approve(
+            @RequestParam String reqNo,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        serviceDetail.approveDeclaration(reqNo, userDetails.getUsername());
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("result", "ok");
+        return ResponseEntity.ok(result);
+    }
+
+    // 필증 발급
+    @PostMapping("/issueCertificate.do")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> issueCertificate(
+            @RequestParam String reqNo,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        serviceDetail.approveDeclaration(reqNo, userDetails.getUsername());
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("result", "ok");
+        result.put("statusCd", "CSTM_DONE");
+        result.put("certificateStatusCd", "CERT_ISSUED");
+        return ResponseEntity.ok(result);
+    }
+
+
+    // 심사메모 저장/수정
+    @PostMapping("/reviewMemo/save")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> saveReviewMemo(
+            @RequestParam String reqNo,
+            @RequestParam(required = false) String reviewMemo,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        String officerId = (userDetails != null) ? userDetails.getUsername() : "SYSTEM";
+        serviceDetail.saveReviewMemo(reqNo, reviewMemo, officerId);
+
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("result", "ok");
+        result.put("reqNo", reqNo);
+        return ResponseEntity.ok(result);
+    }
+
+
+    // 보완요청완료 처리 (DCLR_SUPP_SUB → DCLR_REVIEW)
+    @PostMapping("/completeSupplement.do")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> completeSupplement(
+            @RequestParam String reqNo,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        serviceDetail.completeSupplement(reqNo, userDetails.getUsername());
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("result", "ok");
+        result.put("statusCd", "DCLR_REVIEW");
+        result.put("statusNm", "심사중");
+        return ResponseEntity.ok(result);
+    }
+
+
+    // 품목/란사항 처리상태 변경 (보완요청 / 수리 / 반려)
+    @PostMapping("/updateItemStatus.do")
+    public ResponseEntity<String> updateItemStatus(@RequestParam String reqNo,
+                                                   @RequestParam int itemNo,
+                                                   @RequestParam String statusCd,
+                                                   @RequestParam(required = false) String reason,
+                                                   @AuthenticationPrincipal UserDetails userDetails) {
+
+        String officerId = userDetails.getUsername();
+        serviceDetail.updateItemStatus(reqNo, itemNo, statusCd, reason, officerId);
+
+        return ResponseEntity.ok("OK");
+    }
+
+}

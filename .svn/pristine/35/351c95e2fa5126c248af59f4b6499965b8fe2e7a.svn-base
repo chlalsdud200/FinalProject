@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.officer.basicscreen.mapper.IScreenDetailMapper">
+
+    <!-- 수입 상세 -->
+    <select id="selectImportDetail"
+            parameterType="string"
+            resultType="kr.or.tacs.dto.officer.BasicScreenDetailDTO">
+        SELECT
+            IR.IR_NO AS reqNo,
+            '수입' AS declareType,
+            TO_CHAR(IR.IR_DT, 'YYYY-MM-DD HH24:MI') AS requestDate,
+            ID.ID_STATUS_CD AS statusCd,
+            IR.IR_TFG_NO AS tfgNo,
+
+            ARR.ARR_SCORE AS riskScore,
+            ARR.ARR_GRADE_CD AS riskGradeCd,
+            ARR.ARR_STATUS_CD AS riskStatusCd,
+            ARR.ARR_RESULT_CN AS riskResultCn,
+
+            IR.IR_OWR_ID AS companyName,
+            OWR.OWR_TELNO AS companyTel,
+            IR.IR_CORP_REG_NO AS corpRegNo,
+            IR.IR_CSTM_IDF_NO AS customsIdNo,
+            B.BROKER_OFFICE_NM AS brokerName,
+
+            NVL(ID.ID_OFFICER_ID, IRC.IRC_OFFICER_ID) AS officerId,
+            O.OFFICER_NM AS officerName,
+
+            IR.IR_BL_AWB_NO AS blNo,
+            IR.IR_ARRV_PORT_CD AS arrivalPort,
+            CASE
+                WHEN REGEXP_LIKE(IR.IR_ARRV_SCHD_YMD, '^[0-9]{8}$')
+                THEN TO_CHAR(TO_DATE(IR.IR_ARRV_SCHD_YMD, 'YYYYMMDD'), 'YYYY-MM-DD')
+                ELSE IR.IR_ARRV_SCHD_YMD
+            END AS arrivalDate,
+            TO_CHAR(NULL) AS cargoNo,
+
+            TO_CHAR(IR.IR_INVC_AMT, 'FM999,999,999,999') AS amount,
+            IR.IR_DCLR_CURR_CD AS currencyCode,
+            TO_CHAR(NULL) AS payMethod,
+
+            NVL(ITEM.IDI_DCLR_GDSNM, IR.IR_COMMENT) AS itemName,
+            ITEM.IDI_HS_CD AS hsCode,
+            TO_CHAR(ITEM.IDI_QTY, 'FM999,999,999') AS qty,
+            ITEM.IDI_ORGN_CNTRY_CD AS origin,
+
+            TO_CHAR(NULL) AS reviewMemo,
+            TO_CHAR(NULL) AS reviewStartDate,
+            TO_CHAR(NULL) AS acceptDate,
+
+            IR.IR_COMMENT AS requestContent
+        FROM IMP_RQST IR
+        LEFT JOIN (
+            SELECT *
+            FROM (
+                SELECT D.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY D.ID_IR_NO
+                           ORDER BY NVL(D.ID_RCEPT_DT, D.ID_DCLR_DT) DESC
+                       ) AS RN
+                FROM IMP_DCLR D
+            )
+            WHERE RN = 1
+        ) ID ON ID.ID_IR_NO = IR.IR_NO
+        LEFT JOIN BROKER B
+            ON IR.IR_BROKER_ID = B.BROKER_ID
+        LEFT JOIN OWNER OWR
+            ON IR.IR_OWR_ID = OWR.OWR_ID
+        LEFT JOIN IMP_DCLR_ITEM ITEM
+            ON IR.IR_NO = ITEM.IDI_IR_NO
+           AND ITEM.IDI_SN = (
+                SELECT MIN(IDI_SN)
+                FROM IMP_DCLR_ITEM
+                WHERE IDI_IR_NO = IR.IR_NO
+           )
+        LEFT JOIN IMP_REQ_CNFM IRC
+            ON IR.IR_NO = IRC.IRC_IR_NO
+        LEFT JOIN OFFICER O
+            ON NVL(ID.ID_OFFICER_ID, IRC.IRC_OFFICER_ID) = O.OFFICER_ID
+        LEFT JOIN (
+            SELECT *
+            FROM (
+                SELECT
+                    A.*,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY A.ARR_BIZ_TYPE_CD, A.ARR_REF_NO
+                        ORDER BY A.ARR_REGIST_DT DESC
+                    ) AS RN
+                FROM AI_RISK_RESULT A
+                WHERE A.ARR_BIZ_TYPE_CD = 'IMPORT'
+            )
+            WHERE RN = 1
+        ) ARR
+            ON ARR.ARR_REF_NO = IR.IR_NO
+        WHERE IR.IR_NO = #{reqNo}
+    </select>
+
+
+    <!-- 수출 상세 -->
+    <select id="selectExportDetail"
+            parameterType="string"
+            resultType="kr.or.tacs.dto.officer.BasicScreenDetailDTO">
+        SELECT
+            ER.ER_NO AS reqNo,
+            '수출' AS declareType,
+            TO_CHAR(ER.ER_RQST_DT, 'YYYY-MM-DD HH24:MI') AS requestDate,
+            NVL(ED.ED_STATUS_CD, ER.ER_STATUS_CD) AS statusCd,
+            ER.ER_TFG_NO AS tfgNo,
+
+            ARR.ARR_SCORE AS riskScore,
+            ARR.ARR_GRADE_CD AS riskGradeCd,
+            ARR.ARR_STATUS_CD AS riskStatusCd,
+            ARR.ARR_RESULT_CN AS riskResultCn,
+
+            NVL(ER.ER_ONER_NM, ER.ER_OWR_ID) AS companyName,
+            OWR.OWR_TELNO AS companyTel,
+            ER.ER_CORP_REG_NO AS corpRegNo,
+            ER.ER_CSTM_IDF_NO AS customsIdNo,
+            B.BROKER_OFFICE_NM AS brokerName,
+
+            ED.OFFICER_ID AS officerId,
+            O.OFFICER_NM AS officerName,
+
+            TO_CHAR(NULL) AS blNo,
+            ER.ER_LOAD_PORT_CD AS arrivalPort,
+            TO_CHAR(NULL) AS arrivalDate,
+            TO_CHAR(NULL) AS cargoNo,
+
+            TO_CHAR(ED.ED_DCLR_TOT_AMT_KRW, 'FM999,999,999,999') AS amount,
+            ED.ED_CURR_CD AS currencyCode,
+            TO_CHAR(NULL) AS payMethod,
+
+            NVL(ITEM.EDI_EXPT_GDS_NM, ER.ER_COMMENT) AS itemName,
+            ITEM.EDI_HS_CD AS hsCode,
+            TO_CHAR(ITEM.EDI_DCLR_QTY, 'FM999,999,999') AS qty,
+            ED.ED_PRPS_COUNTRY_CD AS origin,
+
+            TO_CHAR(NULL) AS reviewMemo,
+            TO_CHAR(NULL) AS reviewStartDate,
+            TO_CHAR(NULL) AS acceptDate,
+
+            ER.ER_COMMENT AS requestContent
+        FROM EXP_RQST ER
+        LEFT JOIN BROKER B
+            ON ER.ER_BROKER_ID = B.BROKER_ID
+        LEFT JOIN OWNER OWR
+            ON ER.ER_OWR_ID = OWR.OWR_ID
+        LEFT JOIN EXP_DCLR ED
+            ON ER.ER_NO = ED.ED_ER_NO
+        LEFT JOIN EXP_DCLR_ITEM ITEM
+            ON ER.ER_NO = ITEM.EDI_ER_NO
+           AND ITEM.EDI_SN = (
+                SELECT MIN(EDI_SN)
+                FROM EXP_DCLR_ITEM
+                WHERE EDI_ER_NO = ER.ER_NO
+           )
+        LEFT JOIN OFFICER O
+            ON ED.OFFICER_ID = O.OFFICER_ID
+        LEFT JOIN (
+            SELECT *
+            FROM (
+                SELECT
+                    A.*,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY A.ARR_BIZ_TYPE_CD, A.ARR_REF_NO
+                        ORDER BY A.ARR_REGIST_DT DESC
+                    ) AS RN
+                FROM AI_RISK_RESULT A
+                WHERE A.ARR_BIZ_TYPE_CD = 'EXPORT'
+            )
+            WHERE RN = 1
+        ) ARR
+            ON ARR.ARR_REF_NO = ER.ER_NO
+        WHERE ER.ER_NO = #{reqNo}
+    </select>
+
+
+    <!-- 수입 품목 목록 -->
+    <select id="selectImportItems"
+            parameterType="string"
+            resultType="kr.or.tacs.dto.officer.BasicScreenDetailDTO">
+        SELECT
+            IDI_SN                                                      AS itemNo,
+            IDI_DCLR_GDSNM                                              AS itemName,
+            IDI_TRDNG_GDSNM                                             AS tradeItemName,
+            IDI_HS_CD                                                   AS hsCode,
+            IDI_ORGN_CNTRY_CD                                           AS origin,
+            TO_CHAR(IDI_QTY,          'FM999,999,999')                  AS qty,
+            TO_CHAR(IDI_NET_WT,       'FM999,999,999.000')              AS weight,
+            TO_CHAR(IDI_TAXT_RT * 100,'FM990.00') || '%'                AS taxRate,
+            TO_CHAR(IDI_TAXT_PRC_KRW, 'FM999,999,999,999')             AS amount,
+            TO_CHAR(ROUND(IDI_TAXT_PRC_KRW * IDI_TAXT_RT),
+                         'FM999,999,999,999')                           AS taxAmount,
+            '미분석'                                                      AS riskGrade,
+            '-'                                                         AS reqTarget,
+            TO_CHAR(NULL)                                               AS itemStatusCd,
+            TO_CHAR(NULL)                                               AS itemRemark,
+            /* ── 세금·허가 심사 필수 추가 컬럼 ──────────────────────────
+               아래 컬럼명은 추정값입니다. IMP_DCLR_ITEM 실제 DDL 확인 후 수정하세요.
+               IDI_TAXT_TP_CD      → 관세구분 (일반/협정/잠정세율 등)
+               IDI_ORGN_DTN_STD_CD → 원산지결정기준 (WO/CTH/RVC 등)
+               IDI_TAX_RDCT_CD     → 관세감면구분
+               IDI_TAXT_AMT        → 관세액 (순수 관세액)
+               IDI_VAT_AMT         → 부가세액
+               컬럼이 없다면 해당 줄을 TO_CHAR(NULL) AS ... 로 유지하세요. */
+            TO_CHAR(NULL)                                               AS customsDutyType,
+            TO_CHAR(NULL)                                               AS originCriteria,
+            TO_CHAR(NULL)                                               AS taxExemption,
+            TO_CHAR(ROUND(IDI_TAXT_PRC_KRW * IDI_TAXT_RT),
+                         'FM999,999,999,999')                           AS taxAmt,
+            TO_CHAR(NULL)                                               AS vatAmount
+        FROM IMP_DCLR_ITEM
+        WHERE IDI_IR_NO = #{reqNo}
+        ORDER BY IDI_SN
+    </select>
+
+
+    <!-- 수출 품목 목록 -->
+    <select id="selectExportItems"
+            parameterType="string"
+            resultType="kr.or.tacs.dto.officer.BasicScreenDetailDTO">
+        SELECT
+            EDI_SN                                                      AS itemNo,
+            EDI_EXPT_GDS_NM                                             AS itemName,
+            EDI_TRDNG_GDS_NM                                            AS tradeItemName,
+            EDI_HS_CD                                                   AS hsCode,
+            TO_CHAR(NULL)                                               AS origin,
+            TO_CHAR(EDI_DCLR_QTY,    'FM999,999,999')                  AS qty,
+            TO_CHAR(EDI_NET_WT,      'FM999,999,999.000')               AS weight,
+            TO_CHAR(NULL)                                               AS taxRate,
+            TO_CHAR(EDI_DCLR_PRC_KRW,'FM999,999,999,999')              AS amount,
+            TO_CHAR(NULL)                                               AS taxAmount,
+            '미분석'                                                      AS riskGrade,
+            '-'                                                         AS reqTarget,
+            TO_CHAR(NULL)                                               AS itemStatusCd,
+            TO_CHAR(NULL)                                               AS itemRemark,
+            /* ── 세금·허가 심사 필수 추가 컬럼 ──────────────────────────
+               아래 컬럼명은 추정값입니다. EXP_DCLR_ITEM 실제 DDL 확인 후 수정하세요.
+               EDI_TAXT_TP_CD      → 관세구분
+               EDI_ORGN_DTN_STD_CD → 원산지결정기준
+               EDI_TAX_RDCT_CD     → 관세감면구분
+               EDI_TAXT_AMT        → 관세액
+               EDI_VAT_AMT         → 부가세액 */
+            TO_CHAR(NULL)                                               AS customsDutyType,
+            TO_CHAR(NULL)                                               AS originCriteria,
+            TO_CHAR(NULL)                                               AS taxExemption,
+            TO_CHAR(NULL)                                               AS taxAmt,
+            TO_CHAR(NULL)                                               AS vatAmount
+        FROM EXP_DCLR_ITEM
+        WHERE EDI_ER_NO = #{reqNo}
+        ORDER BY EDI_SN
+    </select>
+
+</mapper>

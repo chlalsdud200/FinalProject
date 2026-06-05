@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.systemadmin.support.mapper.IAdminSupportContentMapper">
+
+    <resultMap id="codeMap" type="kr.or.tacs.vo.systemadmin.support.AdminSupportCodeVO">
+        <result property="code" column="CODE"/>
+        <result property="name" column="NAME"/>
+        <result property="sortOrder" column="SORT_ORDER"/>
+    </resultMap>
+
+    <resultMap id="resourceMap" type="kr.or.tacs.vo.systemadmin.support.AdminSupportResourceVO">
+        <id property="resourceNo" column="RES_NO"/>
+        <result property="fileGroupNo" column="RES_FG_NO"/>
+        <result property="fileNo" column="DFI_FILE_NO"/>
+        <result property="title" column="RES_TTL"/>
+        <result property="description" column="RES_CN"/>
+        <result property="orgFileName" column="DFI_ORG_NM"/>
+        <result property="fileSize" column="DFI_SIZE"/>
+        <result property="docTypeCd" column="TFM_DOC_TY_CD"/>
+        <result property="docTypeName" column="DOC_TY_NM"/>
+        <result property="useYn" column="USE_YN"/>
+        <result property="createdAt" column="CREATED_AT"/>
+        <result property="updatedAt" column="UPDATED_AT"/>
+        <result property="targetRoleText" column="TARGET_ROLE_TEXT"/>
+    </resultMap>
+
+    <sql id="docTypeNameCase">
+        CASE TFM.tfm_doc_ty_cd
+            WHEN 'INVOICE' THEN '송장'
+            WHEN 'PACKING_LIST' THEN '포장명세서'
+            WHEN 'BL' THEN '선하증권'
+            WHEN 'IMPORT_DECL' THEN '수입신고서'
+            WHEN 'EXPORT_DECL' THEN '수출신고서'
+            WHEN 'MANUAL' THEN '매뉴얼'
+            ELSE '기타'
+        END
+    </sql>
+
+    <sql id="resourceColumns">
+          R.res_no
+        , R.res_fg_no
+        , R.res_ttl
+        , R.res_cn
+        , DFI.dfi_file_no
+        , DFI.dfi_org_nm
+        , DFI.dfi_size
+        , TFM.tfm_doc_ty_cd
+        , <include refid="docTypeNameCase"/> AS DOC_TY_NM
+        , CASE NVL(DFI.dfi_del_yn, 'N') WHEN 'N' THEN 'Y' ELSE 'N' END AS USE_YN
+        , TO_CHAR(R.res_reg_dt, 'YYYY-MM-DD HH24:MI') AS CREATED_AT
+        , TO_CHAR(DFI.dfi_regist_dt, 'YYYY-MM-DD HH24:MI') AS UPDATED_AT
+        , (
+            SELECT LISTAGG(RBA2.rba_target_role_cd, ', ')
+                   WITHIN GROUP (ORDER BY RBA2.rba_target_role_cd)
+            FROM res_board_auth RBA2
+            WHERE RBA2.rba_res_no = R.res_no
+          ) AS TARGET_ROLE_TEXT
+    </sql>
+
+    <sql id="resourceJoin">
+        FROM res_board R
+        JOIN tacs_file_grp TFG
+          ON TFG.tfg_no = R.res_fg_no
+        LEFT JOIN tacs_file_map TFM
+          ON TFM.tfm_tfg_no = TFG.tfg_no
+        LEFT JOIN docs_file_data DFI
+          ON DFI.dfi_file_no = TFM.tfm_dfi_no
+    </sql>
+
+    <select id="selectCodes" resultMap="codeMap">
+        SELECT
+              cc_cd AS CODE
+            , cc_nm AS NAME
+            , cc_sort_sn AS SORT_ORDER
+        FROM com_code
+        WHERE cc_ccg_id = #{groupId}
+          AND NVL(cc_use_yn, 'Y') = 'Y'
+        ORDER BY cc_sort_sn, cc_cd
+    </select>
+
+    <select id="selectResourceList" parameterType="kr.or.tacs.vo.systemadmin.support.AdminSupportResourceSearchVO" resultMap="resourceMap">
+        SELECT
+            <include refid="resourceColumns"/>
+        <include refid="resourceJoin"/>
+        WHERE TFG.tfg_biz_se_cd = 'RES'
+          AND NVL(DFI.dfi_biz_ty_cd, 'RES') = 'RES'
+        <if test="keyword != null and keyword != ''">
+          AND (
+                UPPER(R.res_ttl) LIKE '%' || UPPER(#{keyword}) || '%'
+             OR UPPER(R.res_cn) LIKE '%' || UPPER(#{keyword}) || '%'
+             OR UPPER(DFI.dfi_org_nm) LIKE '%' || UPPER(#{keyword}) || '%'
+          )
+        </if>
+        <if test="targetRoleCd != null and targetRoleCd != '' and targetRoleCd != 'all' and targetRoleCd != 'SYSTEM_ADMIN'">
+          AND EXISTS (
+              SELECT 1
+              FROM res_board_auth RBA
+              WHERE RBA.rba_res_no = R.res_no
+                AND RBA.rba_target_role_cd IN ('ALL', #{targetRoleCd})
+          )
+        </if>
+        <if test="useYn != null and useYn != '' and useYn != 'all'">
+          AND CASE NVL(DFI.dfi_del_yn, 'N') WHEN 'N' THEN 'Y' ELSE 'N' END = #{useYn}
+        </if>
+        ORDER BY R.res_reg_dt DESC, R.res_no DESC, DFI.dfi_file_no DESC
+    </select>
+
+    <select id="selectResource" resultMap="resourceMap">
+        SELECT
+            <include refid="resourceColumns"/>
+        <include refid="resourceJoin"/>
+        WHERE R.res_no = #{resourceNo}
+          AND TFG.tfg_biz_se_cd = 'RES'
+          AND NVL(DFI.dfi_biz_ty_cd, 'RES') = 'RES'
+        ORDER BY CASE NVL(DFI.dfi_del_yn, 'N') WHEN 'N' THEN 0 ELSE 1 END, DFI.dfi_file_no DESC
+        FETCH FIRST 1 ROWS ONLY
+    </select>
+
+    <select id="selectResourceTargetRoles" resultType="string">
+        SELECT rba_target_role_cd
+        FROM res_board_auth
+        WHERE rba_res_no = #{resourceNo}
+        ORDER BY rba_target_role_cd
+    </select>
+
+    <select id="selectNextResourceNo" resultType="long">
+        SELECT NVL(MAX(res_no), 0) + 1 FROM res_board
+    </select>
+
+    <insert id="insertResource">
+        INSERT INTO res_board (
+              res_no
+            , res_fg_no
+            , res_ttl
+            , res_cn
+            , res_reg_dt
+        ) VALUES (
+              #{resourceNo}
+            , #{fileGroupNo}
+            , #{title}
+            , #{description}
+            , SYSDATE
+        )
+    </insert>
+
+    <update id="updateResource">
+        UPDATE res_board
+        SET
+              res_ttl = #{title}
+            , res_cn = #{description}
+        WHERE res_no = #{resourceNo}
+    </update>
+
+    <delete id="deleteResourceAuths">
+        DELETE FROM res_board_auth
+        WHERE rba_res_no = #{resourceNo}
+    </delete>
+
+    <insert id="insertResourceAuths">
+        INSERT INTO res_board_auth (
+              rba_no
+            , rba_res_no
+            , rba_target_role_cd
+        )
+        SELECT
+              (SELECT NVL(MAX(rba_no), 0) FROM res_board_auth) + ROWNUM
+            , #{resourceNo}
+            , T.role_cd
+        FROM (
+            <foreach collection="targetRoles" item="roleCd" separator=" UNION ALL ">
+                SELECT #{roleCd} AS ROLE_CD FROM dual
+            </foreach>
+        ) T
+    </insert>
+
+    <update id="markResourceFilesDeleted">
+        UPDATE docs_file_data DFI
+        SET dfi_del_yn = 'Y'
+        WHERE EXISTS (
+            SELECT 1
+            FROM tacs_file_map TFM
+            WHERE TFM.tfm_dfi_no = DFI.dfi_file_no
+              AND TFM.tfm_tfg_no = #{fileGroupNo}
+        )
+    </update>
+</mapper>

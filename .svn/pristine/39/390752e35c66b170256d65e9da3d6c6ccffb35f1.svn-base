@@ -1,0 +1,55 @@
+<%@ page pageEncoding="UTF-8" %>
+<%@ page import="org.springframework.security.core.Authentication" %>
+<%@ page import="org.springframework.security.core.context.SecurityContextHolder" %>
+<%@ page import="kr.or.tacs.vo.common.CustomUser" %>
+<%
+    String officerHeaderName = "행정공무원";
+    String officerHeaderRole = "행정공무원";
+    String officerHeaderInitial = "행";
+
+    Authentication officerHeaderAuth = SecurityContextHolder.getContext().getAuthentication();
+    if (officerHeaderAuth != null && officerHeaderAuth.getPrincipal() instanceof CustomUser) {
+        CustomUser officerHeaderUser = (CustomUser) officerHeaderAuth.getPrincipal();
+        if (officerHeaderUser.getLoginNm() != null && officerHeaderUser.getLoginNm().trim().length() > 0) {
+            officerHeaderName = officerHeaderUser.getLoginNm().trim();
+            officerHeaderInitial = officerHeaderName.substring(0, 1);
+        }
+        if (officerHeaderUser.getRoleNm() != null && officerHeaderUser.getRoleNm().trim().length() > 0) {
+            officerHeaderRole = officerHeaderUser.getRoleNm().trim();
+        }
+    }
+%>
+
+<header class="topbar">
+    <div class="tb-left">
+        <span class="tb-brand">TACS</span>
+    </div>
+
+    <div class="tb-right">
+    
+        <button class="tb-btn" title="액터 목록" onclick="location.href='${ctx}/systemadmin/dashboard.do'">
+            <span class="material-symbols-outlined">list</span>
+        </button>
+        
+        <jsp:include page="/WEB-INF/views/common/notification_bell.jsp" />
+
+        <button class="tb-btn" onclick="alert('행정공무원 도움말\\n\\n• 신고 접수 및 기본심사\\n• 요건 결과 확인\\n• 과세가격·세율·FTA 검토\\n• 통관보류 등록·해지\\n• 신고수리 처리')">
+            <span class="material-symbols-outlined">help</span>
+        </button>
+
+        <div class="tb-sep"></div>
+
+        <div class="tb-user">
+            <div class="tb-user-info">
+                <div class="name"><%= officerHeaderName %></div>
+                <div class="role"><%= officerHeaderRole %></div>
+            </div>
+
+            <div class="tb-avatar"
+                 onclick="if(confirm('로그아웃 하시겠습니까?')) location.href='${ctx}/logout'"
+                 style="cursor:pointer">
+                <%= officerHeaderInitial %>
+            </div>
+        </div>
+    </div>
+</header>

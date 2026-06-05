@@ -1,0 +1,74 @@
+package kr.or.tacs.owner.arrival.controller;
+
+import kr.or.tacs.dto.owner.OwnerArrivalNoticeDTO;
+import kr.or.tacs.owner.arrival.service.IArrivalService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/owner/arrival-notice")
+public class ArrivalController {
+
+    @Autowired
+    private IArrivalService arrivalService;
+
+    @GetMapping("/list.do")
+    public String list(Authentication authentication,
+                       Model model) {
+
+        String owrId = authentication.getName();
+
+        List<OwnerArrivalNoticeDTO> arrivalList =
+                arrivalService.retrieveArrivalNoticeList(owrId);
+
+        model.addAttribute("arrivalList", arrivalList);
+
+        model.addAttribute("totalCount", arrivalList.size());
+        model.addAttribute("pendingCount", arrivalList.stream()
+                .filter(arrival -> "TRC_NTC_NSENT".equals(arrival.getIanSendSttsCd()))
+                .count());
+        model.addAttribute("sentCount", arrivalList.stream()
+                .filter(arrival -> "TRC_NTC_SENT".equals(arrival.getIanSendSttsCd()))
+                .count());
+
+        return "owner/arrivalNotice";
+    }
+
+    @GetMapping("/detail.do/{ianNo}")
+    public String detail(@PathVariable String ianNo,
+                         Authentication authentication,
+                         Model model) {
+
+        String owrId = authentication.getName();
+
+        OwnerArrivalNoticeDTO arrival =
+                arrivalService.retrieveArrivalNoticeDetail(ianNo, owrId);
+
+        model.addAttribute("arrival", arrival);
+
+        return "owner/arrivalNoticeDetail";
+    }
+
+    @GetMapping("/detail-by-trc.do/{trcNo}")
+    public String detailByTrcNo(@PathVariable String trcNo,
+                                Authentication authentication,
+                                Model model) {
+
+        String owrId = authentication.getName();
+
+        OwnerArrivalNoticeDTO arrival =
+                arrivalService.retrieveArrivalNoticeDetailByTrcNo(trcNo, owrId);
+
+        model.addAttribute("arrival", arrival);
+
+        return "owner/arrivalNoticeDetail";
+    }
+}

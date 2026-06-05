@@ -1,0 +1,22 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<header class="topbar">
+      <div class="tb-left">
+        <a href="${ctx}/broker/dash.do"  class="tb-brand">TACS</a>
+      </div>
+      <div class="tb-right">
+        <% if (request.isUserInRole("SYSTEM_ADMIN")) { %>
+        <button class="tb-btn" title="액터 목록" onclick="location.href='${ctx}/systemadmin/dashboard.do'">
+          <span class="material-symbols-outlined">list</span>
+        </button>
+        <% } %>
+        <jsp:include page="/WEB-INF/views/common/notification_bell.jsp" />
+        <div class="tb-sep"></div>
+        <div class="tb-user">
+          <div class="tb-user-info">
+            <div class="name">관세사 김관세</div>
+            <div class="role">인천본부세관 · CS-20241</div>
+          </div>
+          <div class="tb-avatar" onclick="if(confirm('로그아웃 하시겠습니까?')) document.getElementById('logoutForm').submit();" style="cursor:pointer">김</div>
+        </div>
+      </div>
+</header>

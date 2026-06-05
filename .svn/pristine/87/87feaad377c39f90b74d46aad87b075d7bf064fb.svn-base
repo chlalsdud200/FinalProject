@@ -1,0 +1,55 @@
+package kr.or.tacs.broker.status.mapper;
+
+import java.util.List;
+import java.util.Map;
+import kr.or.tacs.dto.PageDTO;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+@Mapper
+public interface IStatusMapper {
+
+	int selectImportDeclareCount(
+	        @Param("brokerId") String brokerId,
+	        @Param("pageDTO") PageDTO pageDTO
+	);
+
+	List<Map<String, Object>> selectImportDeclareList(
+	        @Param("brokerId") String brokerId,
+	        @Param("pageDTO") PageDTO pageDTO
+	);
+
+    Map<String, Object> selectImportDeclareDetail(
+            @Param("idIrNo") String idIrNo,
+            @Param("brokerId") String brokerId
+    );
+
+    List<Map<String, Object>> selectImportDeclareItemList(@Param("idIrNo") String idIrNo);
+
+    List<Map<String, Object>> selectImportDeclareMdlspecList(@Param("idIrNo") String idIrNo);
+    
+    Map<String, Object> selectSupplementItem(
+            @Param("idIrNo") String idIrNo,
+            @Param("idiSn") Integer idiSn,
+            @Param("brokerId") String brokerId
+    );
+
+    List<Map<String, Object>> selectSupplementMdlspecList(
+            @Param("idIrNo") String idIrNo,
+            @Param("idiSn") Integer idiSn
+    );
+
+    int updateSupplementItem(Map<String, Object> param);
+
+    int deleteSupplementMdlspecByItem(
+            @Param("idIrNo") String idIrNo,
+            @Param("idiSn") Integer idiSn
+    );
+
+    int insertSupplementMdlspec(Map<String, Object> param);
+
+    int updateItemStatusToSuppSub(
+            @Param("idIrNo") String idIrNo,
+            @Param("idiSn") Integer idiSn
+    );
+}

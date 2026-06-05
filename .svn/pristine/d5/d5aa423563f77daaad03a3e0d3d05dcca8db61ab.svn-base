@@ -1,0 +1,35 @@
+package kr.or.tacs.officer.fulfillmentandexport.mapper;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import kr.or.tacs.dto.officer.LoadedCargoListDTO;
+
+@Mapper
+public interface ILoadedCargoListMapper {
+
+    List<LoadedCargoListDTO> selectLoadedCargoList(
+            @Param("reqNo") String reqNo,
+            @Param("declareStatusCd") String declareStatusCd,
+            @Param("declareType") String declareType,
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate,
+            @Param("keyword") String keyword
+    );
+
+    List<LoadedCargoListDTO> selectMixedCargoList(
+            @Param("reqNo") String reqNo,
+            @Param("declareStatusCd") String declareStatusCd,
+            @Param("declareType") String declareType,
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate,
+            @Param("keyword") String keyword
+    );
+
+    List<LoadedCargoListDTO> selectCargoItemList(
+            @Param("reqNo") String reqNo,
+            @Param("declareType") String declareType
+    );
+}

@@ -1,0 +1,20 @@
+﻿<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html lang="ko" class="light">
+<head>
+<%@ include file="/WEB-INF/views/transport/common/head.jsp" %>
+<link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/transport/css/pages/dash.css">
+</head>
+<body class="bg-background text-on-surface">
+<%@ include file="/WEB-INF/views/transport/common/sidebar.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/topbar.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/main-content.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/footer.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/modals.jsp" %>
+<script>
+  window.TRANSPORT_INITIAL_VIEW = { group: 'dashboard' };
+</script>
+<script src="${pageContext.request.contextPath}/resources/js/transport/js/common.js?v=20260511-export-detail3col1"></script>
+<script src="${pageContext.request.contextPath}/resources/js/transport/js/pages/dash.js?v=20260502-async4"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%
+  String transportUserName = request.getUserPrincipal() != null ? request.getUserPrincipal().getName() : "";
+  String transportUserLabel = transportUserName == null || transportUserName.trim().isEmpty() ? "운송담당자" : "운송담당자 " + transportUserName;
+  String transportUserInitial = transportUserName == null || transportUserName.trim().isEmpty() ? "운" : transportUserName.trim().substring(0, 1);
+%>
+<header class="fixed top-0 right-0 left-72 h-16 bg-slate-50 border-b-2 border-slate-900 flex justify-between items-center px-6 z-40 glass-header">
+  <div class="flex items-center gap-6">
+    <span class="text-xl font-black text-slate-900 tracking-tighter">TACS</span>
+    <div class="relative">
+      <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+        <span class="material-symbols-outlined text-slate-400 text-sm">search</span>
+      </span>
+      <input class="pl-10 pr-4 py-1.5 bg-surface-container-highest border-b-2 border-outline focus:border-primary outline-none text-sm w-80 transition-all" placeholder="의뢰번호, B/L번호, 화주명 검색" type="text" />
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <% if (request.isUserInRole("SYSTEM_ADMIN")) { %>
+    <button class="p-2 text-slate-700 hover:bg-slate-200 transition-colors flex items-center justify-center" type="button" onclick="location.href='${pageContext.request.contextPath}/systemadmin/dashboard.do'" aria-label="목록">
+      <span class="material-symbols-outlined text-[22px]">list</span>
+    </button>
+    <% } %>
+    <jsp:include page="/WEB-INF/views/common/notification_bell.jsp" />
+    <button class="p-2 text-slate-700 hover:bg-slate-200 transition-colors flex items-center justify-center" type="button" aria-label="도움말">
+      <span class="material-symbols-outlined text-[22px]">help</span>
+    </button>
+    <div class="h-8 w-px bg-slate-300 mx-2"></div>
+    <div class="flex items-center gap-3">
+      <div class="text-right">
+        <p class="text-xs font-bold text-slate-900"><%= transportUserLabel %></p>
+        <p class="text-[10px] text-slate-500">운송담당자 운영</p>
+      </div>
+      <div class="w-10 h-10 bg-primary flex items-center justify-center text-on-primary font-bold text-sm cursor-pointer" onclick="if(confirm('로그아웃 하시겠습니까?')) location.href='${pageContext.request.contextPath}/logout'"><%= transportUserInitial %></div>
+    </div>
+  </div>
+</header>

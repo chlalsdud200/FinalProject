@@ -1,0 +1,14 @@
+@charset "UTF-8";
+
+.info-filter-card { margin-top: 12px; }
+.info-form-grid.compact { grid-template-columns: 140px 1fr 140px 1fr; }
+.info-form-grid .fg-value.fg-full { grid-column: span 3; }
+.info-action-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.info-state { background: #fff; border: 1px solid #e2e8f0; padding: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; color: #203444; }
+.info-state.muted { color: #697d8f; }
+.info-state.error { color: #991b1b; background: #fef2f2; border-color: #fecaca; }
+.info-result-area { margin-top: 16px; }
+@media (max-width: 900px) {
+  .info-form-grid.compact { grid-template-columns: 120px 1fr; }
+  .info-form-grid .fg-value.fg-full { grid-column: auto; }
+}

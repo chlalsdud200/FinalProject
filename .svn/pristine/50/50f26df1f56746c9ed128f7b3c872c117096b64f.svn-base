@@ -1,0 +1,28 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html lang="ko" class="light">
+<head>
+<%@ include file="/WEB-INF/views/transport/common/head.jsp" %>
+<link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/transport/css/pages/community.css">
+</head>
+<body class="bg-background text-on-surface">
+<%@ include file="/WEB-INF/views/transport/common/sidebar.jsp" %>
+<%@ include file="/WEB-INF/views/transport/common/topbar.jsp" %>
+<main class="ml-72 pt-16 min-h-screen bg-surface">
+  <section class="p-8 space-y-6">
+    <div class="section-card overflow-hidden bg-white">
+      <div class="bg-on-primary-fixed px-6 py-4 flex justify-between items-center">
+        <div>
+          <h4 class="text-sm font-bold text-white">자료실</h4>
+        </div>
+      </div>
+      <div class="p-6">
+        <%@ include file="/WEB-INF/views/common/community/resourceArchive.jsp" %>
+      </div>
+    </div>
+  </section>
+</main>
+<%@ include file="/WEB-INF/views/transport/common/footer.jsp" %>
+<script src="${pageContext.request.contextPath}/resources/js/transport/js/common.js?v=20260511-export-detail3col1"></script>
+</body>
+</html>

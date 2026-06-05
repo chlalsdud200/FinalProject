@@ -1,0 +1,234 @@
+package kr.or.tacs.broker.quarantine.controller;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import kr.or.tacs.broker.quarantine.service.IQuarantineService;
+import kr.or.tacs.vo.broker.quarantine.QuarantineVO;
+import lombok.RequiredArgsConstructor;
+
+@Controller
+@RequiredArgsConstructor
+@RequestMapping("/broker/quarantine")
+public class QuarantineController {
+
+    private final IQuarantineService quarantineService;
+
+    /*
+     * 검역결과조회 화면
+     */
+    @GetMapping("/result.do")
+    public String result(@ModelAttribute("searchVO") QuarantineVO searchVO,
+                         Principal principal,
+                         Model model) {
+
+        String brokerId = getLoginId(principal);
+        searchVO.setLoginBrokerId(brokerId);
+
+        model.addAttribute("activeMenu", "quarantine");
+        model.addAttribute("activeSub", "result");
+        model.addAttribute("resultList", quarantineService.selectImportQuarantineResultList(searchVO));
+
+        return "broker/pages/quarantineResult";
+    }
+
+    /*
+     * 검역결과 상세
+     *
+     * 현재는 별도 detail.jsp를 만들지 않고
+     * 검역결과조회 화면에서 상세 모달 또는 상세 영역으로 보여주는 구조로 둔다.
+     */
+    @GetMapping("/detail.do")
+    public String detail(@RequestParam("iirReqNo") String iirReqNo,
+                         Principal principal,
+                         Model model) {
+
+        QuarantineVO searchVO = new QuarantineVO();
+        searchVO.setLoginBrokerId(getLoginId(principal));
+
+        model.addAttribute("activeMenu", "quarantine");
+        model.addAttribute("activeSub", "result");
+
+        // JSP에서 detailVO로 받을 수 있게 이름 통일
+        model.addAttribute("detailVO", quarantineService.selectImportQuarantineDetail(iirReqNo));
+
+        // 상세 화면에서도 목록이 필요하면 유지
+        model.addAttribute("searchVO", searchVO);
+        model.addAttribute("resultList", quarantineService.selectImportQuarantineResultList(searchVO));
+
+        return "broker/pages/quarantineResult";
+    }
+
+    /*
+     * 수입검역신청 화면
+     */
+    @GetMapping("/import.do")
+    public String importApply(@RequestParam(value = "irNo", required = false) String irNo,
+                              Principal principal,
+                              Model model) {
+
+        String brokerId = getLoginId(principal);
+
+        model.addAttribute("activeMenu", "quarantine");
+        model.addAttribute("activeSub", "import");
+
+        // 검역신청 가능한 수입의뢰 목록
+        List<QuarantineVO> candidateList =
+                quarantineService.selectImportRequestCandidateList(brokerId);
+        model.addAttribute("candidateList", candidateList);
+
+        // 화면 form 기본 객체
+        QuarantineVO applyVO = new QuarantineVO();
+
+        // 수입의뢰를 선택해서 들어온 경우 자동 세팅
+        if (irNo != null && !irNo.isBlank()) {
+            QuarantineVO selectedVO =
+                    quarantineService.selectImportRequestForQuarantine(irNo, brokerId);
+
+            if (selectedVO != null) {
+                applyVO = selectedVO;
+            }
+        }
+
+        model.addAttribute("applyVO", applyVO);
+
+        return "broker/pages/quarantineImport";
+    }
+
+    /*
+     * 수입검역신청 등록
+     */
+    @PostMapping("/import/apply.do")
+    public String importApplySubmit(@ModelAttribute QuarantineVO quarantineVO,
+                                    Principal principal,
+                                    RedirectAttributes redirectAttributes) {
+
+        quarantineVO.setLoginBrokerId(getLoginId(principal));
+
+        try {
+            quarantineService.insertImportQuarantineRequest(quarantineVO);
+
+            redirectAttributes.addFlashAttribute("successMsg", "수입 검역신청이 등록되었습니다.");
+            return "redirect:/broker/quarantine/result.do";
+
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+
+            String irNo = quarantineVO.getIirAplyNo();
+
+            if (irNo == null || irNo.isBlank()) {
+                irNo = quarantineVO.getIrNo();
+            }
+
+            if (irNo != null && !irNo.isBlank()) {
+                return "redirect:/broker/quarantine/import.do?irNo=" + irNo;
+            }
+
+            return "redirect:/broker/quarantine/import.do";
+        }
+    }
+
+    /*
+     * 수출검역신청 화면
+     */
+    @GetMapping("/export.do")
+    public String exportApply(Model model) {
+
+        model.addAttribute("activeMenu", "quarantine");
+        model.addAttribute("activeSub", "export");
+
+        return "broker/pages/quarantineExport";
+    }
+
+    /*
+     * 로그인 ID 추출
+     */
+    private String getLoginId(Principal principal) {
+        return principal == null ? null : principal.getName();
+    }
+    
+    /*
+     * 첨부문서 자동입력 처리
+     *
+     * 역할:
+     * - 수입검역신청 화면에서 관세사가 첨부한 PDF 파일을 서버로 전송하면
+     * - Service에서 PDFBox로 PDF 내용을 문자열로 추출하고
+     * - Spring AI를 통해 수입검역신청 입력값 형태로 변환한 뒤
+     * - JSON 형태로 화면에 반환한다.
+     *
+     * 요청 URL:
+     * - POST /broker/quarantine/import/ai-fill.do
+     *
+     * 응답 형태:
+     * {
+     *   "success": true,
+     *   "data": { ...AI가 추출한 수입검역신청 데이터... }
+     * }
+     */
+    @PostMapping("/import/ai-fill.do")
+    @ResponseBody
+    public Map<String, Object> autoFillImportQuarantine(
+            // 화면에서 선택한 첨부파일 배열
+            // JS FormData에서 formData.append("attachFiles", file)로 넘어오는 값
+            @RequestParam("attachFiles") MultipartFile[] attachFiles,
+
+            // 현재 선택된 수입통관의뢰번호
+            // 자동입력 자체는 PDF 기준이지만, 추후 의뢰번호 기준 검증/보정에 사용할 수 있음
+            @RequestParam(value = "irNo", required = false) String irNo) {
+
+        // 화면으로 반환할 JSON 응답 데이터를 담는 Map
+        // success, message, data 등을 담아서 반환한다.
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            // 1. 첨부파일 존재 여부 확인
+            // 파일이 없으면 PDFBox로 읽을 대상이 없으므로 바로 실패 응답 반환
+            if (attachFiles == null || attachFiles.length == 0) {
+                result.put("success", false);
+                result.put("message", "자동입력할 첨부문서가 없습니다.");
+                return result;
+            }
+
+            // 2. Service에서 실제 자동입력 처리 수행
+            // 내부 처리 흐름:
+            // MultipartFile[] PDF 파일
+            // → PDFBox로 텍스트 추출
+            // → Spring AI로 수입검역신청 항목 추출
+            // → QuarantineVO 형태로 변환
+            QuarantineVO aiData = quarantineService.extractImportQuarantineData(attachFiles, irNo);
+
+            // 3. 정상 처리 결과 반환
+            // JS에서는 result.data를 받아서 각 input/select/textarea에 값을 세팅한다.
+            result.put("success", true);
+            result.put("data", aiData);
+
+        } catch (Exception e) {
+            // 예외 발생 시 콘솔에 상세 오류 출력
+            // 개발 중에는 원인 확인용으로 사용하고,
+            // 운영 단계에서는 log.error(...) 방식으로 바꾸는 것이 좋음
+            e.printStackTrace();
+
+            // 화면에는 공통 오류 메시지만 반환
+            result.put("success", false);
+            result.put("message", "첨부문서 자동입력 중 오류가 발생했습니다.");
+        }
+
+        // @ResponseBody 때문에 Map이 JSON으로 변환되어 AJAX 응답으로 내려간다.
+        return result;
+    }
+    
+    
+}

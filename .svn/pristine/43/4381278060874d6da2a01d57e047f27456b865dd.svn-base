@@ -1,0 +1,761 @@
+document.addEventListener('DOMContentLoaded', function () {
+  bindDetailTabs();
+  bindDetailButtons();
+  initWorkForm();
+  bindHsApiButtons();
+  bindTariffRateButtons();
+  autoLoadTariffRates();
+});
+
+/* =========================================================
+   탭 처리
+   ========================================================= */
+function bindDetailTabs() {
+  document.addEventListener('click', function (e) {
+    var tab = e.target.closest('.det-tab-i');
+    if (!tab) return;
+
+    e.preventDefault();
+
+    if (tab.classList.contains('locked')) return;
+
+    openDetailTab(tab.getAttribute('data-tab'));
+  });
+}
+
+function openDetailTab(tabName) {
+  if (!tabName) return;
+
+  var targetBtn = document.querySelector('.det-tab-i[data-tab="' + tabName + '"]');
+  if (targetBtn && targetBtn.classList.contains('locked')) return;
+
+  document.querySelectorAll('.det-tab-i').forEach(function (tab) {
+    tab.classList.remove('on');
+  });
+
+  if (targetBtn) targetBtn.classList.add('on');
+
+  document.querySelectorAll('.tab-pane').forEach(function (pane) {
+    pane.classList.remove('on');
+  });
+
+  var targetPane = document.getElementById('tab-' + tabName);
+  if (targetPane) targetPane.classList.add('on');
+}
+
+window.openDetailTab = openDetailTab;
+
+/* =========================================================
+   기본 버튼 처리
+   ========================================================= */
+function bindDetailButtons() {
+  safeClick('btnBack', goList);
+  safeClick('btnBackBottom', goList);
+
+  safeChange('workType', changeWorkForm);
+  safeClick('btnWorkSubmit', submitWork);
+
+  safeClick('btnReceiptBottom', submitDetailAccept);
+  safeClick('btnRejectBottom', openDetailRejectModal);
+
+  safeClick('btnApproveBottom', function () {
+    if (!confirm('승인 처리하시겠습니까?')) return;
+
+    setStatus('세금납부대기');
+    activateTaxTab();
+    openDetailTab('tax');
+    addHistory('승인 처리', 'green', '승인 처리되어 세금납부 탭이 활성화되었습니다.');
+    toast('승인 처리되었습니다. 세금납부 탭이 활성화되었습니다.', 'g');
+  });
+
+  safeClick('btnTaxComplete', function () {
+    if (!confirm('납부완료 처리하시겠습니까?')) return;
+
+    setText('taxStatus', '납부완료');
+    setText('taxStateCell', '납부완료');
+    setText('vatStateCell', '납부완료');
+
+    setStatus('승인완료');
+    addHistory('납부완료 확인', 'green', '관세 및 부가세 납부완료 상태로 변경되었습니다.');
+    toast('납부완료 처리되었습니다.', 'g');
+  });
+}
+
+function initWorkForm() {
+  changeWorkForm();
+  initTaxTabLock();
+}
+
+function initTaxTabLock() {
+  var taxTab = document.getElementById('taxTabBtn');
+  var taxLocked = document.getElementById('taxLocked');
+  var taxContent = document.getElementById('taxContent');
+
+  if (!taxTab) return;
+
+  if (taxTab.classList.contains('locked')) {
+    taxTab.setAttribute('aria-disabled', 'true');
+    taxTab.title = '승인 후 활성화됩니다.';
+
+    if (taxLocked) taxLocked.classList.remove('hidden');
+    if (taxContent) taxContent.classList.add('tax-disabled');
+  }
+}
+
+function activateTaxTab() {
+  var taxTab = document.getElementById('taxTabBtn');
+  var taxLocked = document.getElementById('taxLocked');
+  var taxContent = document.getElementById('taxContent');
+
+  if (taxTab) {
+    taxTab.classList.remove('locked');
+    taxTab.classList.add('tax-active');
+    taxTab.setAttribute('aria-disabled', 'false');
+    taxTab.title = '';
+  }
+
+  if (taxLocked) taxLocked.classList.add('hidden');
+  if (taxContent) taxContent.classList.remove('tax-disabled');
+}
+
+/* =========================================================
+   업무처리 탭
+   ========================================================= */
+function changeWorkForm() {
+  var workType = document.getElementById('workType');
+  var workTitle = document.getElementById('workTitle');
+  var workReason = document.getElementById('workReason');
+  var workDesc = document.getElementById('workDesc');
+  var btnWorkSubmit = document.getElementById('btnWorkSubmit');
+  var workFileArea = document.getElementById('workFileRow');
+  var workFile = document.getElementById('workFile');
+
+  if (!workType || !workTitle || !workReason) return;
+
+  var value = workType.value;
+
+  var titleMap = {
+    supplement: '보완요청',
+    hold: '통관보류'
+  };
+
+  var descMap = {
+    supplement: '보완이 필요한 서류나 내용을 수입자에게 요청합니다.',
+    hold: '통관보류 사유를 등록하고 관련 근거파일을 첨부합니다.'
+  };
+
+  var buttonTextMap = {
+    supplement: '보완요청 등록',
+    hold: '통관보류 처리'
+  };
+
+  var title = titleMap[value] || '보완요청';
+
+  workTitle.textContent = title;
+  workReason.placeholder = title + ' 사유를 입력하세요.';
+
+  if (workDesc) workDesc.textContent = descMap[value] || '';
+  if (btnWorkSubmit) btnWorkSubmit.textContent = buttonTextMap[value] || '처리 등록';
+
+  if (workFileArea) {
+    if (value === 'hold') {
+      workFileArea.classList.remove('hidden');
+    } else {
+      workFileArea.classList.add('hidden');
+      if (workFile) workFile.value = '';
+    }
+  }
+}
+
+function submitWork() {
+  var workType = document.getElementById('workType');
+  var workReason = document.getElementById('workReason');
+  var workTitle = document.getElementById('workTitle');
+  var workFile = document.getElementById('workFile');
+
+  if (!workType || !workReason || !workTitle) {
+    alert('업무처리 입력 영역을 찾을 수 없습니다.');
+    return;
+  }
+
+  if (!workReason.value.trim()) {
+    alert('처리 사유를 입력하세요.');
+    workReason.focus();
+    return;
+  }
+
+  var value = workType.value;
+  var title = workTitle.textContent;
+  var reason = workReason.value.trim();
+
+  var fileName = '-';
+  if (workFile && workFile.files && workFile.files.length > 0) {
+    fileName = workFile.files[0].name;
+  }
+
+  addWorkRequestHistory(title, reason, value, fileName);
+
+  if (value === 'hold') {
+    setStatus('통관보류');
+  } else {
+    setStatus('보완요청');
+  }
+
+  openDetailTab('work');
+  toast(title + ' 등록 완료', value === 'hold' ? 'o' : 'b');
+
+  workReason.value = '';
+  if (workFile) workFile.value = '';
+}
+
+function addWorkRequestHistory(title, reason, value, fileName) {
+  var tbody =
+    document.getElementById('workHistoryBody') ||
+    document.querySelector('.work-history-table tbody') ||
+    document.querySelector('.request-history-table tbody');
+
+  if (!tbody) return;
+
+  var emptyRow = tbody.querySelector('.empty-cell');
+  if (emptyRow) {
+    var emptyTr = emptyRow.closest('tr');
+    if (emptyTr) emptyTr.remove();
+  }
+
+  var attachText = '-';
+  if (fileName && fileName !== '-') {
+    attachText =
+      '<button type="button" class="btn-secondary btn-sm" onclick="previewFile(\'' +
+      escapeJs(fileName) +
+      '\')">첨부확인</button>';
+  }
+
+  var tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td>' + escapeHtml(title) + '</td>' +
+    '<td>방금 전</td>' +
+    '<td>' + escapeHtml(reason) + '</td>' +
+    '<td>-</td>' +
+    '<td><span class="work-badge-orange">답변대기</span></td>' +
+    '<td>' + attachText + '</td>';
+
+  tbody.appendChild(tr);
+}
+
+/* =========================================================
+   상태 / 이력
+   ========================================================= */
+function setStatus(status) {
+  setText('detailStatus', status);
+  setText('inlineStatus', status);
+
+  var panel = document.getElementById('statusPanel');
+  if (panel) panel.className = 'status-panel sp-' + status;
+}
+
+function addHistory(title, color, note) {
+  var list = document.getElementById('historyList');
+  if (!list) return;
+
+  var count = list.querySelectorAll('.tl-item').length + 1;
+
+  var item = document.createElement('div');
+  item.className = 'tl-item';
+
+  item.innerHTML =
+    '<div class="tl-dot ' + escapeHtml(color || 'blue') + '">' + count + '</div>' +
+    '<div class="tl-body">' +
+      '<div class="tl-title">' + escapeHtml(title) + '</div>' +
+      '<div class="tl-time">방금 전 · 김세관</div>' +
+      '<div class="tl-note">' + escapeHtml(note || '처리 이력이 추가되었습니다.') + '</div>' +
+    '</div>';
+
+  list.appendChild(item);
+}
+
+/* =========================================================
+   접수 / 반려 / 목록
+   ========================================================= */
+function goList() {
+  location.href = (window.contextPath || '') + '/officer/basicScreenList.do';
+}
+
+function submitDetailAccept() {
+  if (!confirm('접수 처리하시겠습니까?')) return;
+
+  var form = document.getElementById('detailAcceptForm');
+  if (form) {
+    form.submit();
+  }
+}
+
+function openDetailRejectModal() {
+  var modal = document.getElementById('m-reject');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeDetailRejectModal() {
+  var modal = document.getElementById('m-reject');
+  if (modal) modal.style.display = 'none';
+}
+
+window.closeDetailRejectModal = closeDetailRejectModal;
+
+/* =========================================================
+   파일 미리보기
+   ========================================================= */
+function previewFile(fileName) {
+  if (!fileName) {
+    toast('미리보기할 파일이 없습니다.', 'r');
+    return;
+  }
+
+  toast(fileName + ' 파일 미리보기는 파일 뷰어 연결 후 표시됩니다.', 'b');
+}
+
+window.previewFile = previewFile;
+
+/* =========================================================
+   품목 처리 모달 — DB 저장 연결
+   ========================================================= */
+(function () {
+  var _itemNo = null;
+  var _reqNo = null;
+  var _actionCd = null;
+
+  var TITLE = {
+    ITEM_SUPP_REQ: '보완요청',
+    ITEM_ACPT: '수리',
+    ITEM_REJ: '반려'
+  };
+
+  var SUB = {
+    ITEM_SUPP_REQ: '보완이 필요한 사항을 입력하면 관세사에게 전달됩니다.',
+    ITEM_ACPT: '해당 란을 수리 처리합니다. 수리 후에는 되돌릴 수 없습니다.',
+    ITEM_REJ: '해당 란을 반려 처리합니다.'
+  };
+
+  var NEED_REASON = {
+    ITEM_SUPP_REQ: true,
+    ITEM_ACPT: false,
+    ITEM_REJ: true
+  };
+
+  window.openItemModal = function (itemNo, reqNo, hsCode, itemName, actionCd) {
+    _itemNo = itemNo;
+    _reqNo = reqNo;
+    _actionCd = actionCd;
+
+    setText('mia-title', '란사항 ' + (TITLE[actionCd] || actionCd));
+    setText('mia-sub', SUB[actionCd] || '');
+    setText('mia-hs', hsCode || '-');
+    setText('mia-name', itemName || '-');
+
+    var reason = document.getElementById('mia-reason');
+    if (reason) {
+      reason.value = '';
+      reason.style.borderColor = '';
+    }
+
+    var reasonWrap = document.getElementById('mia-reason-wrap');
+    if (reasonWrap) {
+      reasonWrap.style.display = NEED_REASON[actionCd] ? 'block' : 'none';
+    }
+
+    var confirmBtn = document.getElementById('mia-confirm');
+    if (confirmBtn) {
+      confirmBtn.className = actionCd === 'ITEM_REJ' ? 'btn-danger' : 'btn-approve';
+      confirmBtn.style.cssText = 'min-width:70px; height:34px;';
+      confirmBtn.textContent = TITLE[actionCd] || '확인';
+    }
+
+    var modal = document.getElementById('m-item-action');
+    if (modal) modal.style.display = 'flex';
+  };
+
+  window.closeItemModal = function () {
+    var modal = document.getElementById('m-item-action');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.confirmItemModal = function () {
+    var reasonEl = document.getElementById('mia-reason');
+    var reason = reasonEl ? reasonEl.value.trim() : '';
+
+    if (NEED_REASON[_actionCd] && !reason) {
+      if (reasonEl) {
+        reasonEl.style.borderColor = '#dc2626';
+        reasonEl.focus();
+      }
+      return;
+    }
+
+    var ctx = getContextPath();
+    var csrf = getCsrfToken();
+
+    var params = new URLSearchParams();
+    params.append('reqNo', _reqNo);
+    params.append('itemNo', _itemNo);
+    params.append('statusCd', _actionCd);
+    params.append('reason', reason);
+
+    if (csrf) params.append('_csrf', csrf);
+
+    fetch(ctx + '/officer/updateItemStatus.do', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    })
+      .then(function (res) {
+        if (res.ok) {
+          closeItemModal();
+          location.reload();
+        } else {
+          alert('처리 중 오류가 발생했습니다.');
+        }
+      })
+      .catch(function () {
+        alert('서버 연결 오류가 발생했습니다.');
+      });
+  };
+
+  var itemActionModal = document.getElementById('m-item-action');
+  if (itemActionModal) {
+    itemActionModal.addEventListener('click', function (e) {
+      if (e.target === this) closeItemModal();
+    });
+  }
+})();
+
+/* =========================================================
+   HS API 조회
+   ========================================================= */
+function bindHsApiButtons() {
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.btn-hs-check');
+    if (!btn) return;
+
+    var hsCode = btn.dataset.hsCode || '';
+    if (!hsCode) {
+      alert('HS코드가 없습니다.');
+      return;
+    }
+
+    btn.disabled = true;
+    var originalText = btn.textContent;
+    btn.textContent = '확인중...';
+
+    fetch(getContextPath() + '/officer/api/hs-code-search?hsCode=' + encodeURIComponent(hsCode))
+      .then(function (res) {
+        return res.text();
+      })
+      .then(function (text) {
+        var resultBox = btn.parentElement.querySelector('.hs-mini-result');
+
+        btn.textContent = 'HS 확인';
+
+        if (!text || text.trim() === '0') {
+          if (resultBox) {
+            resultBox.textContent = '공식정보 없음';
+          }
+
+          btn.classList.add('hs-check-fail');
+          return;
+        }
+
+        var parser = new DOMParser();
+        var xmlDoc = parser.parseFromString(text, 'text/xml');
+
+        var korePrnmNode = xmlDoc.querySelector('korePrnm');
+        var korePrnm = korePrnmNode ? korePrnmNode.textContent : '-';
+
+        if (resultBox) {
+          if (korePrnm && korePrnm !== '-') {
+            resultBox.textContent = '확인됨';
+            resultBox.title = korePrnm;
+          } else {
+            resultBox.textContent = '확인필요';
+            resultBox.title = '';
+          }
+        }
+
+        btn.classList.add('hs-check-ok');
+      })
+      .catch(function (err) {
+        console.error('HS 조회 실패:', err);
+        btn.textContent = '조회실패';
+        btn.classList.add('hs-check-fail');
+      })
+      .finally(function () {
+        setTimeout(function () {
+          btn.disabled = false;
+        }, 500);
+      });
+  });
+}
+
+/* =========================================================
+   관세율 조회 — 세율·원산지 판단 박스 갱신
+   ========================================================= */
+function bindTariffRateButtons() {
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.btn-tariff-check');
+    if (!btn) return;
+
+    var hsCode = btn.dataset.hsCode || '';
+    var idx = btn.dataset.index;
+
+    if (!hsCode) {
+      alert('HS코드가 없습니다.');
+      return;
+    }
+
+    btn.disabled = true;
+    var originalText = btn.textContent || '세율 재조회';
+    btn.textContent = '조회중...';
+
+    fetch(getContextPath() + '/officer/tariff/rate?hsCode=' + encodeURIComponent(hsCode))
+      .then(function (res) {
+        if (!res.ok) throw new Error('관세율 조회 실패');
+        return res.json();
+      })
+      .then(function (data) {
+        if (!data || data.length === 0) {
+          toast('관세율 정보가 없습니다.', 'o');
+          return;
+        }
+
+        var main = pickMainTariffRate(data);
+        if (!main) {
+          toast('관세율 정보가 없습니다.', 'o');
+          return;
+        }
+
+        var tariffRate = main.ctrTariffRate || '-';
+        if (tariffRate !== '-' && String(tariffRate).indexOf('%') === -1) {
+          tariffRate += '%';
+        }
+
+        setElementText('tariffRateValue-' + idx, tariffRate);
+        setElementText('rateTypeValue-' + idx, getRateTypeText(main.ctrRateType));
+
+        /* 원산지 국가는 관세율표의 적용국가코드가 아니라 신고서 원산지 값을 유지한다. */
+
+        var hasFta = data.some(function (r) {
+          return String(r.ctrRateType || '').toUpperCase().startsWith('F');
+        });
+        setElementText('ftaYnValue-' + idx, hasFta ? 'FTA 세율 존재' : '미적용');
+
+        var startDate = formatYmd(main.ctrStartDate);
+        var endDate = formatYmd(main.ctrEndDate);
+        setElementText('rateEtcValue-' + idx, startDate + ' ~ ' + endDate);
+        setElementText('rateCandidateValue-' + idx, data.length + '건');
+
+        toast('관세율 조회 완료', 'g');
+      })
+      .catch(function (err) {
+        console.error(err);
+        toast('관세율 조회 실패', 'r');
+      })
+      .finally(function () {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      });
+  });
+}
+
+/* =========================================================
+   관세율 표시 텍스트 변환
+   ========================================================= */
+function getRateTypeText(code) {
+  code = String(code || '').toUpperCase();
+
+  if (code === 'A') return '기본세율';
+  if (code === 'C') return 'WTO 협정세율';
+  if (code.startsWith('F')) return 'FTA 협정세율';
+
+  return code || '-';
+}
+
+function setElementText(id, value) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = value || '-';
+}
+
+function pickMainTariffRate(data) {
+  if (!data || data.length === 0) return null;
+
+  var priority = ['A', 'C'];
+
+  for (var i = 0; i < priority.length; i++) {
+    var found = data.find(function (rate) {
+      return String(rate.ctrRateType || '').toUpperCase() === priority[i];
+    });
+    if (found) return found;
+  }
+
+  return data[0];
+}
+
+function findFtaRate(data) {
+  if (!data || data.length === 0) return null;
+
+  return data.find(function (rate) {
+    var type = String(rate.ctrRateType || '').toUpperCase();
+    return type.indexOf('F') === 0;
+  }) || null;
+}
+
+function updateRateJudgeBox(card, mainRate, ftaRate, totalCount) {
+  if (!mainRate) return;
+
+  var tariffRate = mainRate.ctrTariffRate || '-';
+  if (tariffRate !== '-' && String(tariffRate).indexOf('%') === -1) {
+    tariffRate = tariffRate + '%';
+  }
+
+  var rateType = mainRate.ctrRateType || '-';
+  var period = formatYmd(mainRate.ctrStartDate) + ' ~ ' + formatYmd(mainRate.ctrEndDate);
+
+  setJudgeValue(card, '적용세율', tariffRate);
+  setJudgeValue(card, 'FTA 적용여부', ftaRate ? 'FTA 세율 후보 있음' : '미적용');
+  setJudgeValue(card, '원산지결정기준', period);
+  setJudgeValue(card, '감면구분', rateType);
+
+  var note = '조회 ' + totalCount + '건';
+  if (ftaRate) {
+    var ftaText = ftaRate.ctrTariffRate || '-';
+    if (ftaText !== '-' && String(ftaText).indexOf('%') === -1) {
+      ftaText = ftaText + '%';
+    }
+    note += ' / FTA 후보 ' + (ftaRate.ctrRateType || '-') + ' ' + ftaText;
+  }
+
+  setJudgeValue(card, '요건대상 여부', note);
+}
+
+function setJudgeValue(card, labelText, value) {
+  var rows = card.querySelectorAll('.cic-row');
+
+  rows.forEach(function (row) {
+    var label = row.querySelector('span');
+    var strong = row.querySelector('strong');
+
+    if (!label || !strong) return;
+
+    var text = label.textContent.replace(/\s/g, '');
+
+    if (text === labelText.replace(/\s/g, '')) {
+      strong.textContent = value || '-';
+    }
+  });
+}
+
+function hideTariffResultBox(card) {
+  var titles = card.querySelectorAll('.cic-box-title');
+
+  titles.forEach(function (title) {
+    if (title.textContent && title.textContent.indexOf('관세율 조회결과') > -1) {
+      var box = title.closest('.cic-box');
+      if (box) box.style.display = 'none';
+    }
+  });
+
+  var resultBox = card.querySelector('.tariff-result');
+  if (resultBox) {
+    resultBox.innerHTML = '';
+    resultBox.style.display = 'none';
+  }
+}
+
+function formatYmd(value) {
+  if (!value) return '-';
+
+  var text = String(value).replace(/[^0-9]/g, '');
+  if (text.length !== 8) return value;
+
+  return text.substring(0, 4) + '-' + text.substring(4, 6) + '-' + text.substring(6, 8);
+}
+
+/* =========================================================
+   유틸
+   ========================================================= */
+function getContextPath() {
+  if (window.contextPath) return window.contextPath;
+
+  var ctxMeta = document.getElementById('pageCtx');
+  if (ctxMeta) return ctxMeta.content || '';
+
+  return '';
+}
+
+function getCsrfToken() {
+  var csrfMeta = document.getElementById('pageCsrf');
+  if (csrfMeta) return csrfMeta.content || '';
+
+  var csrfInput = document.querySelector('input[name="_csrf"]');
+  if (csrfInput) return csrfInput.value || '';
+
+  return '';
+}
+
+function safeClick(id, handler) {
+  var el = document.getElementById(id);
+  if (el) el.addEventListener('click', handler);
+}
+
+function safeChange(id, handler) {
+  var el = document.getElementById(id);
+  if (el) el.addEventListener('change', handler);
+}
+
+function setText(id, text) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+function toast(message, type) {
+  var oldToast = document.querySelector('.toast');
+  if (oldToast) oldToast.remove();
+
+  var box = document.createElement('div');
+  box.className = 'toast ' + (type || 'b');
+  box.innerHTML =
+    '<span class="material-symbols-outlined" style="font-size:18px">info</span>' +
+    '<span>' + escapeHtml(message) + '</span>';
+
+  document.body.appendChild(box);
+
+  setTimeout(function () {
+    box.classList.add('on');
+  }, 10);
+
+  setTimeout(function () {
+    box.classList.remove('on');
+    setTimeout(function () {
+      box.remove();
+    }, 300);
+  }, 2500);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function escapeJs(value) {
+  return String(value)
+    .replaceAll('\\', '\\\\')
+    .replaceAll("'", "\\'")
+    .replaceAll('"', '\\"');
+}
+
+function autoLoadTariffRates() {
+  document.querySelectorAll('.btn-tariff-check').forEach(function (btn) {
+    btn.click();
+  });
+}

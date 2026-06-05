@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.owner.arrival.mapper.IArrivalMapper">
+
+    <select id="selectArrivalNoticeList" parameterType="string" resultType="kr.or.tacs.dto.owner.OwnerArrivalNoticeDTO">
+        SELECT
+            ian.ian_no
+             , ian.ian_owr_id
+             , ian.ian_send_stts_cd
+             , ian.ian_send_dt
+             , ian.ian_regist_dt
+             , ian.ian_curr_loc
+             , ian.ian_arrv_status_cd
+             , ian.ian_trc_no
+             , ian.ian_arrv_dt
+
+             , CASE ian.ian_send_stts_cd
+                   WHEN 'TRC_NTC_NSENT' THEN '발송대기'
+                   WHEN 'TRC_NTC_SENT'  THEN '수신완료'
+                   ELSE NVL(ian.ian_send_stts_cd, '-')
+            END AS send_stts_nm
+
+             , CASE ian.ian_arrv_status_cd
+                   WHEN 'TRC_ARR_ARRIVED' THEN '도착'
+                   ELSE NVL(ian.ian_arrv_status_cd, '-')
+            END AS arrv_status_nm
+
+        FROM imp_arrv_ntc ian
+        WHERE ian.ian_owr_id = #{owrId}
+        ORDER BY NVL(ian.ian_send_dt, ian.ian_regist_dt) DESC
+    </select>
+
+    <select id="selectArrivalNoticeDetail" parameterType="map" resultType="kr.or.tacs.dto.owner.OwnerArrivalNoticeDTO">
+        SELECT
+            ian.ian_no
+             , ian.ian_owr_id
+             , ian.ian_send_stts_cd
+             , ian.ian_send_dt
+             , ian.ian_regist_dt
+             , ian.ian_curr_loc
+             , ian.ian_arrv_status_cd
+             , ian.ian_trc_no
+             , ian.ian_arrv_dt
+
+             , CASE ian.ian_send_stts_cd
+                   WHEN 'TRC_NTC_NSENT' THEN '발송대기'
+                   WHEN 'TRC_NTC_SENT'  THEN '수신완료'
+                   ELSE NVL(ian.ian_send_stts_cd, '-')
+            END AS send_stts_nm
+
+             , CASE ian.ian_arrv_status_cd
+                   WHEN 'TRC_ARR_ARRIVED' THEN '도착'
+                   ELSE NVL(ian.ian_arrv_status_cd, '-')
+            END AS arrv_status_nm
+
+        FROM imp_arrv_ntc ian
+        WHERE ian.ian_no = #{ianNo}
+          AND ian.ian_owr_id = #{owrId}
+    </select>
+
+    <select id="selectArrivalNoticeDetailByTrcNo"
+            resultType="kr.or.tacs.dto.owner.OwnerArrivalNoticeDTO">
+        SELECT
+            ian_no             AS ianNo
+             , ian_owr_id         AS ianOwrId
+             , ian_send_stts_cd   AS ianSendSttsCd
+             , ian_send_dt        AS ianSendDt
+             , ian_regist_dt      AS ianRegistDt
+             , ian_curr_loc       AS ianCurrLoc
+             , ian_arrv_status_cd AS ianArrvStatusCd
+             , ian_trc_no         AS ianTrcNo
+             , ian_arrv_dt        AS ianArrvDt
+             , CASE ian_send_stts_cd
+                   WHEN 'TRC_NTC_NSENT' THEN '발송대기'
+                   WHEN 'TRC_NTC_SENT'  THEN '수신완료'
+                   ELSE NVL(ian_send_stts_cd, '-')
+            END AS sendSttsNm
+             , CASE ian_arrv_status_cd
+                   WHEN 'TRC_ARR_ARRIVED' THEN '도착'
+                   ELSE NVL(ian_arrv_status_cd, '-')
+            END AS arrvStatusNm
+        FROM imp_arrv_ntc
+        WHERE ian_trc_no = #{trcNo}
+          AND ian_owr_id = #{owrId}
+    </select>
+
+</mapper>

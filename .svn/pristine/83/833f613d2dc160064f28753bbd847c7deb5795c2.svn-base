@@ -1,0 +1,209 @@
+// reportReceiptList.js - 신고접수목록 전용
+(function () {
+  function $(selector) {
+    return document.querySelector(selector);
+  }
+
+  function $all(selector) {
+    return document.querySelectorAll(selector);
+  }
+
+  function getContextPath() {
+    return window.contextPath || '';
+  }
+
+  function formatDate(date) {
+    var y = date.getFullYear();
+    var m = String(date.getMonth() + 1).padStart(2, '0');
+    var d = String(date.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+
+  function setTodayRange(days) {
+    var end = new Date();
+    var start = new Date();
+    start.setDate(end.getDate() - days);
+
+    var startInput = $('input[name="startDate"]');
+    var endInput = $('input[name="endDate"]');
+
+    if (startInput) startInput.value = formatDate(start);
+    if (endInput) endInput.value = formatDate(end);
+  }
+
+  function toggleAllRows() {
+    var checkAll = $('#checkAll');
+    var rows = $all('.row-check:not(:disabled)');
+
+    rows.forEach(function (cb) {
+      cb.checked = checkAll.checked;
+    });
+  }
+
+  function resetSearch() {
+    location.href = getContextPath() + '/officer/reportReceiptList.do';
+  }
+
+  function moveDetail(reqNo) {
+    if (!reqNo) return;
+    location.href = getContextPath() + '/officer/basicScreenDetail.do?reqNo=' + encodeURIComponent(reqNo);
+  }
+
+  function receiveBatch() {
+    var checkedList = document.querySelectorAll('.row-check:checked');
+
+    if (checkedList.length === 0) {
+      alert('접수 처리할 신고건을 선택하세요.');
+      return;
+    }
+
+    if (!confirm(checkedList.length + '건을 일괄 접수 처리하시겠습니까?')) {
+      return;
+    }
+
+    var form = document.getElementById('batchAcceptForm');
+    if (!form) return;
+
+    // 중복 append 방지
+    form.querySelectorAll('input[name="reqNoList"], input[name="declareTypeList"]').forEach(function (input) {
+      input.remove();
+    });
+
+    checkedList.forEach(function (check) {
+      var reqInput = document.createElement('input');
+      reqInput.type = 'hidden';
+      reqInput.name = 'reqNoList';
+      reqInput.value = check.value;
+      form.appendChild(reqInput);
+
+      var typeInput = document.createElement('input');
+      typeInput.type = 'hidden';
+      typeInput.name = 'declareTypeList';
+      typeInput.value = check.dataset.declareType || '';
+      form.appendChild(typeInput);
+    });
+
+    form.submit();
+  }
+
+  function openRejectModal(reqNo, declareType) {
+    var modal = $('#rejectModal');
+    var reqInput = $('#rejectReqNo');
+    var typeInput = $('#rejectDeclareType');
+    var reason = $('#rejectReason');
+
+    if (reqInput) reqInput.value = reqNo || '';
+    if (typeInput) typeInput.value = declareType || '';
+    if (reason) reason.value = '';
+
+    if (modal) {
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function closeRejectModal() {
+    var modal = $('#rejectModal');
+
+    if (modal) {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function openRejectReasonModal(reqNo, reason, date, type) {
+    var modal = $('#rejectReasonModal');
+    var reqInput = $('#rejectReasonReqNo');
+    var dateInput = $('#rejectReasonDate');
+    var typeInput = $('#rejectReasonType');
+    var reasonView = $('#rejectReasonView');
+
+    if (reqInput) reqInput.value = reqNo || '';
+    if (dateInput) dateInput.value = date || '-';
+    if (typeInput) typeInput.value = type || '-';
+    if (reasonView) reasonView.value = reason || '등록된 반려사유가 없습니다.';
+
+    if (modal) {
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function closeRejectReasonModal() {
+    var modal = $('#rejectReasonModal');
+
+    if (modal) {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function bindEvents() {
+    var checkAll = $('#checkAll');
+    if (checkAll) checkAll.addEventListener('change', toggleAllRows);
+
+    var resetBtn = $('#btnReset');
+    if (resetBtn) resetBtn.addEventListener('click', resetSearch);
+
+    var batchBtn = $('#btnBatchReceive');
+    if (batchBtn) batchBtn.addEventListener('click', receiveBatch);
+
+    $all('.btn-quick').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var range = Number(btn.dataset.range || 7);
+        setTodayRange(range);
+      });
+    });
+
+    $all('.btn-detail').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        moveDetail(btn.dataset.reqNo);
+      });
+    });
+
+    $all('.btn-reject').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+
+        openRejectModal(
+          btn.dataset.reqNo,
+          btn.dataset.declareType
+        );
+      });
+    });
+
+    $all('.btn-reject-reason').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+
+        openRejectReasonModal(
+          btn.dataset.reqNo,
+          btn.dataset.reason,
+          btn.dataset.date,
+          btn.dataset.type
+        );
+      });
+    });
+
+    var closeBtn = $('#btnRejectClose');
+    var cancelBtn = $('#btnRejectCancel');
+    var reasonCloseBtn = $('#btnRejectReasonClose');
+    var reasonCancelBtn = $('#btnRejectReasonCancel');
+
+    if (closeBtn) closeBtn.addEventListener('click', closeRejectModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeRejectModal);
+    if (reasonCloseBtn) reasonCloseBtn.addEventListener('click', closeRejectReasonModal);
+    if (reasonCancelBtn) reasonCancelBtn.addEventListener('click', closeRejectReasonModal);
+
+    // JSP inline onclick에서 사용할 수 있게 공개
+    window.closeRejectModal = closeRejectModal;
+    window.openRejectModal = openRejectModal;
+    window.closeRejectReasonModal = closeRejectReasonModal;
+  }
+
+  document.addEventListener('DOMContentLoaded', bindEvents);
+})();

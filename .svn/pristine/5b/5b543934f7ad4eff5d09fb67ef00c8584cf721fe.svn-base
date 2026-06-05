@@ -1,0 +1,29 @@
+package kr.or.tacs.owner.payment.mapper;
+
+import kr.or.tacs.dto.owner.OwnerPayRecordDTO;
+import kr.or.tacs.dto.owner.OwnerPaymentTargetDTO;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.Map;
+
+@Mapper
+public interface IOwnerPaymentMapper {
+    OwnerPaymentTargetDTO selectFreightPaymentTarget(@Param("claimNo") String claimNo,@Param("owrId") String owrId);
+
+    OwnerPaymentTargetDTO selectBrokerPaymentTarget(String claimNo, String owrId);
+
+    void insertPayReady(OwnerPayRecordDTO payRecord);
+
+    OwnerPayRecordDTO selectPayRecordByPaymentId(String orderId);
+
+    void updatePayDone(OwnerPayRecordDTO updateRecord);
+
+    void updateFreightPaid(OwnerPayRecordDTO payRecord);
+
+    void updateBrokerPaid(OwnerPayRecordDTO payRecord);
+
+    void updatePayFail(String oprNo);
+
+    void insertPayFailed(Map<String, Object> failMap);
+}

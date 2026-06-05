@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.officer.fulfillmentandexport.mapper.ILoadedCargoListMapper">
+
+    <!-- 수출 적재화물목록: EXP_DCLR 기준으로 조회해야 목록 미제출 건도 확인 가능 -->
+    <select id="selectLoadedCargoList" resultType="kr.or.tacs.dto.officer.LoadedCargoListDTO">
+        SELECT
+            ROWNUM AS no,
+            A.listType,
+            A.listNo,
+            A.blNo,
+            A.mblNo,
+            A.hblNo,
+            A.reqNo,
+            A.goodsGroupNo,
+            A.ownerName,
+            A.itemName,
+            A.vesselName,
+            A.submitStatusCd,
+            A.submitStatus,
+            A.submitDate,
+            A.declareStatusCd,
+            A.declareStatus,
+            A.remark
+        FROM (
+            SELECT
+                'loading' AS listType,
+                NVL(TO_CHAR(ECM.ECM_NO), '-') AS listNo,
+                NVL(ECM.ECM_BL_NO, NVL(BI.BI_MBL_NO, '-')) AS blNo,
+                NVL(BI.BI_MBL_NO, ECM.ECM_BL_NO) AS mblNo,
+                BI.BI_HBL_NO AS hblNo,
+                ED.ED_ER_NO AS reqNo,
+                ED.ED_GG_NO AS goodsGroupNo,
+                NVL(ER.ER_ONER_NM, ECM.ECM_OWR_ID) AS ownerName,
+                NVL(EI.ITEM_NAME, '-') AS itemName,
+                '-' AS vesselName,
+                CASE WHEN ECM.ECM_NO IS NOT NULL THEN 'SUBMITTED' ELSE 'MISSING' END AS submitStatusCd,
+                CASE WHEN ECM.ECM_NO IS NOT NULL THEN '제출완료' ELSE '미제출' END AS submitStatus,
+                TO_CHAR(ECM.ECM_SBMSN_DT, 'YYYY-MM-DD') AS submitDate,
+                ED.ED_STATUS_CD AS declareStatusCd,
+                NVL(ED.ED_STATUS_CD, '-') AS declareStatus,
+                NVL(ECM.ECM_RMRK_CN, '-') AS remark
+            FROM EXP_DCLR ED
+            LEFT JOIN EXP_RQST ER
+                   ON ER.ER_NO = ED.ED_ER_NO
+            LEFT JOIN EXP_CARGO_MANIFEST ECM
+                   ON ECM.ECM_GG_NO = ED.ED_GG_NO
+            LEFT JOIN (
+                SELECT
+                    EDI_ER_NO,
+                    MIN(EDI_EXPT_GDS_NM) AS ITEM_NAME,
+                    SUM(NVL(EDI_DCLR_QTY, 0)) AS TOTAL_QTY,
+                    SUM(NVL(EDI_NET_WT, 0)) AS TOTAL_WT
+                FROM EXP_DCLR_ITEM
+                GROUP BY EDI_ER_NO
+            ) EI
+                   ON EI.EDI_ER_NO = ED.ED_ER_NO
+            LEFT JOIN (
+                SELECT
+                    BI_GG_NO,
+                    MIN(BI_MBL_NO) AS BI_MBL_NO,
+                    MIN(BI_HBL_NO) AS BI_HBL_NO
+                FROM BL_ISSU
+                GROUP BY BI_GG_NO
+            ) BI
+                   ON BI.BI_GG_NO = ED.ED_GG_NO
+            WHERE 1 = 1
+            <if test="reqNo != null and reqNo != ''">
+                AND ED.ED_ER_NO LIKE '%' || #{reqNo} || '%'
+            </if>
+            <if test="submitStatusCd != null and submitStatusCd != '' and submitStatusCd != 'ALL'">
+                <choose>
+                    <when test="submitStatusCd == 'SUBMITTED'">
+                        AND ECM.ECM_NO IS NOT NULL
+                    </when>
+                    <when test="submitStatusCd == 'MISSING'">
+                        AND ECM.ECM_NO IS NULL
+                    </when>
+                </choose>
+            </if>
+            <if test="startDate != null and startDate != ''">
+                AND ECM.ECM_SBMSN_DT <![CDATA[>=]]> TO_DATE(#{startDate}, 'YYYY-MM-DD')
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND ECM.ECM_SBMSN_DT <![CDATA[<]]> TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                       ECM.ECM_BL_NO LIKE '%' || #{keyword} || '%'
+                    OR BI.BI_MBL_NO LIKE '%' || #{keyword} || '%'
+                    OR ER.ER_ONER_NM LIKE '%' || #{keyword} || '%'
+                    OR EI.ITEM_NAME LIKE '%' || #{keyword} || '%'
+                )
+            </if>
+            ORDER BY ECM.ECM_SBMSN_DT DESC NULLS LAST, ED.ED_ER_NO DESC
+        ) A
+    </select>
+
+    <!-- 수입 혼재화물 적하목록: IMP_DCLR 기준으로 조회해야 적하목록 미제출 건도 확인 가능 -->
+    <select id="selectMixedCargoList" resultType="kr.or.tacs.dto.officer.LoadedCargoListDTO">
+        SELECT
+            ROWNUM AS no,
+            A.listType,
+            A.listNo,
+            A.blNo,
+            A.mblNo,
+            A.hblNo,
+            A.reqNo,
+            A.goodsGroupNo,
+            A.ownerName,
+            A.itemName,
+            A.vesselName,
+            A.submitStatusCd,
+            A.submitStatus,
+            A.submitDate,
+            A.declareStatusCd,
+            A.declareStatus,
+            A.remark
+        FROM (
+            SELECT
+                'house' AS listType,
+                NVL(TO_CHAR(ICM.ICM_NO), '-') AS listNo,
+                NVL(ICM.ICM_MBL_NO, NVL(BI.BI_MBL_NO, '-')) AS blNo,
+                NVL(ICM.ICM_MBL_NO, BI.BI_MBL_NO) AS mblNo,
+                NVL(ICM.ICM_HBL_NO, BI.BI_HBL_NO) AS hblNo,
+                ID.ID_IR_NO AS reqNo,
+                ID.ID_GG_NO AS goodsGroupNo,
+                NVL(ID.ID_IMPR_NM, ICM.ICM_OWR_ID) AS ownerName,
+                NVL(II.ITEM_NAME, '-') AS itemName,
+                '-' AS vesselName,
+                CASE WHEN ICM.ICM_NO IS NOT NULL THEN 'SUBMITTED' ELSE 'MISSING' END AS submitStatusCd,
+                CASE WHEN ICM.ICM_NO IS NOT NULL THEN '제출완료' ELSE '미제출' END AS submitStatus,
+                TO_CHAR(ICM.ICM_SBMSN_DT, 'YYYY-MM-DD') AS submitDate,
+                ID.ID_STATUS_CD AS declareStatusCd,
+                NVL(ID.ID_STATUS_CD, '-') AS declareStatus,
+                NVL(ICM.ICM_RMRK_CN, '-') AS remark
+            FROM IMP_DCLR ID
+            LEFT JOIN IMP_CARGO_MANIFEST ICM
+                   ON ICM.ICM_GG_NO = ID.ID_GG_NO
+            LEFT JOIN (
+                SELECT
+                    IDI_IR_NO,
+                    MIN(IDI_DCLR_GDSNM) AS ITEM_NAME,
+                    SUM(NVL(IDI_QTY, 0)) AS TOTAL_QTY,
+                    SUM(NVL(IDI_NET_WT, 0)) AS TOTAL_WT
+                FROM IMP_DCLR_ITEM
+                GROUP BY IDI_IR_NO
+            ) II
+                   ON II.IDI_IR_NO = ID.ID_IR_NO
+            LEFT JOIN (
+                SELECT
+                    BI_GG_NO,
+                    MIN(BI_MBL_NO) AS BI_MBL_NO,
+                    MIN(BI_HBL_NO) AS BI_HBL_NO
+                FROM BL_ISSU
+                GROUP BY BI_GG_NO
+            ) BI
+                   ON BI.BI_GG_NO = ID.ID_GG_NO
+            WHERE 1 = 1
+            <if test="reqNo != null and reqNo != ''">
+                AND ID.ID_IR_NO LIKE '%' || #{reqNo} || '%'
+            </if>
+            <if test="submitStatusCd != null and submitStatusCd != '' and submitStatusCd != 'ALL'">
+                <choose>
+                    <when test="submitStatusCd == 'SUBMITTED'">
+                        AND ICM.ICM_NO IS NOT NULL
+                    </when>
+                    <when test="submitStatusCd == 'MISSING'">
+                        AND ICM.ICM_NO IS NULL
+                    </when>
+                </choose>
+            </if>
+            <if test="startDate != null and startDate != ''">
+                AND ICM.ICM_SBMSN_DT <![CDATA[>=]]> TO_DATE(#{startDate}, 'YYYY-MM-DD')
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND ICM.ICM_SBMSN_DT <![CDATA[<]]> TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                       ICM.ICM_MBL_NO LIKE '%' || #{keyword} || '%'
+                    OR ICM.ICM_HBL_NO LIKE '%' || #{keyword} || '%'
+                    OR BI.BI_MBL_NO LIKE '%' || #{keyword} || '%'
+                    OR BI.BI_HBL_NO LIKE '%' || #{keyword} || '%'
+                    OR ID.ID_IMPR_NM LIKE '%' || #{keyword} || '%'
+                    OR II.ITEM_NAME LIKE '%' || #{keyword} || '%'
+                )
+            </if>
+            ORDER BY ICM.ICM_SBMSN_DT DESC NULLS LAST, ID.ID_IR_NO DESC
+        ) A
+    </select>
+
+</mapper>

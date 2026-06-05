@@ -1,0 +1,32 @@
+package kr.or.tacs.officer.dash.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import kr.or.tacs.dto.officer.DashboardDTO;
+import kr.or.tacs.officer.dash.mapper.IDashMapper;
+
+
+@Service
+public class DashboardServiceImpl implements IDashboardService {
+
+   @Autowired
+   private IDashMapper Mapper;
+
+   @Override
+   public DashboardDTO getStatCounts(String officerId) {
+	   DashboardDTO stat = new DashboardDTO();
+       stat.setReceiptWaitCount(Mapper.selectReceiptWaitCount());
+       stat.setReviewCount(Mapper.selectReviewCount(officerId));
+       stat.setSupplementCount(Mapper.selectSupplementCount(officerId));
+       stat.setTaxWaitCount(Mapper.selectTaxWaitCount(officerId));
+       return stat;
+   }
+
+   @Override
+   public List<DashboardDTO> getNewReceiptList() {
+       return Mapper.selectNewReceiptList();
+   }
+}

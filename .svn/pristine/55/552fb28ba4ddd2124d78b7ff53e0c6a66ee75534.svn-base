@@ -1,0 +1,8 @@
+@charset "UTF-8";
+
+/* ── Footer ── */
+.footer { padding: 12px 28px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; }
+.footer a { color: #94a3b8; text-decoration: none; margin-left: 12px; }
+.footer a:hover { color: #565e74; }
+.footer-right { display: flex; align-items: center; gap: 6px; }
+.footer-dot { width: 5px; height: 5px; background: #22c55e; }

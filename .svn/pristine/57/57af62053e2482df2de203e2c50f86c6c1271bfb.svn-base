@@ -1,0 +1,460 @@
+@charset "UTF-8";
+
+/* 창고 화물조회 전용 CSS - 헤더/사이드바 제외 */
+.warehouseCargoTracking-page {
+  padding: 24px 28px !important;
+}
+
+.warehouseCargoTracking-page * {
+  box-sizing: border-box;
+}
+
+.warehouseCargoTracking-page .page-content,
+.warehouseCargoTracking-page .inline-screen-body {
+  padding: 0 !important;
+}
+
+.warehouseCargoTracking-page .section-head {
+  margin-bottom: 10px !important;
+}
+
+.warehouseCargoTracking-page .page-heading {
+  margin: 0 0 10px !important;
+  color: #0f172a !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+}
+
+/* breadcrumb */
+.warehouseCargoTracking-page .breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.warehouseCargoTracking-page .breadcrumb-text {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.warehouseCargoTracking-page .breadcrumb-sep {
+  color: #94a3b8;
+}
+
+.warehouseCargoTracking-page .breadcrumb-tag {
+  padding: 2px 8px;
+  background: #1e3054;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+/* screen header */
+.warehouseCargoTracking-page .inline-screen-host {
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.warehouseCargoTracking-page .inline-screen-header {
+  margin-bottom: 20px !important;
+  padding: 14px 20px !important;
+  background: #1e3054 !important;
+  border: 0 !important;
+}
+
+.warehouseCargoTracking-page .screen-title {
+  margin: 0 !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+}
+
+.warehouseCargoTracking-page .screen-desc {
+  display: none !important;
+}
+
+/* search */
+.warehouseCargoTracking-page .receipt-search-panel {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 0 18px !important;
+  padding: 0 !important;
+  background: #fff !important;
+  border: 1px solid #dde4ef !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-title,
+.warehouseCargoTracking-page .section-title {
+  position: relative !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 8px 16px 8px 20px !important;
+  border-bottom: 1px solid #dde4ef !important;
+  background: #fff !important;
+  color: #111827 !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  line-height: 1.4 !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-title::before,
+.warehouseCargoTracking-page .section-title::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 4px !important;
+  height: 100% !important;
+  background: #536178 !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  min-height: 45px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 5px 16px !important;
+  gap: 14px !important;
+  border-bottom: 0 !important;
+  background: #fff !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-label {
+  width: 90px !important;
+  min-width: 90px !important;
+  flex: 0 0 90px !important;
+  margin: 0 !important;
+  color: #374151 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-field,
+.warehouseCargoTracking-page .receipt-search-bottom,
+.warehouseCargoTracking-page .receipt-search-date-wrap,
+.warehouseCargoTracking-page .receipt-search-radio-group {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-bottom {
+  flex: 1 1 auto !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-input,
+.warehouseCargoTracking-page .receipt-search-select,
+.warehouseCargoTracking-page .receipt-search-date {
+  height: 33px !important;
+  padding: 0 10px !important;
+  border: 1px solid #d1d9e6 !important;
+  background: #fff !important;
+  color: #0f172a !important;
+  font-size: 12px !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-input:focus,
+.warehouseCargoTracking-page .receipt-search-select:focus,
+.warehouseCargoTracking-page .receipt-search-date:focus {
+  border-color: #3b5bdb !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-input {
+  width: 210px !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-field-wide .receipt-search-input,
+.warehouseCargoTracking-page .receipt-search-bottom .receipt-search-input {
+  width: 260px !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-select {
+  width: 120px !important;
+  padding: 0 8px !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-date {
+  width: 130px !important;
+}
+
+.warehouseCargoTracking-page .receipt-search-date-sep {
+  color: #64748b !important;
+  font-size: 12px !important;
+}
+
+.warehouseCargoTracking-page .receipt-check-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  margin-right: 14px !important;
+  color: #374151 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
+
+/* buttons */
+.warehouseCargoTracking-page .btn-primary,
+.warehouseCargoTracking-page .btn-secondary,
+.warehouseCargoTracking-page .receipt-action-btn,
+.warehouseCargoTracking-page .receipt-inline-btn,
+.warehouseCargoTracking-page .btn-sm {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  border-radius: 0 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+
+.warehouseCargoTracking-page .btn-primary,
+.warehouseCargoTracking-page .receipt-action-btn.btn-primary {
+  background: #1e3054 !important;
+  border: 1px solid #1e3054 !important;
+  color: #fff !important;
+}
+
+.warehouseCargoTracking-page .btn-secondary,
+.warehouseCargoTracking-page .receipt-inline-btn,
+.warehouseCargoTracking-page .btn-secondary.btn-sm {
+  background: #fff !important;
+  border: 1px solid #cbd8e8 !important;
+  color: #1e3054 !important;
+}
+
+/* result */
+.warehouseCargoTracking-page .result-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin: 0 0 10px !important;
+}
+
+.warehouseCargoTracking-page .result-title {
+  color: #1e293b !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+.warehouseCargoTracking-page .result-count {
+  margin-left: 6px !important;
+  color: #2563eb !important;
+  font-weight: 700 !important;
+}
+
+/* common table */
+.warehouseCargoTracking-page .table-wrap {
+  width: 100% !important;
+  margin-bottom: 16px !important;
+  overflow-x: auto !important;
+  background: #fff !important;
+  border: 1px solid #d9eafc !important;
+}
+
+.warehouseCargoTracking-page .data-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  background: #fff !important;
+}
+
+.warehouseCargoTracking-page .table-wrap > .data-table {
+  table-layout: fixed !important;
+}
+
+.warehouseCargoTracking-page .data-table th {
+  padding: 10px 14px !important;
+  background: #ecf4ff !important;
+  border-bottom: 1px solid #d9eafc !important;
+  color: #4d6172 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+.warehouseCargoTracking-page .data-table td {
+  padding: 11px 14px !important;
+  border-bottom: 1px solid #d9eafc !important;
+  color: #203444 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+.warehouseCargoTracking-page .warehouse-master-row {
+  cursor: pointer !important;
+}
+
+.warehouseCargoTracking-page .td-bold,
+.warehouseCargoTracking-page .font-bold,
+.warehouseCargoTracking-page .text-blue-600 {
+  color: #0f2537 !important;
+  font-weight: 700 !important;
+}
+
+.warehouseCargoTracking-page .badge-done,
+.warehouseCargoTracking-page .badge-progress,
+.warehouseCargoTracking-page .badge-wait,
+.warehouseCargoTracking-page .badge-fail,
+.warehouseCargoTracking-page .badge-pass {
+  padding: 0 !important;
+  background: none !important;
+  border: 0 !important;
+  color: #203444 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.warehouseCargoTracking-page .empty-row,
+.warehouseCargoTracking-page .empty-cell {
+  height: 42px !important;
+  color: #64748b !important;
+  text-align: center !important;
+}
+
+/* detail */
+.warehouseCargoTracking-page .warehouse-detail-row > td {
+  padding: 0 !important;
+  white-space: normal !important;
+  background: #fff !important;
+}
+
+.warehouseCargoTracking-page .detail-content {
+  width: 100% !important;
+  padding: 18px !important;
+  background: #fff !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+.warehouseCargoTracking-page .grid-3 {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 16px !important;
+}
+
+.warehouseCargoTracking-page .grid-sm {
+  margin-bottom: 16px !important;
+}
+
+.warehouseCargoTracking-page .info-card {
+  margin: 0 !important;
+  padding: 14px 16px !important;
+  overflow: hidden !important;
+  background: #fff !important;
+  border: 1px solid #d9eafc !important;
+  border-left: 0 !important;
+}
+
+.warehouseCargoTracking-page .warehouse-detail-row .section-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 0 12px !important;
+  padding: 0 !important;
+  border-bottom: 0 !important;
+  color: #0f172a !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.warehouseCargoTracking-page .warehouse-detail-row .section-title::before {
+  content: '' !important;
+  position: static !important;
+  display: inline-block !important;
+  width: 4px !important;
+  height: 16px !important;
+  background: #536178 !important;
+  flex-shrink: 0 !important;
+}
+
+.warehouseCargoTracking-page .warehouse-detail-row .data-table {
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+.warehouseCargoTracking-page .warehouse-detail-row .data-table td {
+  padding: 10px 12px !important;
+  white-space: normal !important;
+  text-align: left !important;
+  vertical-align: middle !important;
+  background: #fff !important;
+}
+
+.warehouseCargoTracking-page .warehouse-detail-row .data-table td.td-bold {
+  width: 120px !important;
+  background: #fff !important;
+  color: #0f2537 !important;
+  font-weight: 800 !important;
+}
+
+/* item detail table */
+.warehouseCargoTracking-page .item-detail-table {
+  width: 100% !important;
+  margin-top: 8px !important;
+  border-collapse: collapse !important;
+  table-layout: fixed !important;
+  background: #fff !important;
+  font-size: 13px !important;
+}
+
+.warehouseCargoTracking-page .item-detail-table th,
+.warehouseCargoTracking-page .item-detail-table td {
+  padding: 10px 12px !important;
+  border: 1px solid #d7e5f5 !important;
+  text-align: center !important;
+}
+
+.warehouseCargoTracking-page .item-detail-table th {
+  background: #ecf4ff !important;
+  color: #4d6172 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+}
+
+.warehouseCargoTracking-page .item-detail-table td {
+  background: #fff !important;
+  color: #203444 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  white-space: normal !important;
+}
+
+.warehouseCargoTracking-page .item-detail-table td:first-child {
+  text-align: left !important;
+}
+
+@media (max-width: 1200px) {
+  .warehouseCargoTracking-page .grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .warehouseCargoTracking-page {
+    padding: 16px !important;
+  }
+
+  .warehouseCargoTracking-page .receipt-search-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+}

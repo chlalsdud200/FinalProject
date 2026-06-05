@@ -1,0 +1,48 @@
+package kr.or.tacs.broker.dash.controller;
+
+import java.security.Principal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import kr.or.tacs.broker.dash.service.IBrokerDashboardService;
+
+/**
+ * 대시보드 페이지 컨트롤러
+ *  - URL : /broker/dashboard.do
+ *  - View: broker/pages/dash.jsp
+ */
+@Controller
+@RequestMapping("/broker")
+public class BrokerDashboardController {
+
+    private final IBrokerDashboardService dashboardService;
+
+    public BrokerDashboardController(IBrokerDashboardService dashboardService) {
+        this.dashboardService = dashboardService;
+    }
+
+    @GetMapping("/dashboard.do")
+    public String dash(Model model, Principal principal) {
+        String brokerId = principal != null ? principal.getName() : null;
+
+        Map<String, Object> dash = dashboardService.getDashboardData(brokerId);
+
+        model.addAttribute("activeMenu", "dash");
+        model.addAttribute("todayText",
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " (KST)"); // 이런것도 유틸로 빼면 좋음
+
+        model.addAttribute("summary", dash.get("summary"));
+        model.addAttribute("newRequestList", dash.get("newRequestList"));
+        model.addAttribute("supplementList", dash.get("supplementList"));
+        model.addAttribute("topOwnerList", dash.get("topOwnerList"));
+        model.addAttribute("monthSummary", dash.get("monthSummary"));
+        model.addAttribute("deadlineList", dash.get("deadlineList"));
+
+        return "broker/pages/dash";
+    }
+}

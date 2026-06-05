@@ -1,0 +1,421 @@
+@charset "UTF-8";
+
+/* ─────────────────────────────
+   Owner Payment - Duty List
+   path: /resources/css/owner/common/duty.css
+───────────────────────────── */
+
+#duty-list-view .duty-list-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 10px 12px;
+    border-left: 3px solid #565e74;
+    background: #fff;
+}
+
+#duty-list-view .duty-search-wrap {
+    flex: 1 1 360px;
+    min-width: 320px;
+}
+
+#duty-list-view .search-wrap .material-symbols-outlined {
+    left: 12px;
+    font-size: 17px;
+    color: #697d8f;
+}
+
+#duty-list-view .duty-search-input {
+    width: 100%;
+    height: 36px;
+    padding: 0 12px 0 38px;
+    border: 1px solid #e2e8f0;
+    border-bottom: 2px solid #94a3b8;
+    background: #f8fafc;
+    font-size: 12px;
+    color: #203444;
+}
+
+#duty-list-view .duty-search-input:focus {
+    border-color: #565e74;
+    background: #fff;
+}
+
+#duty-list-view .duty-filter-select,
+#duty-list-view .duty-date-input {
+    height: 36px;
+    border: 1px solid #e2e8f0;
+    border-bottom: 2px solid #94a3b8;
+    background: #fff;
+    color: #203444;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+}
+
+#duty-list-view .duty-filter-select {
+    width: 128px;
+    min-width: 128px;
+    padding: 0 10px;
+}
+
+#duty-list-view .duty-date-input {
+    width: 134px;
+    padding: 0 10px;
+}
+
+#duty-list-view .duty-filter-select:focus,
+#duty-list-view .duty-date-input:focus {
+    border-color: #565e74;
+    background: #f8fafc;
+}
+
+#duty-list-view .duty-date-sep {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+#duty-list-view .duty-list-filter .btn {
+    height: 36px;
+    padding: 0 14px;
+}
+
+#duty-list-view .duty-list-title {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #334155;
+}
+
+#duty-list-view .card-section {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    overflow-x: auto;
+}
+
+#duty-list-view table.data-table {
+    min-width: 1100px;
+}
+
+#duty-list-view table.data-table thead th {
+    padding: 11px 14px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 800;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+#duty-list-view table.data-table tbody td {
+    padding: 13px 14px;
+    color: #334155;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+#duty-list-view table.data-table tbody tr:hover {
+    background: #f8fbff;
+}
+
+#duty-list-view .td-id {
+    font-weight: 800;
+    color: #0f172a;
+}
+
+#duty-list-view .td-muted {
+    display: inline-block;
+    margin-top: 3px;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+#duty-list-view .duty-type-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    margin-right: 6px;
+    display: inline-block;
+}
+
+#duty-list-view .duty-type-badge.import {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+#duty-list-view .duty-amount {
+    font-weight: 800;
+    color: #dc2626;
+}
+
+#duty-list-view .duty-manage-col {
+    width: 130px;
+    text-align: center;
+}
+
+#duty-list-view table.data-table th:nth-child(9),
+#duty-list-view table.data-table td:nth-child(9),
+#duty-list-view table.data-table th:nth-child(10),
+#duty-list-view table.data-table td:nth-child(10) {
+    text-align: center;
+}
+
+#duty-list-view table.data-table td:nth-child(9),
+#duty-list-view table.data-table td:nth-child(10) {
+    vertical-align: middle;
+}
+
+#duty-list-view .doc-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    height: 22px;
+    padding: 0 8px;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+#duty-list-view .btn-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+#duty-list-view .mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 46px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+    line-height: 1;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
+#duty-list-view a.mini,
+#duty-list-view a.mini:link,
+#duty-list-view a.mini:visited,
+#duty-list-view a.mini:hover,
+#duty-list-view a.mini:active {
+    text-decoration: none;
+}
+
+#duty-list-view .duty-empty-cell {
+    padding: 44px 16px !important;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+/* ─────────────────────────────
+   Owner Payment - Duty Detail
+───────────────────────────── */
+
+#duty-detail-view .duty-detail-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+#duty-detail-view .duty-back-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    text-decoration: none;
+}
+
+#duty-detail-view .duty-back-icon {
+    font-size: 14px;
+}
+
+#duty-detail-view .duty-detail-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+#duty-detail-view .duty-detail-sub {
+    margin-top: 3px;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+#duty-detail-view .duty-detail-card {
+    padding: 20px 24px;
+    margin-bottom: 18px;
+}
+
+#duty-detail-view .duty-detail-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+#duty-detail-view .duty-detail-label {
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+
+#duty-detail-view .duty-detail-no {
+    font-size: 20px;
+    font-weight: 900;
+    color: #0f172a;
+    margin-bottom: 8px;
+}
+
+#duty-detail-view .duty-detail-desc {
+    font-size: 12px;
+    color: #64748b;
+}
+
+#duty-detail-view .duty-detail-status {
+    flex-shrink: 0;
+}
+
+#duty-detail-view .duty-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+}
+
+#duty-detail-view .duty-summary-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 14px;
+}
+
+#duty-detail-view .duty-summary-label {
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+#duty-detail-view .duty-summary-value {
+    font-size: 13px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-top: 6px;
+}
+
+#duty-detail-view .duty-section-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #475569;
+    margin-bottom: 14px;
+}
+
+#duty-detail-view .duty-bill-grid {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+#duty-detail-view .duty-bill-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+#duty-detail-view .duty-bill-row:last-child {
+    border-bottom: none;
+}
+
+#duty-detail-view .duty-bill-row.total {
+    background: #f8fafc;
+}
+
+#duty-detail-view .duty-bill-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+#duty-detail-view .duty-bill-value {
+    font-size: 14px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+#duty-detail-view .duty-bill-row.total .duty-bill-value {
+    font-size: 18px;
+}
+
+#duty-detail-view .duty-info-grid {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+#duty-detail-view .duty-info-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+#duty-detail-view .duty-info-row:last-child {
+    border-bottom: none;
+}
+
+#duty-detail-view .duty-info-label {
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+}
+
+#duty-detail-view .duty-info-value {
+    padding: 12px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+}
+
+#duty-detail-view .duty-action-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+@media (max-width: 1200px) {
+    #duty-detail-view .duty-summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    #duty-detail-view .duty-detail-top {
+        flex-direction: column;
+    }
+
+    #duty-detail-view .duty-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #duty-detail-view .duty-info-row {
+        grid-template-columns: 1fr;
+    }
+
+    #duty-detail-view .duty-info-label {
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    #duty-detail-view .duty-action-row {
+        justify-content: flex-start;
+    }
+}

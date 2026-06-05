@@ -1,0 +1,247 @@
+/* import-gate-fix.js
+ * 수입운송 상세 탭 게이트 보강.
+ * - 반출관리: D/O 전달완료(TRC_DO_REQ) 전에는 탭 화면/버튼 차단
+ * - 내륙배차: 반출완료(REL_DONE) 전에는 탭 화면/버튼 차단
+ * import-ui.js 뒤에 로드하세요.
+ */
+(function () {
+  'use strict';
+
+  if (window.__TACS_IMPORT_DETAIL_GATE_FIX_20260519) return;
+  window.__TACS_IMPORT_DETAIL_GATE_FIX_20260519 = true;
+
+  var bypassClick = false;
+
+  function contextPath() {
+    return (window.contextPath || document.body?.dataset?.contextPath || '').replace(/\/$/, '');
+  }
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function normalize(value) {
+    return String(value == null ? '' : value).trim();
+  }
+
+  function rowsOf() {
+    var rows = [];
+    Array.prototype.slice.call(arguments).forEach(function (list) {
+      if (Array.isArray(list)) rows = rows.concat(list);
+    });
+    return rows;
+  }
+
+  function requestNoFromRow(row) {
+    row = row || {};
+    return normalize(
+      row.trcNo || row.requestNo || row.reqNo || row.tcsTrcNo || row.TRC_NO || row.diTrcNo || row.DI_TRC_NO ||
+      row.crrTreId || row.CRR_TRE_ID || row.dispatchTrcNo || row.DISPATCH_TRC_NO || row.treId || row.TRE_ID
+    );
+  }
+
+  function currentRequestNo(root) {
+    var req = window.selectedImportRequest || {};
+    return normalize(
+      (root && root.dataset && root.dataset.requestNo) ||
+      req.requestNo || req.trcNo || req.reqNo ||
+      window.selectedImportRequestNo || window.currentImportRequestNo ||
+      window.__TACS_IMPORT_CURRENT_TRC_NO || window.__TACS_CURRENT_IMPORT_TRC_NO || ''
+    );
+  }
+
+  function rowMatches(row, trcNo) {
+    if (!row || !trcNo) return false;
+    return [
+      row.trcNo, row.requestNo, row.reqNo, row.tcsTrcNo, row.TRC_NO, row.diTrcNo, row.DI_TRC_NO,
+      row.crrTreId, row.CRR_TRE_ID, row.dispatchTrcNo, row.DISPATCH_TRC_NO, row.treId, row.TRE_ID
+    ].map(function (v) { return normalize(v); }).indexOf(normalize(trcNo)) >= 0;
+  }
+
+  function findRow(rows, trcNo) {
+    return (Array.isArray(rows) ? rows : []).find(function (row) { return rowMatches(row, trcNo); }) || null;
+  }
+
+  function doRows() {
+    return rowsOf(window.TRANSPORT_IMPORT_DO_LIST, window.IMPORT_DO_LIST, window.__TACS_IMPORT_DO_ROWS);
+  }
+
+  function releaseRows() {
+    return rowsOf(window.__TACS_IMPORT_RELEASE_ROWS, window.TRANSPORT_IMPORT_RELEASE_LIST, window.IMPORT_RELEASE_LIST);
+  }
+
+  function inlandRows() {
+    return rowsOf(
+      window.importInlandDispatchState && window.importInlandDispatchState.rows,
+      window.TRANSPORT_IMPORT_INLAND_DISPATCH_LIST,
+      window.__TACS_IMPORT_INLAND_ROWS
+    );
+  }
+
+  function getJson(url) {
+    return fetch(contextPath() + url + (url.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now(), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+      cache: 'no-store'
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
+  }
+
+  function ensureDoList() {
+    if (Array.isArray(window.TRANSPORT_IMPORT_DO_LIST) && window.TRANSPORT_IMPORT_DO_LIST.length) {
+      return Promise.resolve(window.TRANSPORT_IMPORT_DO_LIST);
+    }
+    if (window.__TACS_IMPORT_GATE_DO_PROMISE) return window.__TACS_IMPORT_GATE_DO_PROMISE;
+    window.__TACS_IMPORT_GATE_DO_PROMISE = getJson('/transport/import/do/list.do')
+      .then(function (list) {
+        window.TRANSPORT_IMPORT_DO_LIST = Array.isArray(list) ? list : [];
+        window.__TACS_IMPORT_DO_LOADED = true;
+        return window.TRANSPORT_IMPORT_DO_LIST;
+      })
+      .catch(function (err) {
+        console.warn('[수입운송 게이트] D/O 목록 조회 실패', err);
+        return doRows();
+      })
+      .finally(function () { window.__TACS_IMPORT_GATE_DO_PROMISE = null; });
+    return window.__TACS_IMPORT_GATE_DO_PROMISE;
+  }
+
+  function ensureReleaseList() {
+    if (Array.isArray(window.__TACS_IMPORT_RELEASE_ROWS) && window.__TACS_IMPORT_RELEASE_ROWS.length) {
+      return Promise.resolve(window.__TACS_IMPORT_RELEASE_ROWS);
+    }
+    if (Array.isArray(window.TRANSPORT_IMPORT_RELEASE_LIST) && window.TRANSPORT_IMPORT_RELEASE_LIST.length) {
+      return Promise.resolve(window.TRANSPORT_IMPORT_RELEASE_LIST);
+    }
+    if (window.__TACS_IMPORT_GATE_RELEASE_PROMISE) return window.__TACS_IMPORT_GATE_RELEASE_PROMISE;
+    window.__TACS_IMPORT_GATE_RELEASE_PROMISE = getJson('/transport/import/release-request/list.do')
+      .then(function (list) {
+        var rows = Array.isArray(list) ? list : [];
+        window.__TACS_IMPORT_RELEASE_ROWS = rows;
+        window.TRANSPORT_IMPORT_RELEASE_LIST = rows;
+        window.IMPORT_RELEASE_LIST = rows;
+        window.__TACS_IMPORT_RELEASE_LOADED = true;
+        return rows;
+      })
+      .catch(function (err) {
+        console.warn('[수입운송 게이트] 반출 목록 조회 실패', err);
+        return releaseRows();
+      })
+      .finally(function () { window.__TACS_IMPORT_GATE_RELEASE_PROMISE = null; });
+    return window.__TACS_IMPORT_GATE_RELEASE_PROMISE;
+  }
+
+  function doDelivered(row) {
+    if (!row) return false;
+    var cd = normalize(row.doStatusCd || row.diStatusCd || row.DI_STATUS_CD || row.statusCd).toUpperCase();
+    var nm = normalize(row.doStatusNm || row.statusNm || row.DI_STATUS_NM);
+    return cd === 'TRC_DO_REQ' || nm.indexOf('전달완료') >= 0 || nm === 'D/O전달완료';
+  }
+
+  function releaseDone(row) {
+    if (!row) return false;
+    var cd = normalize(row.releaseStatusCd || row.statusCd || row.crStatusCd || row.CR_STATUS_CD).toUpperCase();
+    var nm = normalize(row.releaseStatusNm || row.statusNm || row.releaseStatus || row.listStatus);
+    return cd === 'REL_DONE' || nm.indexOf('반출완료') >= 0;
+  }
+
+  function renderLocked(root, active, title, message) {
+    if (!root) return;
+    root.dataset.activeWorkId = active;
+    root.dataset.gateLocked = 'Y';
+
+    root.querySelectorAll('.import-ui-tab').forEach(function (button) {
+      button.classList.toggle('is-active', button.dataset.workId === active);
+    });
+
+    var mainDetail = root.parentElement ? root.parentElement.querySelector('.import-ui-main-request-detail') : null;
+    if (mainDetail) mainDetail.style.display = 'none';
+
+    var panel = root.querySelector('.import-ui-panel');
+    if (!panel) return;
+    panel.classList.add('is-active');
+    panel.innerHTML = '' +
+      '<div class="import-ui-request-detail" data-gate-lock="true">' +
+      '  <div class="import-ui-section" style="margin:16px;">' +
+      '    <h5>' + esc(title) + '</h5>' +
+      '    <p class="text-sm text-slate-600" style="margin:0;">' + esc(message) + '</p>' +
+      '  </div>' +
+      '</div>';
+  }
+
+  function gateMessage(workId) {
+    if (workId === 'release') {
+      return {
+        title: 'D/O 전달완료 후 진행 가능',
+        message: '정산 완료 후 D/O를 발급하고 창고에 전달완료 처리해야 반출요청을 진행할 수 있습니다.'
+      };
+    }
+    return {
+      title: '반출완료 후 진행 가능',
+      message: '창고에서 보세구역 반출완료 처리된 건만 내륙배차를 진행할 수 있습니다.'
+    };
+  }
+
+  function isAllowed(workId, trcNo) {
+    if (workId === 'release') {
+      return ensureDoList().then(function (rows) {
+        return doDelivered(findRow(rows, trcNo));
+      });
+    }
+    if (workId === 'inland') {
+      return ensureReleaseList().then(function (rows) {
+        var releaseRow = findRow(rows, trcNo);
+        if (releaseDone(releaseRow)) return true;
+        return releaseDone(findRow(inlandRows(), trcNo));
+      });
+    }
+    return Promise.resolve(true);
+  }
+
+  function handleTabClick(event) {
+    if (bypassClick) return;
+    var target = event.target;
+    if (!(target instanceof Element)) return;
+    var button = target.closest('.import-ui-tab[data-work-id]');
+    if (!button) return;
+
+    var workId = button.dataset.workId || '';
+    if (workId !== 'release' && workId !== 'inland') return;
+
+    var root = button.closest('.import-inline-tabs-0513, .import-ui-tabs');
+    var trcNo = currentRequestNo(root);
+    if (!trcNo) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+
+    renderLocked(root, workId, '상태 확인 중', '선행 업무 완료 여부를 확인하는 중입니다.');
+
+    isAllowed(workId, trcNo).then(function (allowed) {
+      if (!root || !root.isConnected) return;
+      if (allowed) {
+        root.dataset.gateLocked = 'N';
+        bypassClick = true;
+        try { button.click(); } finally { bypassClick = false; }
+        return;
+      }
+      var msg = gateMessage(workId);
+      renderLocked(root, workId, msg.title, msg.message);
+    }).catch(function (err) {
+      console.warn('[수입운송 상세 탭 게이트 확인 실패]', err);
+      var msg = gateMessage(workId);
+      renderLocked(root, workId, msg.title, msg.message);
+    });
+  }
+
+  document.addEventListener('click', handleTabClick, true);
+})();

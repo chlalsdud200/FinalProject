@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.tacs.warehouse.dashboard.mapper.IWarehouseDashboardMapper">
+	
+	 <!--
+        창고관리자 대시보드 상단 카드 집계 조회
+    -->
+    <select id="selectDashboardCount"
+            resultType="kr.or.tacs.dto.warehouse.WarehouseDashboardDTO">
+
+        SELECT
+            (
+                SELECT COUNT(*)
+                FROM WH_IN_RPT WIR
+                WHERE WIR.WIR_WM_ID = #{wmId}
+                  AND WIR.WIR_STATUS_CD = 'WAIT'
+            ) wirWaitCnt,
+
+            (
+                SELECT COUNT(*)
+                FROM WH_IN_RPT WIR
+                WHERE WIR.WIR_WM_ID = #{wmId}
+                  AND WIR.WIR_STATUS_CD = 'REQ_SENT'
+            ) wirReqSentCnt,
+
+            (
+                SELECT COUNT(*)
+                FROM CARGO_RELEASE_REQ CRR
+                WHERE CRR.CRR_WM_ID = #{wmId}
+                  AND CRR.CRR_STATUS_CD = 'REL_WAIT'
+            ) crrWaitCnt,
+
+            (
+                SELECT COUNT(*)
+                FROM WAREHOUSE_ITEM WI
+
+                JOIN WAREHOUSE_ITEM_LOCATION WIL
+                  ON WI.WIL_CL_NO = WIL.WIL_NO
+
+                JOIN WAREHOUSE_ZONE WZ
+                  ON WIL.WIL_WH_ZONE_NO = WZ.WZ_NO
+
+                WHERE WI.WI_USE_YN = 'Y'
+                  AND WIL.WIL_OUT_DT IS NULL
+                  AND WIL.WIL_NO IS NOT NULL
+                  AND WZ.WM_ID = #{wmId}
+            ) wirStoredCnt
+
+        FROM DUAL
+
+    </select>
+
+
+        <!--
+        창고관리자 대시보드 최근 업무 현황 조회
+
+        방향:
+        - 입고/반출 이벤트를 UNION ALL로 따로 보여주지 않는다.
+        - WH_IN_RPT 입고의뢰 1건을 기준으로 한 줄만 보여준다.
+        - 같은 건에 반출요청/반출완료가 있으면 반출 상태를 우선 표시한다.
+
+        화면 의미:
+        - 유형: 수입 / 수출
+        - 요청번호: 입고의뢰번호 WIR_NO
+        - 상태: 입고대기 / 입고완료 / 반출대기 / 반출완료
+    -->
+    <select id="selectRecentFlowList"
+            resultType="kr.or.tacs.dto.warehouse.WarehouseDashboardDTO">
+
+        SELECT *
+        FROM (
+            SELECT FLOW.*
+            FROM (
+                SELECT
+                    /*
+                        수입 / 수출 유형
+                        기존처럼 입고/반출을 구분하는 것이 아니라,
+                        해당 업무 건이 수입 건인지 수출 건인지 보여준다.
+                    */
+                    WIR.WIR_IO_SE_CD wirIoSeCd,
+
+                    CASE
+                        WHEN WIR.WIR_IO_SE_CD = 'IMP' THEN '수입'
+                        WHEN WIR.WIR_IO_SE_CD = 'IMPORT' THEN '수입'
+                        WHEN WIR.WIR_IO_SE_CD = 'EXP' THEN '수출'
+                        WHEN WIR.WIR_IO_SE_CD = 'EXPORT' THEN '수출'
+                        ELSE WIR.WIR_IO_SE_CD
+                    END wirIoSeNm,
+
+                    /*
+                        한 건의 기준 번호는 입고의뢰번호로 유지한다.
+                        그래야 같은 건이 입고완료 → 반출대기 → 반출완료로
+                        상태만 바뀌어 보인다.
+                    */
+                    WIR.WIR_NO wirNo,
+
+                    /*
+                        반출요청번호는 내부적으로 필요할 수 있으므로 같이 내려둔다.
+                        화면 요청번호는 우선 WIR_NO를 쓰는 방향이 맞다.
+                    */
+                    CRR_FLOW.CRR_NO crrNo,
+
+                    WIR.WIR_OWR_NM wirOwrNm,
+
+                    /*
+                        품목 요약
+                    */
+                    GOODS_SUM.goodsSummary goodsSummary,
+
+                    /*
+                        현재 상태 코드
+
+                        상태 판단 순서:
+                        1. 반출완료
+                        2. 반출대기
+                        3. 입고상태
+                    */
+                    CASE
+                        WHEN CRR_FLOW.CRR_STATUS_CD = 'REL_DONE'
+                            THEN 'REL_DONE'
+
+                        WHEN CRR_FLOW.CRR_STATUS_CD IN ('REL_WAIT', 'REL_FIX', 'REL_SENT')
+                            THEN 'REL_WAIT'
+
+                        ELSE WIR.WIR_STATUS_CD
+                    END wirStatusCd,
+
+                    /*
+                        현재 상태명
+                    */
+                    CASE
+                        WHEN CRR_FLOW.CRR_STATUS_CD = 'REL_DONE'
+                            THEN '반출완료'
+
+                        WHEN CRR_FLOW.CRR_STATUS_CD IN ('REL_WAIT', 'REL_FIX', 'REL_SENT')
+                            THEN '반출대기'
+
+                        ELSE NVL(CC_WIR.CC_NM, WIR.WIR_STATUS_CD)
+                    END wirStatusNm,
+
+                    /*
+                        반출 상태 원본값
+                        JSP가 기존 crrStatusCd / crrStatusNm을 참조해도 깨지지 않게 유지한다.
+                    */
+                    CRR_FLOW.CRR_STATUS_CD crrStatusCd,
+
+                    CASE
+                        WHEN CRR_FLOW.CRR_STATUS_CD = 'REL_WAIT' THEN '반출대기'
+                        WHEN CRR_FLOW.CRR_STATUS_CD = 'REL_FIX' THEN '반출대기'
+                        WHEN CRR_FLOW.CRR_STATUS_CD = 'REL_SENT' THEN '반출대기'
+                        WHEN CRR_FLOW.CRR_STATUS_CD = 'REL_DONE' THEN '반출완료'
+                        ELSE CRR_FLOW.CRR_STATUS_CD
+                    END crrStatusNm,
+
+                    /*
+                        입고 기준일시
+                        입고승인 후 WAREHOUSE_ITEM이 생긴 경우에는 재고 등록일시를 우선 사용한다.
+                        아직 입고대기면 WIR_IN_PLAN_DT를 사용한다.
+                    */
+                    TO_CHAR(
+                        NVL(WI_SUM.IN_DT, WIR.WIR_IN_PLAN_DT),
+                        'YYYY-MM-DD HH24:MI'
+                    ) wirDt,
+
+                    /*
+                        반출 기준일시
+                    */
+                    TO_CHAR(
+                        CRR_FLOW.CRR_DT,
+                        'YYYY-MM-DD HH24:MI'
+                    ) crrDt,
+
+                    /*
+                        대시보드 정렬 기준일시
+                        현재 상태가 반출 쪽이면 반출일시를 우선 사용한다.
+                        반출이 없고 입고완료 재고가 있으면 재고 등록일시를 사용한다.
+                        그 외에는 입고요청일시를 사용한다.
+                    */
+                    CASE
+                        WHEN CRR_FLOW.CRR_DT IS NOT NULL
+                            THEN CRR_FLOW.CRR_DT
+
+                        WHEN WI_SUM.IN_DT IS NOT NULL
+                            THEN WI_SUM.IN_DT
+
+                        ELSE WIR.WIR_IN_PLAN_DT
+                    END sortDt
+
+                FROM WH_IN_RPT WIR
+
+                /*
+                    입고 상태명
+                    WAIT → 입고대기
+                    IN_DONE → 입고완료
+                    이런 상태명을 공통코드에서 가져온다.
+                */
+                LEFT JOIN COM_CODE CC_WIR
+                  ON WIR.WIR_STATUS_CD = CC_WIR.CC_CD
+                 AND CC_WIR.CC_CCG_ID = 'WH_IN_STATUS'
+
+                /*
+                    품목 요약
+                    기존 대시보드 입고 SELECT에서 쓰던 품목 요약 로직을
+                    서브쿼리로 분리해서 재사용한다.
+                */
+                LEFT JOIN (
+                    SELECT
+                        CG.GG_NO GG_NO,
+
+                        CASE
+                            WHEN COUNT(*) > 1
+                                THEN MIN(GD.GOODS_NAME) || ' 외 ' || (COUNT(*) - 1) || '건'
+                            ELSE MIN(GD.GOODS_NAME)
+                        END goodsSummary
+
+                    FROM CUSTOMS_GOODS CG
+
+                    JOIN GOODS GD
+                      ON CG.GOODS_NO = GD.GOODS_NO
+
+                    GROUP BY CG.GG_NO
+                ) GOODS_SUM
+                  ON GOODS_SUM.GG_NO = WIR.WIR_GG_NO
+
+                /*
+                    입고완료 후 생성된 창고재고 row 요약
+                    입고완료 기준일시를 보여주기 위해 WAREHOUSE_ITEM 등록일시를 가져온다.
+                    반출완료 후 WI_USE_YN = N이 되어도 입고되었던 사실은 남아야 하므로
+                    여기에는 WI_USE_YN 조건을 걸지 않는다.
+                */
+                LEFT JOIN (
+                    SELECT
+                        WI.WI_WIR_NO WI_WIR_NO,
+                        WI.WI_GG_NO WI_GG_NO,
+                        MIN(WI.WI_REGIST_DT) IN_DT
+                    FROM WAREHOUSE_ITEM WI
+                    GROUP BY
+                        WI.WI_WIR_NO,
+                        WI.WI_GG_NO
+                ) WI_SUM
+                  ON WI_SUM.WI_WIR_NO = WIR.WIR_NO
+                 AND WI_SUM.WI_GG_NO = WIR.WIR_GG_NO
+
+                /*
+                    해당 입고의뢰에 연결된 최신 반출요청 1건
+
+                    CARGO_RELEASE_REQ는 WIR_NO를 직접 들고 있지 않다.
+                    그래서 CRR_TRE_ID → TRAN_RCP.TRC_NO → WH_IN_RPT.WIR_GG_NO 흐름으로 연결한다.
+
+                    같은 입고의뢰에 반출요청 row가 여러 개 생길 수 있으므로
+                    ROW_NUMBER로 최신 1건만 사용한다.
+                */
+                LEFT JOIN (
+                    SELECT *
+                    FROM (
+                        SELECT
+                            WIR_REL.WIR_NO WIR_NO,
+                            CRR.CRR_NO CRR_NO,
+                            CRR.CRR_STATUS_CD CRR_STATUS_CD,
+
+                            NVL(CRR.CRR_RELEASE_DT, CRR.CRR_CR_DT) CRR_DT,
+
+                            ROW_NUMBER() OVER (
+                                PARTITION BY WIR_REL.WIR_NO
+                                ORDER BY
+                                    NVL(CRR.CRR_RELEASE_DT, CRR.CRR_CR_DT) DESC NULLS LAST,
+                                    CRR.CRR_NO DESC
+                            ) RN
+
+                        FROM CARGO_RELEASE_REQ CRR
+
+                        JOIN TRAN_RCP T
+                          ON T.TRC_NO = CRR.CRR_TRE_ID
+
+                        JOIN WH_IN_RPT WIR_REL
+                          ON WIR_REL.WIR_GG_NO = T.TRC_TFG_NO
+                         AND (
+                                WIR_REL.WIR_IO_SE_CD = T.TRC_SE_CD
+                             OR (WIR_REL.WIR_IO_SE_CD = 'IMP' AND T.TRC_SE_CD = 'IMPORT')
+                             OR (WIR_REL.WIR_IO_SE_CD = 'IMPORT' AND T.TRC_SE_CD = 'IMP')
+                             OR (WIR_REL.WIR_IO_SE_CD = 'EXP' AND T.TRC_SE_CD = 'EXPORT')
+                             OR (WIR_REL.WIR_IO_SE_CD = 'EXPORT' AND T.TRC_SE_CD = 'EXP')
+                         )
+
+                        WHERE CRR.CRR_WM_ID = #{wmId}
+                    )
+                    WHERE RN = 1
+                ) CRR_FLOW
+                  ON CRR_FLOW.WIR_NO = WIR.WIR_NO
+
+                WHERE WIR.WIR_WM_ID = #{wmId}
+
+            ) FLOW
+
+            ORDER BY FLOW.sortDt DESC NULLS LAST
+        )
+        WHERE ROWNUM &lt;= 5
+
+    </select>
+</mapper>

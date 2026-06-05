@@ -1,0 +1,340 @@
+package kr.or.tacs.officer.basicscreen.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import kr.or.tacs.common.file.service.IFileService;
+import kr.or.tacs.common.notification.service.INotificationService;
+import kr.or.tacs.dto.officer.BasicScreenDetailDTO;
+import kr.or.tacs.officer.basicscreen.mapper.IScreenDetailMapper;
+
+@Service
+public class ScreenDetailImpl implements IScreenDetailService {
+
+    @Autowired
+    private IScreenDetailMapper mapper;
+    
+    @Autowired
+    private CertificatePdfService certificatePdfService;
+
+    @Autowired
+    private IFileService fileService;
+
+    @Autowired
+    private INotificationService notificationService;
+
+    @Override
+    public BasicScreenDetailDTO selectBasicDetail(String reqNo) {
+        if (reqNo == null || reqNo.trim().isEmpty()) return null;
+        if (reqNo.startsWith("IMP")) return mapper.selectImportDetail(reqNo);
+        if (reqNo.startsWith("EXP")) return mapper.selectExportDetail(reqNo);
+        return null;
+    }
+
+    @Override
+    public List<BasicScreenDetailDTO> selectItemList(String reqNo) {
+        if (reqNo == null || reqNo.trim().isEmpty()) return List.of();
+        if (reqNo.startsWith("IMP")) return mapper.selectImportItems(reqNo);
+        if (reqNo.startsWith("EXP")) return mapper.selectExportItems(reqNo);
+        return List.of();
+    }
+
+    @Override
+    @Transactional
+    public void updateItemTaxRate(Map<String, Object> param) {
+        mapper.updateItemTaxRate(param);
+
+        String reqNo = String.valueOf(param.get("reqNo"));
+
+        if (reqNo != null && mapper.selectTaxCount(reqNo) == 0) {
+            mapper.insertCustomsTaxAuto(reqNo);
+        }
+
+        mapper.recalcCustomsTax(reqNo);
+    }
+
+    @Override
+    @Transactional
+    public kr.or.tacs.dto.officer.TaxDTO selectTaxInfo(String reqNo) {
+        if (reqNo == null || reqNo.trim().isEmpty()) return null;
+        if (!reqNo.startsWith("IMP")) return null; // 수출은 세금 없음
+
+        // CUSTOMS_TAX 레코드가 없으면 생성하고,
+        // 이미 있으면 기존에 잘못 생성된 금액이 남지 않도록 매번 재계산한다.
+        if (mapper.selectTaxCount(reqNo) == 0) {
+            mapper.insertCustomsTaxAuto(reqNo);
+        } else {
+            mapper.recalcCustomsTax(reqNo);
+        }
+
+        return mapper.selectImportTax(reqNo);
+    }
+
+    @Override
+    public java.util.List<java.util.Map<String, Object>> selectTaxItems(String reqNo) {
+        if (reqNo == null || !reqNo.startsWith("IMP")) return java.util.List.of();
+        return mapper.selectTaxItems(reqNo);
+    }
+
+    @Override
+    @Transactional
+    public void sendTaxToBroker(String reqNo) {
+        if (reqNo == null || reqNo.trim().isEmpty()) return;
+
+        // 세금정보 전달 전에도 반드시 최신 품목 세액 기준으로 CUSTOMS_TAX를 맞춘다.
+        if (mapper.selectTaxCount(reqNo) == 0) {
+            mapper.insertCustomsTaxAuto(reqNo);
+        } else {
+            mapper.recalcCustomsTax(reqNo);
+        }
+
+        mapper.updateTaxSendDate(reqNo);
+    }
+
+    @Override
+    @Transactional
+    public void taxPayComplete(String reqNo) {
+        if (reqNo == null || reqNo.trim().isEmpty())
+            throw new IllegalArgumentException("신고번호가 없습니다.");
+
+        // 1. CUSTOMS_TAX 납부상태 → TAX_PAID
+        mapper.updateTaxPayStatus(reqNo);
+
+        // 2. CUSTOMS_TAX_PAY 납부이력 INSERT
+        mapper.insertTaxPay(reqNo);
+
+        notificationService.registNotification(
+            "TAX_PAID",
+            reqNo,
+            null,
+            Map.of("irNo", reqNo)
+        );
+
+        // IMP_DCLR 상태는 납부완료 시점에는 변경하지 않음
+        // 승인 버튼 조건은 JSP에서 tax.taxStatus로 판단
+    }
+
+    @Override
+    @Transactional
+    public void updateDeclrStatus(String reqNo, String statusCd) {
+        if (reqNo == null || reqNo.trim().isEmpty()) {
+            throw new IllegalArgumentException("신고번호가 없습니다.");
+        }
+
+        Map<String, Object> param = new HashMap<>();
+        param.put("reqNo", reqNo);
+        param.put("statusCd", statusCd);
+
+        if (reqNo.startsWith("IMP")) {
+            mapper.updateImpDclrStatus(param);
+            mapper.updateImpRqstStatus(param);
+        } else if (reqNo.startsWith("EXP")) {
+            mapper.updateExpDclrStatus(param);
+            mapper.updateExpRqstStatus(param);
+        } else {
+            throw new IllegalArgumentException("알 수 없는 신고번호 형식입니다.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void approveDeclaration(String reqNo, String officerId) {
+        if (reqNo == null || reqNo.trim().isEmpty()) {
+            throw new IllegalArgumentException("신고번호가 없습니다.");
+        }
+
+        Map<String, Object> dclrParam = new HashMap<>();
+        dclrParam.put("reqNo", reqNo);
+        dclrParam.put("statusCd", "DCLR_DONE");
+
+        Map<String, Object> rqstParam = new HashMap<>();
+        rqstParam.put("reqNo", reqNo);
+        rqstParam.put("statusCd", "CSTM_DONE");
+
+        if (reqNo.startsWith("IMP")) {
+            mapper.updateImpDclrStatus(dclrParam);
+            mapper.updateImpRqstStatus(rqstParam);
+        } else if (reqNo.startsWith("EXP")) {
+            mapper.updateExpDclrStatus(dclrParam);
+            mapper.updateExpRqstStatus(rqstParam);
+        } else {
+            throw new IllegalArgumentException("알 수 없는 신고번호 형식입니다.");
+        }
+
+        issueCertificate(reqNo, officerId);
+
+        notificationService.registNotification(
+            "CSTM_DONE",
+            reqNo,
+            officerId,
+            Map.of("irNo", reqNo)
+        );
+    }
+
+    @Override
+    @Transactional
+    public void issueCertificate(String reqNo, String officerId) {
+
+        if (reqNo == null || reqNo.trim().isEmpty()) {
+            throw new IllegalArgumentException("신고번호가 없습니다.");
+        }
+
+        Map<String, Object> param = new HashMap<>();
+
+        String dclrTypeCd;
+
+        if (reqNo.startsWith("IMP")) {
+            dclrTypeCd = "IMPORT";
+        } else if (reqNo.startsWith("EXP")) {
+            dclrTypeCd = "EXPORT";
+        } else {
+            throw new IllegalArgumentException("알 수 없는 신고번호 형식입니다.");
+        }
+
+        param.put("dclrNo", reqNo);
+        param.put("dclrTypeCd", dclrTypeCd);
+
+        // 이미 발급된 필증이면 중복 발급 방지
+        if (mapper.selectCertificateCount(param) > 0) {
+            return;
+        }
+
+        // 1. CERT_INSURANCE INSERT
+        mapper.insertCertificate(param);
+
+        try {
+
+            // 2. PDF 생성
+            byte[] pdfBytes =
+                    certificatePdfService.createCertificatePdf(reqNo);
+
+            // 3. 공용 파일 업로드
+            Long tfgNo = fileService.uploadGeneratedFile(
+                    "CERT",
+                    pdfBytes,
+                    "신고필증_" + reqNo + ".pdf",
+                    "application/pdf",
+                    dclrTypeCd,
+                    officerId,
+                    "OFFICER"
+            );
+
+            // 4. CERT_INSURANCE.TFG_NO UPDATE
+            param.put("tfgNo", tfgNo);
+
+            mapper.updateCertificateTfgNo(param);
+
+        } catch (Exception e) {
+            throw new RuntimeException("신고필증 PDF 생성 실패", e);
+        }
+    }
+    @Override
+    @Transactional
+    public void updateItemStatus(String reqNo, int itemNo, String statusCd,
+                                 String reason, String officerId) {
+
+        if (reqNo == null || reqNo.trim().isEmpty())
+            throw new IllegalArgumentException("신고번호가 없습니다.");
+        if (statusCd == null || statusCd.trim().isEmpty())
+            throw new IllegalArgumentException("처리상태가 없습니다.");
+
+        boolean isImp = reqNo.startsWith("IMP");
+        boolean isExp = reqNo.startsWith("EXP");
+
+        if (!isImp && !isExp)
+            throw new IllegalArgumentException("알 수 없는 신고번호 형식입니다.");
+
+        String refBizCd = isImp ? "IMPORT_ITEM" : "EXPORT_ITEM";
+        String targetId  = mapper.selectTargetBrokerId(reqNo);
+
+        Map<String, Object> param = new HashMap<>();
+        param.put("reqNo",     reqNo);
+        param.put("itemNo",    itemNo);
+        param.put("statusCd",  statusCd);
+        param.put("reason",    reason);
+        param.put("officerId", officerId);
+        param.put("targetId",  targetId);
+        param.put("refBizCd",  refBizCd);
+        param.put("refNo",     reqNo + "-" + itemNo);
+
+        switch (statusCd) {
+            case "ITEM_SUPP_REQ":
+                // 1) SUPP_RQST에 보완요청 기록
+                mapper.insertItemSupplement(param);
+                // 2) 수입이면 IDI_STATUS_CD 업데이트
+                if (isImp) {
+                    mapper.updateImpDclrItemStatus(param);
+                    notificationService.registNotification(
+                        "ITEM_SUPP_REQUESTED",
+                        reqNo + "-" + itemNo,
+                        officerId,
+                        Map.of("irNo", reqNo, "itemSn", String.valueOf(itemNo))
+                    );
+                }
+                break;
+
+            case "ITEM_REJ":
+                // 1) RJCT_MNG에 반려 기록
+                mapper.insertItemReject(param);
+                // 2) 수입이면 IDI_STATUS_CD 업데이트
+                if (isImp) {
+                    mapper.updateImpDclrItemStatus(param);
+                    notificationService.registNotification(
+                        "ITEM_REJECTED",
+                        reqNo + "-" + itemNo,
+                        officerId,
+                        Map.of("irNo", reqNo, "itemSn", String.valueOf(itemNo))
+                    );
+                }
+                break;
+
+            case "ITEM_ACPT":
+                // 수리는 IDI_STATUS_CD 업데이트만 (수입만 컬럼 있음)
+                if (isImp) {
+                    mapper.updateImpDclrItemStatus(param);
+                    notificationService.registNotification(
+                        "ITEM_ACCEPTED",
+                        reqNo + "-" + itemNo,
+                        officerId,
+                        Map.of("irNo", reqNo, "itemSn", String.valueOf(itemNo))
+                    );
+                }
+                // 수출은 EXP_DCLR_ITEM에 상태 컬럼 없어서 파생 조회로만 처리
+                break;
+
+            case "ITEM_SUPP_SUB":
+                // 관세사가 보완제출한 경우 (브로커 쪽에서 호출)
+                if (isImp) mapper.updateImpDclrItemStatus(param);
+                break;
+
+            default:
+                throw new IllegalArgumentException(
+                    "지원하지 않는 란사항 처리상태입니다: " + statusCd);
+        }
+    }
+    @Override
+    public String selectReviewMemo(String reqNo) {
+        if (reqNo == null || reqNo.trim().isEmpty()) return "";
+        return mapper.selectReviewMemo(reqNo);
+    }
+
+    @Override
+    @Transactional
+    public void saveReviewMemo(String reqNo, String reviewMemo, String officerId) {
+        if (reqNo == null || reqNo.trim().isEmpty()) {
+            throw new IllegalArgumentException("신고번호가 없습니다.");
+        }
+
+        Map<String, Object> param = new HashMap<>();
+        param.put("reqNo", reqNo);
+        param.put("reviewMemo", reviewMemo);
+        param.put("officerId", officerId);
+
+        mapper.mergeReviewMemo(param);
+    }
+}

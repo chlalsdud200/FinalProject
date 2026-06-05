@@ -1,0 +1,19 @@
+package kr.or.tacs.vo.common;
+
+import lombok.Data;
+
+@Data
+public class ResourceArchiveVO {
+
+    private Long resNo;
+    private Long resFgNo;
+    private String resTtl;
+    private String resCn;
+    private String resRegDt;
+
+    private Long fileNo;
+    private String orgFileName;
+    private String strFileName;
+    private Long fileSize;
+    private String filePath;
+}

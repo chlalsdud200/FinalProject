@@ -1,0 +1,204 @@
+/* arrivalNotice.css */
+
+.arrival-alert {
+    margin-bottom: 16px;
+}
+
+.arrival-kpi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.arrival-kpi-card {
+    border: 1px solid #e2e8f0;
+    padding: 16px 18px;
+    background: #fff;
+}
+
+.arrival-kpi-label {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.arrival-kpi-value {
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.arrival-kpi-value.pending {
+    color: #d97706;
+}
+
+.arrival-kpi-value.today {
+    color: #1d4ed8;
+}
+
+.arrival-kpi-value.total {
+    color: #0f172a;
+}
+
+.arrival-kpi-sub {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+.arrival-layout {
+    display: block;
+}
+
+.arrival-card {
+    margin-bottom: 0;
+}
+
+.arrival-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.arrival-search-area {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.arrival-filter-select {
+    font-size: 12px;
+    padding: 7px 10px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    outline: none;
+}
+
+.arrival-search-input {
+    font-size: 12px;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    width: 240px;
+    outline: none;
+}
+
+.arrival-table {
+    margin: 0;
+}
+
+.arrival-guide {
+    padding: 12px 16px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.arrival-empty {
+    text-align: center;
+    color: #94a3b8;
+    padding: 28px 16px !important;
+}
+
+.arrival-status {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 8px;
+    display: inline-block;
+}
+
+.arrival-status.wait {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.arrival-status.sent {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.arrival-status.default {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.arrival-detail-btn {
+    padding: 5px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    border: 1px solid #e2e8f0;
+    background: #f1f5f9;
+    color: #475569;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.arrival-detail-btn:hover {
+    background: #e2e8f0;
+}
+
+.arrival-detail-section {
+    margin-bottom: 0;
+    margin-top: 20px;
+}
+
+.arrival-detail-body {
+    padding: 20px;
+}
+
+.arrival-detail-grid {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    border-top: 1px solid #e2e8f0;
+    border-left: 1px solid #e2e8f0;
+}
+
+.arrival-detail-label,
+.arrival-detail-value {
+    padding: 12px 14px;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 12px;
+}
+
+.arrival-detail-label {
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 800;
+}
+
+.arrival-detail-value {
+    background: #fff;
+    color: #203444;
+    font-weight: 600;
+}
+
+.arrival-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+@media (max-width: 1000px) {
+    .arrival-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .arrival-card-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .arrival-search-area {
+        width: 100%;
+    }
+
+    .arrival-search-input {
+        width: 100%;
+    }
+}

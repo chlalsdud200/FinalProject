@@ -1,0 +1,176 @@
+# 알림 정책 통합 매트릭스 (TACS 인앱 알림)
+
+> **작성일:** 2026-05-28
+> **상태:** 인테이크 1차 통합본 — 코드 검증/우선순위/refKey는 후속 단계에서 확정
+> **출처:** `알림요구사항_*.md` 6개 파일 (수신자 B-only 관점 35개 카드)
+> **다음 단계:** ❓ 표시 항목 코드 검증 → P0/P1/P2 우선순위 확정 → PR 단위 분할
+
+---
+
+## 통합 방법
+
+- 같은 이벤트가 여러 인테이크에 다른 이름으로 나타나면 **이벤트 코드 1개로 묶고 수신자만 합침** (예: 신고 수리는 BROKER+OWNER+WAREHOUSE 3자 수신)
+- 인테이크 6개 모두 **수신자 관점만**이라, 발생자가 누구인지는 인테이크의 "발생시키는 액터" 칸 + 코드 분석으로 확정
+- 신규로 등장한 이벤트(1·2차 PR에 없는 것)는 모두 **코드 검증 필요** ❓ 표시
+- 1·2차 PR에서 이미 박힌 알림은 ✅ 표시
+- **`refKey` 형식**과 **시퀀스 진행 순서**는 별도 컬럼 (3차 분석에서 확정)
+
+---
+
+## 매트릭스 — 도메인별
+
+### A. 통관 도메인 (9개)
+
+| # | 이벤트 코드 | 업무명 | 발생자 → 수신자 | refKey | 인테이크 출처 | 구현상태 |
+|--:|---|---|---|---|---|---|
+| 1 | `DCLR_SUBMITTED` | 수입신고 전송 | BROKER → **OWNER, OFFICER** | IR_NO | 1차+O1 | ✅ 1차 (단 OFFICER 누락 — 2.5차 보강) |
+| 2 | `CSTM_REQUESTED` | 신규 통관 의뢰 등록 | OWNER → BROKER | IR_NO | B1 | ❓ 코드 위치 검증 필요 |
+| 3 | `CSTM_SUPP_REQUESTED` | 의뢰 서류 보완 요청 (관세사→화주) | BROKER → OWNER | IR_NO | H1 | ❓ 검증 필요 — `ITEM_SUPP_REQ`(품목)와 다름 |
+| 4 | `CSTM_SUPP_SUBMITTED` | 의뢰 서류 보완 제출 (화주→관세사) | OWNER → BROKER | IR_NO | B2 | ❓ 검증 필요 |
+| 5 | `ITEM_SUPP_REQUESTED` | 품목 보완 요청 | OFFICER → BROKER | IR_NO-SN | B3, 2차 | ✅ 2차 |
+| 6 | `ITEM_SUPP_SUBMITTED` | 품목 보완 제출 | BROKER → OFFICER | IR_NO-SN | O2, 2차 | ✅ 2차 |
+| 7 | `ITEM_REJECTED` | 품목 반려 | OFFICER → BROKER (+OWNER?) | IR_NO-SN | (B3에 "반려" 단어 등장) | ❌ 누락 — 코드엔 있음 (`ScreenDetailImpl` case ITEM_REJ) |
+| 8 | `CSTM_DONE` | 통관 수리(신고 완료) | OFFICER → **OWNER, BROKER, WAREHOUSE_MANAGER** | IR_NO | B6, H3, W3 (3자) | ❓ 발생 위치 검증 — `ITEM_ACCEPTED`(품목)와 별개 |
+| 9 | `CSTM_CANCEL_REQUESTED` | 통관 취하 요청 | BROKER → OFFICER | IR_NO | O5 | ❓ 검증 필요 |
+
+### B. 세금 / 결제 도메인 (5개)
+
+| # | 이벤트 코드 | 업무명 | 발생자 → 수신자 | refKey | 인테이크 출처 | 구현상태 |
+|--:|---|---|---|---|---|---|
+| 10 | `TAX_NOTICE` | 세금(관부가세) 납부 고지 | BROKER 또는 OFFICER → OWNER | IR_NO | H2 | ❓ 검증 필요 |
+| 11 | `TAX_PAID` | 세금 납부 완료 | OWNER → **BROKER, OFFICER** | IR_NO | B5, O4 | ❓ 검증 필요 |
+| 12 | `FEE_FINAL_NOTICE` | 최종 비용 정산 요청 (D/O 전제) | BROKER+TRANSPORT+WAREHOUSE → OWNER | IR_NO | H4 | ❓ 발생자 다중 — 단일 트리거인지 분리 트리거인지 확인 |
+| 13 | `FEE_BROKER_PAID` | 관세사 대행 수수료 정산 완료 | OWNER → BROKER | IR_NO | B7 | ❓ |
+| 14 | `FEE_WAREHOUSE_PAID` | 창고 보관료 정산 완료 | OWNER → WAREHOUSE_MANAGER | 입고번호? | W6 | ❓ |
+
+### C. 검사 도메인 (4개)
+
+| # | 이벤트 코드 | 업무명 | 발생자 → 수신자 | refKey | 인테이크 출처 | 구현상태 |
+|--:|---|---|---|---|---|---|
+| 15 | `INSP_ASSIGNED` | 현장검사 지시/지정 | OFFICER → **FIELDOFFICER, BROKER** | 검사번호 또는 IR_NO | F1, B4 | ❓ |
+| 16 | `INSP_CARGO_READY` | 검사 대상 화물 준비 완료 | WAREHOUSE_MANAGER → FIELDOFFICER | 검사번호 | F2 | ❓ |
+| 17 | `INSP_RESULT_REGISTERED` | 현장검사 결과 등록 | FIELDOFFICER → OFFICER | 검사번호 | O3 | ❓ |
+| 18 | `INSP_SCHEDULE_CHANGE_REQ` | 검사 일정/장소 변경 요청 | BROKER 또는 WAREHOUSE → FIELDOFFICER | 검사번호 | F3 | ❓ 코드 존재 자체 검증 — 양식 작성자 추정 가능성 |
+
+### D. 운송 / 입고 / 반출 / 배송 (13개)
+
+| # | 이벤트 코드 | 업무명 | 발생자 → 수신자 | refKey | 인테이크 출처 | 구현상태 |
+|--:|---|---|---|---|---|---|
+| 19 | `TR_REQUESTED` | 수입 운송 의뢰 | OWNER → TRANSPORT_MANAGER | 운송번호 | T1 | ❓ |
+| 20 | `WH_INBOUND_SCHEDULED` | 입고 예정 통보 (운송사 도착예정) | TRANSPORT_MANAGER → WAREHOUSE_MANAGER | 운송번호 | W1 | ❓ |
+| 21 | `WH_INBOUND_DONE` | 입고 완료 | WAREHOUSE_MANAGER → TRANSPORT_MANAGER | 입고번호 또는 운송번호 | T2 | ❓ |
+| 22 | `WH_INBOUND_SUPP_REQ` | 입고 보완요청 | WAREHOUSE_MANAGER → **TRANSPORT_MANAGER, OWNER** | 입고번호 | T3, H5 (2자) | ❓ |
+| 23 | `WH_INBOUND_SUPP_DONE` | 입고 보완 조치 완료 | OWNER 또는 TRANSPORT_MANAGER → WAREHOUSE_MANAGER | 입고번호 | W2 | ❓ |
+| 24 | `DO_ISSUED` | D/O 발급 (정산완료+수입신고필증 보유) | OWNER → TRANSPORT_MANAGER | IR_NO 또는 D/O번호 | T4 | ❓ `TacsTrSt.TRC_DO_*` 활용 검증 |
+| 25 | `WH_OUTBOUND_TRUCK_ARRANGED` | 반출 차량 배차 완료 | TRANSPORT_MANAGER → WAREHOUSE_MANAGER | 운송번호 | W4 | ❓ |
+| 26 | `WH_OUTBOUND_SUPP_REQ` | 반출 보완요청 | WAREHOUSE_MANAGER → TRANSPORT_MANAGER | 출고번호 | T6 | ❓ |
+| 27 | `WH_OUTBOUND_SUPP_DONE` | 반출 보완 조치 완료 | TRANSPORT_MANAGER → WAREHOUSE_MANAGER | 출고번호 | W5 | ❓ |
+| 28 | `WH_OUTBOUND_DONE` | 반출 완료 | WAREHOUSE_MANAGER → TRANSPORT_MANAGER | 출고번호 | T5 | ❓ |
+| 29 | `DELIVERY_STARTED` | 내륙 배차 출발 | TRANSPORT_MANAGER → OWNER | 운송번호 | H6 | ❓ |
+| 30 | `DELIVERY_COMPLETED` | 최종 배송 완료 | TRANSPORT_MANAGER → OWNER | 운송번호 | H7 | ❓ |
+| 31 | `DELIVERY_CONFIRMED` | 의뢰 최종완료 인수 확인 | OWNER → TRANSPORT_MANAGER | 운송번호 | T7 (작성 이상 — 발생자 표기 오류) | ❓ |
+
+### E. 이미 박힌 알림 (1·2차) — 매트릭스 내 매핑 확인
+
+| 박힌 이벤트 | 매트릭스 # | 비고 |
+|---|---|---|
+| `DCLR_SUBMITTED` (1차, OWNER 수신) | #1 | OFFICER 수신자 추가 필요 (2.5차 보강) |
+| `ITEM_SUPP_REQUESTED` (2차) | #5 | 그대로 |
+| `ITEM_SUPP_SUBMITTED` (2차) | #6 | 그대로 |
+| `ITEM_ACCEPTED` (2차, BROKER 수신) | #8과 별개로 유지 | 품목 단위. 신고서 단위 `CSTM_DONE`(#8)는 다른 이벤트 |
+
+---
+
+## 누락 발굴 (코드엔 있을 가능성, 인테이크 부재)
+
+| 후보 | 발견 근거 | 검증 방향 |
+|---|---|---|
+| `CSTM_REJ` (신고 자체 반려) | `TacsCstmSt.CSTM_REJ` enum 존재. 통관 자체가 반려되는 흐름 | OFFICER 결재 로직에서 신고 단위 반려 메서드 있는지 |
+| 검역 도메인 알림 | `broker/quarantine` 패키지 존재 | quarantine 도메인 상태 변경 지점 스캔 |
+| 신고필증 발급 자동 알림 | `owner/certs` 패키지, certs 화면 존재 | 발급 완료 트리거 (수리 이후 자동인지 별도 액션인지) |
+| `D/O` 단계별 알림 | `TacsTrSt.TRC_DO_READY / TRC_DO_ISSUED / TRC_DO_REQ` 3단계 enum | 3단계 모두 알림 필요한지, 24번 `DO_ISSUED`로 통합인지 |
+
+---
+
+## 작성 이상 / 의문점 (확인 필요)
+
+### 1. 운송담당자 `알림 7` 발생자 오기
+- 양식 본문에 "화주한테 최종완료 상태값을 받았을 때"라고 적혀있지만 "알림을 발생시키는 액터"는 `WAREHOUSE_MANAGER`로 표기됨
+- **추정 정답: OWNER → TRANSPORT_MANAGER**
+- 통합 매트릭스에서는 OWNER 발생자로 잡음. 운송 담당자에게 재확인 필요
+
+### 2. `CSTM_SUPP_REQUESTED` vs `ITEM_SUPP_REQUESTED` — 두 종류 보완 요청 구분
+- **`CSTM_SUPP_REQUESTED`** (#3): 관세사가 화주에게 의뢰 서류(인보이스/패킹리스트 등)를 보완 요청
+- **`ITEM_SUPP_REQUESTED`** (#5): 공무원이 관세사에게 품목 단위 보완 요청
+- 같은 "보완"이지만 발생자/수신자가 완전히 다른 이벤트. 코드 위치도 다를 가능성 큼
+
+### 3. `FEE_FINAL_NOTICE`(#12) 다중 발생자
+- 인테이크 H4에 "BROKER + TRANSPORT + WAREHOUSE"가 발생자로 표기됨
+- 실제로는 비용 항목별로 트리거가 다를 가능성 → 단일 이벤트로 두기 어려움
+- 옵션: 각 항목별 분리(`FEE_BROKER_NOTICE`, `FEE_TRANSPORT_NOTICE`, `FEE_WAREHOUSE_NOTICE`) 또는 통합 청구서 발행 시점에 1건
+- 코드 분석 후 결정
+
+### 4. `ITEM_ACCEPTED`(2차 박힌 것) 수신자 미흡
+- 2차에 관세사만 수신하도록 박았는데, 매트릭스 #8 `CSTM_DONE`은 화주+창고도 받음
+- **품목 단위 수리(`ITEM_ACCEPTED`)와 신고서 단위 수리(`CSTM_DONE`)를 별개로 둘지, 통합할지** 결정 필요
+  - 현재 추천: 별개 유지 (품목 단위는 부분 수리, 신고서 단위는 전체 완료)
+
+### 5. `WH_INBOUND_DONE`(#21) 화주 수신 미포함
+- 운송담당자만 받음. 화주 인테이크에 입고 완료 자체 알림은 없음
+- 화주는 입고 보완요청(#22)만 받고, 입고 완료는 통관/배송 흐름에서 간접적으로 인지
+- 정상 결정으로 보임 (확인 필요)
+
+### 6. 인테이크 누락 의심 — 화주 측 발신 흐름
+- 화주가 발신하는 알림(`CSTM_REQUESTED`, `TR_REQUESTED`, `CSTM_SUPP_SUBMITTED`, `TAX_PAID`, `FEE_*_PAID`, `DELIVERY_CONFIRMED`, `WH_INBOUND_SUPP_DONE`)이 모두 다른 액터 인테이크에서 등장하지만 화주 본인 인테이크엔 본인이 받는 알림 7개만 있음
+- 이건 양식이 B-only(수신자 관점)라 정상이지만, 화주가 "내가 이거 보내야 한다"고 인지하는지 별도 확인하면 안전
+
+---
+
+## 우선순위 분류 (인테이크 작성 P0/P1/P2 기준)
+
+| P | 카운트 | 내용 |
+|---|--:|---|
+| P0 | 30개 | 인테이크 작성자 대부분이 P0으로 표기 |
+| P1 | 4개 | OWNER H6(내륙 배차 출발), BROKER B7(수수료 정산), 1차 DCLR_SUBMITTED, 그 외 |
+| P2 | 0개 | 없음 |
+
+**관찰:** P0이 너무 많음. 인테이크 작성 시 "놓치면 안 되는 이유"가 거의 다 "업무 중단"으로 표기되어서 등급 변별력이 없음. PR 단위 자르려면 P0 안에서도 다시 분류 필요:
+- **P0-A (실시간 필수)**: 다음 액터 즉각 행동 필요 (예: 보완요청, 신고 접수)
+- **P0-B (인지 필수)**: 중요하지만 시간 여유 있음 (예: 수수료 정산 완료)
+
+---
+
+## 다음 단계
+
+### 1. 코드 검증 위임 (Explore 한 번에) — 27개 ❓ 이벤트 모두
+
+각 ❓ 이벤트에 대해 확인:
+- 실제 코드 트리거 지점이 있는지 (서비스 메서드 + 매퍼 XML)
+- 없다면 다음 PR에서 그 흐름을 새로 구현해야 하는지, 또는 정책에서 제외할지
+- 수신자 산출 쿼리 (특히 운송담당자/창고관리자 매핑이 어느 테이블에 있는지)
+- refKey 형식 결정 (IR_NO / 운송번호 / 입고번호 / 출고번호 / 검사번호)
+
+### 2. 매트릭스 보강
+Explore 결과로 매트릭스의 `구현상태`, `refKey`, `발생 위치` 컬럼 채움
+
+### 3. PR 단위 분할 (예상 3개 PR)
+- **3차 PR**: `CSTM_DONE`(#8, 첫 3자 수신 케이스) + `ITEM_REJECTED`(#7) + `DCLR_SUBMITTED` OFFICER 보강 + 코드에 이미 트리거 있는 통관/세금 도메인 일부
+- **4차 PR**: 운송/입고/반출/배송 사슬 (#19~#31) — 매핑 추적 필요한 그룹
+- **5차 PR**: 검사 도메인(#15~#18) + 검역/필증 누락 발굴분
+
+### 4. 관리자 정책 관리 화면 (별도 트랙)
+인테이크 35개 + 누락 5개 = 약 40개 정책 row가 통합되면, 관리자 화면(매트릭스 UI)이 본격 필요해짐. PR 흐름과 병렬로 화면 작업 가능.
+
+---
+
+## 회의/협의 필요 항목 요약
+
+도메인 담당자/PM 결정이 필요한 항목:
+
+1. **`FEE_FINAL_NOTICE`(#12)** 단일 이벤트로 둘지 항목별로 분리할지
+2. **`CSTM_DONE`(#8)와 `ITEM_ACCEPTED`(현 2차)** 별개 유지 vs 통합
+3. **`ITEM_REJECTED`(#7)** OWNER도 수신해야 하는지
+4. **`WH_INBOUND_DONE`(#21)** OWNER 수신 추가할지
+5. **운송담당자 인테이크 알림7** 발생자 오기 확인
+6. **`INSP_SCHEDULE_CHANGE_REQ`(#18)** 실제 시스템에 존재하는 기능인지
+7. **D/O 단계별(`TacsTrSt.TRC_DO_*` 3단계)** 알림 분리 vs 통합

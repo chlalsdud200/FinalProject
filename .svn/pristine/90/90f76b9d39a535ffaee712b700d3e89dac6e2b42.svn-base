@@ -1,0 +1,133 @@
+# TACS 인앱 알림 - 누락 매트릭스 갭 분석
+
+> **작성일:** 2026-05-29
+> **분석 범위:** 화주, 관세사, 세관공무원, 현장공무원, 창고관리자, 운송담당자의 6개 액터별 알림 요구사항(MD) 전체와 현재 구현된 11개 알림 정책 간의 갭 분석
+
+---
+
+## 1. 액터별 요구사항 전수 매트릭스
+
+### 1.1 화주 (OWNER)
+
+| # | 요구 한글명 (MD에서 추출) | 발생 액터 | 시간성 | 중요도 | 클릭 시 이동 페이지 | 현재 정책 매핑 | 갭 여부 |
+|---|---|---|---|---|---|---|---|
+| 1 | 통관 의뢰 서류 보완 요청 | BROKER | 즉시 | P0 | 통관 의뢰 상세 | 없음 | **GAP** |
+| 2 | 수입 세금(관부가세) 납부 고지 | BROKER/OFFICER | 즉시 | P0 | 비용 정산/결제 화면 | 없음 | **GAP** |
+| 3 | 수입신고 수리 (통관 완료) 안내 | OFFICER/BROKER | 즉시 | P0 | 통관 진행 현황 화면 | `CSTM_DONE` | 적용 |
+| 4 | 물류/통관 비용 최종 정산 요청 | BROKER/TRANSPORT_MANAGER/WAREHOUSE_MANAGER | 즉시 | P0 | 비용 정산 상세 화면 | 없음 | **GAP** |
+| 5 | 창고 입고 시 화물 이상 (보완 요청) | WAREHOUSE_MANAGER | 즉시 | P0 | 의뢰 상세 - 사고/보완 이력 탭 | `WH_INBOUND_SUPP_REQ` | 적용 |
+| 6 | 내륙 배차 출발 안내 | TRANSPORT_MANAGER | 즉시 | P1 | 운송 진행 현황 조회 화면 | 없음 | **GAP** |
+| 7 | 최종 배송 완료 및 인수 확인 요청 | TRANSPORT_MANAGER | 즉시 | P0 | 의뢰 상세 화면 | 없음 | **GAP** |
+
+### 1.2 관세사 (BROKER)
+
+| # | 요구 한글명 (MD에서 추출) | 발생 액터 | 시간성 | 중요도 | 클릭 시 이동 페이지 | 현재 정책 매핑 | 갭 여부 |
+|---|---|---|---|---|---|---|---|
+| 1 | 신규 수출/수입 통관 의뢰 접수 | OWNER | 즉시 | P0 | 통관 의뢰 접수 목록 | 없음 | **GAP** |
+| 2 | 통관 서류 보완 제출 완료 | OWNER | 즉시 | P0 | 통관 의뢰 상세 화면 | 없음 | **GAP** |
+| 3 | 세관 통관 신고 보완/반려 통보 | OFFICER | 즉시 | P0 | 반려 사유 확인 화면 | `ITEM_SUPP_REQUESTED`, `ITEM_REJECTED` | 적용 |
+| 4 | 세관 현장 검사 지정 통보 | OFFICER | 즉시 | P0 | 검사 지정 내역 화면 | 없음 | **GAP** |
+| 5 | 세금 (관부가세) 납부 완료 확인 | OWNER | 즉시 | P0 | 납부 완료 내역 확인 | `TAX_PAID` | 적용 |
+| 6 | 수입/수출 신고 수리(최종 완료) 통보 | OFFICER | 즉시 | P0 | 통관 수리 내역 | `CSTM_DONE` | 적용 |
+| 7 | 대행 수수료 정산 완료 | OWNER | 즉시 | P1 | 비용 정산 완료 화면 | 없음 | **GAP** |
+
+### 1.3 세관공무원 (OFFICER)
+
+| # | 요구 한글명 (MD에서 추출) | 발생 액터 | 시간성 | 중요도 | 클릭 시 이동 페이지 | 현재 정책 매핑 | 갭 여부 |
+|---|---|---|---|---|---|---|---|
+| 1 | 신규 수출/수입 신고서 접수 | BROKER | 즉시 | P0 | 미처리 신고서 목록 화면 | `DCLR_SUBMITTED` | 적용 |
+| 2 | 신고 서류 보완 제출 완료 | BROKER | 즉시 | P0 | 신고서 심사 상세 화면 | `ITEM_SUPP_SUBMITTED` | 적용 |
+| 3 | 현장 검사 결과 등록 완료 | FIELDOFFICER | 즉시 | P0 | 현장 검사 결과 확인 화면 | 없음 | **GAP** |
+| 4 | 관부가세 납부 완료 통보 | OWNER | 즉시 | P0 | 수납 내역 화면 | `TAX_PAID` | 적용 |
+| 5 | 수출/수입 통관 취하(취소) 요청 접수 | BROKER | 즉시 | P0 | 취하 요청 목록 화면 | 없음 | **GAP** |
+
+### 1.4 창고관리자 (WAREHOUSE_MANAGER)
+
+| # | 요구 한글명 (MD에서 추출) | 발생 액터 | 시간성 | 중요도 | 클릭 시 이동 페이지 | 현재 정책 매핑 | 갭 여부 |
+|---|---|---|---|---|---|---|---|
+| 1 | 화물 입고 예정 통보 (운송사 도착 예정) | TRANSPORT_MANAGER | 즉시 | P0 | 입고 예정/대기 목록 화면 | 없음 | **GAP** |
+| 2 | 입고 화물 이상(보완) 조치 완료 | OWNER/TRANSPORT_MANAGER | 즉시 | P0 | 입고 조치 완료 화면 | 없음 | **GAP** |
+| 3 | 세관 반출 승인 (통관 수리 완료) | OFFICER | 즉시 | P0 | 보관 화물 목록 | `CSTM_DONE` | 적용 |
+| 4 | 반출 차량 배차 완료 (픽업 예정) | TRANSPORT_MANAGER | 즉시 | P0 | 반출 대기 목록 화면 | 없음 | **GAP** |
+| 5 | 반출 화물 보완 조치 완료 | TRANSPORT_MANAGER | 즉시 | P0 | 반출 조치 완료 화면 | 없음 | **GAP** |
+| 6 | 창고 보관료 정산 완료 | OWNER | 즉시 | P0 | 보관료 정산 화면 | 없음 | **GAP** |
+
+### 1.5 현장공무원 (FIELDOFFICER)
+
+| # | 요구 한글명 (MD에서 추출) | 발생 액터 | 시간성 | 중요도 | 클릭 시 이동 페이지 | 현재 정책 매핑 | 갭 여부 |
+|---|---|---|---|---|---|---|---|
+| 1 | 신규 화물 현장 검사 지시 | OFFICER | 즉시 | P0 | 나의 현장 검사 지시 목록 | 없음 | **GAP** |
+| 2 | 검사 대상 화물 창고 반입 및 준비 완료 | WAREHOUSE_MANAGER | 즉시 | P0 | 현장 검사 상세 화면 | 없음 | **GAP** |
+| 3 | 현장 검사 일정/장소 변경 요청 | BROKER/WAREHOUSE_MANAGER | 즉시 | P0 | 일정 조율 화면 | 없음 | **GAP** |
+
+### 1.6 운송담당자 (TRANSPORT_MANAGER)
+
+| # | 요구 한글명 (MD에서 추출) | 발생 액터 | 시간성 | 중요도 | 클릭 시 이동 페이지 | 현재 정책 매핑 | 갭 여부 |
+|---|---|---|---|---|---|---|---|
+| 1 | 수입운송의뢰 접수 | OWNER | 즉시 | P0 | 운송의뢰 상세 화면 | 없음 | **GAP** |
+| 2 | 입고완료 | WAREHOUSE_MANAGER | 즉시 | P0 | 운송의뢰 리스트 화면 | `WH_INBOUND_DONE` | 적용 |
+| 3 | 입고 보완요청 | WAREHOUSE_MANAGER | 즉시 | P0 | 운송의뢰 리스트 화면 | `WH_INBOUND_SUPP_REQ` | 적용 |
+| 4 | 수입비용정산 상태값 정산완료 및 D/O | OWNER | 즉시 | P0 | 운송의뢰 리스트 화면 | 없음 | **GAP** |
+| 5 | 반출완료 | WAREHOUSE_MANAGER | 즉시 | P0 | 운송의뢰 리스트 화면 | `WH_OUTBOUND_DONE` | 적용 |
+| 6 | 반출 보완요청 | WAREHOUSE_MANAGER | 즉시 | P0 | 운송의뢰 리스트 화면 | `WH_OUTBOUND_SUPP_REQ` | 적용 |
+| 7 | 운송의뢰 최종완료 | OWNER | 즉시 | P0 | 운송의뢰 리스트 화면 | 없음 | **GAP** |
+
+---
+
+## 2. 갭 통합 매트릭스
+
+| # | 제안 이벤트 코드 | 의미 | 수신자 | 발송자 | refKey 후보 | 본문 변수 | 발화 메서드 후보 | 코드 위치 확정도 |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `CSTM_REQUESTED` | 통관 의뢰 접수 | BROKER | OWNER | `IR_NO` | `${irNo}` | `ImportServiceImpl.insertImp(...)` | 🟢 |
+| 2 | `TR_REQUESTED` | 운송 의뢰 접수 | TRANSPORT_MANAGER | OWNER | `TRC-{trcNo}` | `${trcNo}` | `TransportContractServiceImpl.registTranReq(...)` | 🟢 |
+| 3 | `CSTM_REQ_REJECTED` | 통관 의뢰 서류 보완 요청 | OWNER | BROKER | `IR_NO` | `${irNo}` | `StatusServiceImpl`의 보완요청 메서드 | 🟡 |
+| 4 | `CSTM_SUPP_SUBMITTED` | 통관 서류 보완 제출 | BROKER | OWNER | `IR_NO` | `${irNo}` | `ImportServiceImpl`의 보완제출 메서드 | 🟡 |
+| 5 | `CSTM_CANCEL_REQUESTED` | 통관 취소 요청 접수 | OFFICER | BROKER | `IR_NO` | `${irNo}` | `BrokerDeclareServiceImpl`의 취소 관련 메서드 | 🟡 |
+| 6 | `TAX_NOTICE` | 관부가세 납부 고지 | OWNER | BROKER/OFFICER | `IR_NO` | `${irNo}` | (코드 부재 - 향후 트랙) | 🔴 |
+| 7 | `FEE_INVOICE_ISSUED` | 물류/통관 정산 요청 | OWNER | BROKER/TM/WM | `IR_NO` 또는 청구서키 | `${irNo}` | (코드 부재 - 향후 트랙) | 🔴 |
+| 8 | `FEE_PAID_DONE` | 수수료/보관료 정산 완료 | BROKER, WAREHOUSE_MANAGER | OWNER | `IR_NO` | `${irNo}` | `OwnerPaymentServiceImpl`의 결제 메서드 | 🟡 |
+| 9 | `DO_ISSUED` | D/O 발급 및 정산완료 | TRANSPORT_MANAGER | OWNER | `DO-{doNo}` | `${doNo}` | `OwnerPaymentServiceImpl` 또는 D/O 발급 로직 | 🟡 |
+| 10 | `DELIVERY_STARTED` | 내륙 배차 출발 안내 | OWNER | TRANSPORT_MANAGER | `TRC-{trcNo}` | `${trcNo}` | `ImportTransportServiceImpl.modifyImpTransportReqStatus` (특정 상태) | 🟡 |
+| 11 | `DELIVERY_COMPLETED` | 최종 배송 완료 | OWNER | TRANSPORT_MANAGER | `TRC-{trcNo}` | `${trcNo}` | `ImportTransportServiceImpl`의 완료 처리 메서드 | 🟡 |
+| 12 | `DELIVERY_CONFIRMED` | 운송의뢰 최종 인수확인 | TRANSPORT_MANAGER | OWNER | `TRC-{trcNo}` | `${trcNo}` | `OwnerTransportServiceImpl` 인수 확인 메서드 | 🟡 |
+| 13 | `WH_INBOUND_SCHEDULED` | 입고 예정 통보 | WAREHOUSE_MANAGER | TRANSPORT_MANAGER | `WIR-{wirNo}` | `${wirNo}` | `ImportTransportServiceImpl` 입고지시 메서드 | 🟡 |
+| 14 | `WH_OUTBOUND_SCHEDULED` | 반출 차량 배차 완료 | WAREHOUSE_MANAGER | TRANSPORT_MANAGER | `CRR-{crrNo}` | `${crrNo}` | `ExportTransportServiceImpl` 등 배차완료 메서드 | 🟡 |
+| 15 | `WH_INBOUND_SUPP_RESOLVED`| 입고 이상 조치 완료 | WAREHOUSE_MANAGER | OWNER/TM | `WIR-{wirNo}` | `${wirNo}` | (코드 부재 - 향후 트랙) | 🔴 |
+| 16 | `WH_OUTBOUND_SUPP_RESOLVED`| 반출 이상 조치 완료 | WAREHOUSE_MANAGER | TRANSPORT_MANAGER | `CRR-{crrNo}` | `${crrNo}` | (코드 부재 - 향후 트랙) | 🔴 |
+| 17 | `INSPECT_ASSIGNED` | 세관 현장 검사 지정 | BROKER | OFFICER | `IR_NO` | `${irNo}` | (코드 부재 - 검사 모듈 향후 트랙) | 🔴 |
+| 18 | `INSPECT_ASSIGNED_FIELD`| 현장 검사 지시 | FIELDOFFICER | OFFICER | `IR_NO` | `${irNo}` | (코드 부재 - 검사 모듈 향후 트랙) | 🔴 |
+| 19 | `INSPECT_READY` | 검사 화물 준비 완료 | FIELDOFFICER | WAREHOUSE_MANAGER | `IR_NO` 또는 `WIR-{wirNo}` | `${irNo}` | (코드 부재 - 검사 모듈 향후 트랙) | 🔴 |
+| 20 | `INSPECT_RESCHEDULE_REQ`| 검사 일정/장소 변경 요청 | FIELDOFFICER | BROKER/WM | `IR_NO` | `${irNo}` | (코드 부재 - 검사 모듈 향후 트랙) | 🔴 |
+| 21 | `INSPECT_RESULT_REGISTERED`| 현장 검사 결과 등록 완료 | OFFICER | FIELDOFFICER | `IR_NO` | `${irNo}` | (코드 부재 - 검사 모듈 향후 트랙) | 🔴 |
+
+---
+
+## 3. 액터별 갭 요약
+
+- **화주 (OWNER):** 요구 7건 / 적용 2건 / 갭 5건 (🟢 0, 🟡 3, 🔴 2)
+- **관세사 (BROKER):** 요구 7건 / 적용 3건 / 갭 4건 (🟢 1, 🟡 2, 🔴 1)
+- **세관공무원 (OFFICER):** 요구 5건 / 적용 3건 / 갭 2건 (🟢 0, 🟡 1, 🔴 1)
+- **창고관리자 (WAREHOUSE_MANAGER):** 요구 6건 / 적용 1건 / 갭 5건 (🟢 0, 🟡 3, 🔴 2)
+- **현장공무원 (FIELDOFFICER):** 요구 3건 / 적용 0건 / 갭 3건 (🟢 0, 🟡 0, 🔴 3)
+- **운송담당자 (TRANSPORT_MANAGER):** 요구 7건 / 적용 4건 / 갭 3건 (🟢 1, 🟡 2, 🔴 0)
+
+*전체 누락 건수: 21건 (🟢 2건, 🟡 10건, 🔴 9건)*
+
+---
+
+## 4. 다음 PR 후보 정리
+
+🟢 확정도 높은 이벤트를 즉시 적용 가능한 다음 PR 후보로 선정합니다.
+
+| 제안 이벤트 코드 | 액터 | 발화 위치 | 추정 작업량 |
+|---|---|---|---|
+| `CSTM_REQUESTED` | BROKER | `ImportServiceImpl.insertImp(...)`, `ExportServiceImpl.insertExp(...)` | 단기 (공통 모듈 수정 불필요, 정책+트리거 2곳) |
+| `TR_REQUESTED` | TRANSPORT_MANAGER | `TransportContractServiceImpl.registTranReq(...)` | 단기 (수신자 산출 Mapper 추가 필요할 수 있음) |
+
+---
+
+## 5. 발견된 운영 이슈 및 우려사항
+
+1. **검사 도메인 기능 부재:** 현장공무원(FIELDOFFICER) 관련된 알림(현장 검사 지시, 장소 변경, 결과 등록)은 현재 업무 코드가 구현되어 있지 않아 발화 지점을 찾을 수 없습니다. (🔴 상태)
+2. **청구/비용 도메인 구현 불명확:** 세금 고지(TAX_NOTICE), 물류 정산 요청(FEE_INVOICE_ISSUED) 등의 비용 청구 기능이 명확히 코드에 존재하지 않아 트리거를 박을 수 없습니다.
+3. **`TRC-{trcNo}` 기반 수신자 산출:** 운송 의뢰 접수 시 TRANSPORT_MANAGER 수신자를 찾기 위해 `TRC_NO`를 사용하는 신규 매퍼 메서드(예: `selectTransportManagerIdByTrcNo`)가 필요합니다. 공통 모듈에 추가 작업이 선행되어야 합니다.

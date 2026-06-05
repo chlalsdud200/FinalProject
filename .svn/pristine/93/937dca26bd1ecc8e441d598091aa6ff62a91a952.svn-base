@@ -1,0 +1,90 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%
+    request.setAttribute("activeMenu", "transport");
+    request.setAttribute("activeGroup", "transport");
+    request.setAttribute("activeSub", "forwarder");
+%>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="ctx-path" content="${pageContext.request.contextPath}">
+    <title>TACS 운송업체 상세</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+          rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/owner.css">
+</head>
+<body>
+<div class="app" id="app">
+    <%@ include file="/WEB-INF/views/owner/sidebar.jsp" %>
+
+    <div class="main-wrap">
+        <%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+        <main class="content">
+            <div class="page active" id="pg-transport">
+                <div class="page-title-row">
+                    <h2>운송업체 상세</h2>
+                </div>
+                <%@ include file="/WEB-INF/views/owner/transport/fragments/transportTabs.jsp" %>
+
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                    <a class="btn btn-outline"
+                       href="${pageContext.request.contextPath}/owner/transport/forwarder/list.do"
+                       style="padding:6px 12px; font-size:11px; text-decoration:none;">
+                        <span class="material-symbols-outlined" style="font-size:14px;">arrow_back</span> 목록으로
+                    </a>
+                    <h3 style="font-size:15px; font-weight:800; color:#0f172a;">운송업체 상세</h3>
+                </div>
+                <div class="card-section" style="padding:20px 24px; margin-bottom:18px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;">
+                        <div>
+                            <div style="font-size:10px;color:#94a3b8;font-weight:800;margin-bottom:6px">운송업체</div>
+                            <div style="font-size:20px;font-weight:900;color:#0f172a;margin-bottom:8px">대한포워딩</div>
+                            <div style="font-size:12px;color:#64748b">김운송 · 02-1234-5678 · ocean@forwarder.example</div>
+                        </div>
+                        <span class="doc-status ok">이용중</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px">
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:14px">
+                            <div style="font-size:10px;color:#94a3b8;font-weight:700">전문구간</div>
+                            <div style="font-size:13px;font-weight:800;margin-top:6px">부산 ↔ LA</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:14px">
+                            <div style="font-size:10px;color:#94a3b8;font-weight:700">운송유형</div>
+                            <div style="font-size:13px;font-weight:800;margin-top:6px">해상</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:14px">
+                            <div style="font-size:10px;color:#94a3b8;font-weight:700">평점</div>
+                            <div style="font-size:13px;font-weight:800;margin-top:6px">★ 4.8</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:14px">
+                            <div style="font-size:10px;color:#94a3b8;font-weight:700">처리건수</div>
+                            <div style="font-size:13px;font-weight:800;margin-top:6px">128건</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px">
+                    <a class="btn btn-primary"
+                       href="${pageContext.request.contextPath}/owner/transport/contract/form.do?frwrId=${selectedFrwrId}"
+                       style="text-decoration:none">
+                        <span class="material-symbols-outlined"
+                              style="font-size:15px;vertical-align:middle;margin-right:4px">handshake</span>계약 요청
+                    </a>
+                </div>
+
+            </div>
+        </main>
+
+        <%@ include file="/WEB-INF/views/common/ownerModals.jsp" %>
+        <%@ include file="/WEB-INF/views/common/footer.jsp" %>
+    </div>
+</div>
+
+<%@ include file="/WEB-INF/views/common/ownerScripts.jsp" %>
+
+</body>
+</html>

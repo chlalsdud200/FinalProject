@@ -1,0 +1,175 @@
+package kr.or.tacs.broker.status.controller;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.Map;
+
+import kr.or.tacs.broker.status.service.IStatusService;
+import kr.or.tacs.dto.PageDTO;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+/**
+ * 처리현황 페이지 컨트롤러
+ *  - 통합조회: 수입신고서 목록/상세
+ *  - 세금납부: 기존 화면 유지
+ *  - 신고필증: 기존 화면 유지
+ */
+@Controller
+@RequestMapping("/broker/status")
+public class StatusController {
+
+    private final IStatusService statusService;
+
+    public StatusController(IStatusService statusService) {
+        this.statusService = statusService;
+    }
+
+    @GetMapping("/search.do")
+    public String search(
+            @ModelAttribute PageDTO pageDTO,
+            Principal principal,
+            Model model
+    ) {
+        String brokerId = principal != null ? principal.getName() : null;
+
+        if (pageDTO.getPage() < 1) {
+            pageDTO.setPage(1);
+        }
+        if (pageDTO.getSize() < 1) {
+            pageDTO.setSize(10);
+        }
+
+        int totalCount = statusService.selectImportDeclareCount(brokerId, pageDTO);
+        pageDTO.setTotalCount(totalCount);
+
+        List<Map<String, Object>> declareList =
+                statusService.selectImportDeclareList(brokerId, pageDTO);
+
+        model.addAttribute("activeMenu", "status");
+        model.addAttribute("activeSub", "search");
+        model.addAttribute("mode", "list");
+
+        model.addAttribute("declareList", declareList);
+        model.addAttribute("pageDTO", pageDTO);
+
+        return "broker/pages/status";
+    }
+
+    @GetMapping("/detail.do")
+    public String detail(
+            @RequestParam("idIrNo") String idIrNo,
+            @ModelAttribute PageDTO pageDTO,
+            Principal principal,
+            Model model
+    ) {
+        String brokerId = principal != null ? principal.getName() : null;
+
+        model.addAttribute("activeMenu", "status");
+        model.addAttribute("activeSub", "search");
+        model.addAttribute("mode", "detail");
+        model.addAttribute("pageDTO", pageDTO);
+
+        model.addAttribute("detail", statusService.selectImportDeclareDetail(idIrNo, brokerId));
+        model.addAttribute("items", statusService.selectImportDeclareItemList(idIrNo));
+        model.addAttribute("mdlspecs", statusService.selectImportDeclareMdlspecList(idIrNo));
+
+        return "broker/pages/status";
+    }
+
+    @GetMapping("/item/suppForm.do")
+    public String suppForm(
+            @RequestParam("idIrNo") String idIrNo,
+            @RequestParam("idiSn") Integer idiSn,
+            @ModelAttribute PageDTO pageDTO,
+            Principal principal,
+            Model model
+    ) {
+        String brokerId = principal != null ? principal.getName() : null;
+
+        model.addAttribute("activeMenu", "status");
+        model.addAttribute("activeSub", "search");
+        model.addAttribute("mode", "suppForm");
+        model.addAttribute("pageDTO", pageDTO);
+
+        model.addAttribute("detail", statusService.selectImportDeclareDetail(idIrNo, brokerId));
+        model.addAttribute("suppItem", statusService.selectSupplementItem(idIrNo, idiSn, brokerId));
+        model.addAttribute("suppMdlspecs", statusService.selectSupplementMdlspecList(idIrNo, idiSn));
+
+        return "broker/pages/status";
+    }
+
+    @PostMapping("/item/suppSubmit.do")
+    public String suppSubmit(
+            @RequestParam("idIrNo") String idIrNo,
+            @RequestParam("idiSn") Integer idiSn,
+            @RequestParam(value = "idiHsCd", required = false) String idiHsCd,
+            @RequestParam(value = "idiDclrGdsnm", required = false) String idiDclrGdsnm,
+            @RequestParam(value = "idiTrdngGdsnm", required = false) String idiTrdngGdsnm,
+            @RequestParam(value = "idiTrdmkNm", required = false) String idiTrdmkNm,
+            @RequestParam(value = "idiQty", required = false) String idiQty,
+            @RequestParam(value = "idiQtyUnitCd", required = false) String idiQtyUnitCd,
+            @RequestParam(value = "idiNetWt", required = false) String idiNetWt,
+            @RequestParam(value = "idiTaxtPrcKrw", required = false) String idiTaxtPrcKrw,
+            @RequestParam(value = "idiOrgnCntryCd", required = false) String idiOrgnCntryCd,
+
+            @RequestParam(value = "idimMdlspecNo", required = false) String[] idimMdlspecNo,
+            @RequestParam(value = "idimMdlspecNm", required = false) String[] idimMdlspecNm,
+            @RequestParam(value = "idimQty1", required = false) String[] idimQty1,
+            @RequestParam(value = "idimQty1UnitCd", required = false) String[] idimQty1UnitCd,
+            @RequestParam(value = "idimUnitPrc", required = false) String[] idimUnitPrc,
+            @RequestParam(value = "idimAmt", required = false) String[] idimAmt,
+
+            Principal principal,
+            RedirectAttributes ra
+    ) {
+        String brokerId = principal != null ? principal.getName() : null;
+
+        statusService.submitSupplementItem(
+                idIrNo,
+                idiSn,
+                brokerId,
+                idiHsCd,
+                idiDclrGdsnm,
+                idiTrdngGdsnm,
+                idiTrdmkNm,
+                idiQty,
+                idiQtyUnitCd,
+                idiNetWt,
+                idiTaxtPrcKrw,
+                idiOrgnCntryCd,
+                idimMdlspecNo,
+                idimMdlspecNm,
+                idimQty1,
+                idimQty1UnitCd,
+                idimUnitPrc,
+                idimAmt
+        );
+
+        ra.addFlashAttribute("msg", "보완수정이 제출되었습니다.");
+
+        return "redirect:/broker/status/detail.do?idIrNo=" + idIrNo;
+    }
+    
+    @GetMapping("/tax.do")
+    public String tax(Model model) {
+        model.addAttribute("activeMenu", "status");
+        model.addAttribute("activeSub", "tax");
+        return "broker/pages/status";
+    }
+
+    @GetMapping("/cert.do")
+    public String cert(Model model) {
+        model.addAttribute("activeMenu", "status");
+        model.addAttribute("activeSub", "cert");
+        return "broker/pages/status";
+    }
+    
+    
+}

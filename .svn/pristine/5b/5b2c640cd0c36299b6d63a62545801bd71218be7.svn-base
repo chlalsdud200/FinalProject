@@ -1,0 +1,12 @@
+package kr.or.tacs.owner.transport.service;
+
+import kr.or.tacs.dto.owner.OwnerFreightDTO;
+
+import java.util.List;
+
+public interface IFreightService {
+
+    List<OwnerFreightDTO> retrieveFreightList();
+
+    OwnerFreightDTO retrieveFreight(String tcsNo);
+}

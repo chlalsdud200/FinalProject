@@ -1,0 +1,25 @@
+package kr.or.tacs.owner.transport.mapper;
+
+import kr.or.tacs.dto.owner.OwnerTranRequestDTO;
+import kr.or.tacs.dto.owner.OwnerTranSearchDTO;
+import kr.or.tacs.vo.OwnerVO;
+import kr.or.tacs.vo.transport.TransportManagerVO;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
+
+@Mapper
+public interface ITransportContractMapper {
+
+    Long selectTrcSeq();
+
+    OwnerVO selectOwnerInfo(String trcOwrId);
+
+    int insertTranReq(OwnerTranRequestDTO tranDTO);
+
+    List<TransportManagerVO> selectTranManagerList();
+
+    int selectContractCount(OwnerTranSearchDTO searchDTO);
+
+    List<OwnerTranRequestDTO> selectContractList(OwnerTranSearchDTO searchDTO);
+}

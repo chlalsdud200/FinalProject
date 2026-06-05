@@ -1,0 +1,669 @@
+/* ==========================================================================
+   Outbound specific styles
+   보세반출 처리 화면 전용 CSS
+   - 공통 CSS 색상/톤 유지
+   - outbound 화면의 배치/간격만 정리
+   ========================================================================== */
+
+/* ==========================================================================
+   탭
+   ========================================================================== */
+
+.outbound-tab-bar {
+  margin-bottom: 24px;
+}
+
+/* 공통 prog-tab 스타일과 충돌 방지 */
+.outbound-tab-bar .prog-tab {
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  background: transparent !important;
+  color: #475569;
+  padding: 12px 18px !important;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.outbound-tab-bar .prog-tab:hover {
+  background: transparent !important;
+  color: #0f172a;
+}
+
+.outbound-tab-bar .prog-tab.active {
+  color: #0f172a;
+  border-bottom-color: #334155 !important;
+}
+
+.outbound-tab-bar .prog-tab:focus,
+.outbound-tab-bar .prog-tab:focus-visible,
+.outbound-tab-bar .prog-tab:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   탭 패널
+   ========================================================================== */
+
+.outbound-panel {
+  display: none;
+}
+
+.outbound-panel.active {
+  display: block;
+}
+
+/* ==========================================================================
+   검색 조건 영역
+   ========================================================================== */
+
+.outbound-filter {
+  display: grid !important;
+  grid-template-columns: 310px 150px 150px minmax(360px, 1fr) 86px;
+  align-items: end;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #fff;
+  border-left: 4px solid #334155;
+  box-sizing: border-box;
+}
+
+/* 기존 구분선은 grid 배치에서는 필요 없음 */
+.outbound-filter .filter-sep {
+  display: none !important;
+}
+
+/* 필터 항목 */
+.outbound-filter .form-item {
+  display: flex !important;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  width: 100%;
+}
+
+.outbound-filter .form-item label {
+  font-size: 11px;
+  font-weight: 900;
+  color: #334155;
+  line-height: 1;
+}
+
+/* 날짜 범위 */
+.outbound-filter .date-range {
+  display: grid !important;
+  grid-template-columns: 1fr 16px 1fr;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.outbound-filter .date-range input {
+  width: 100% !important;
+  min-width: 0;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.outbound-filter .date-range span {
+  display: block;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* select 크기만 통일 */
+.outbound-filter select {
+  width: 100% !important;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+/*
+   검색창
+   색상/테두리/아이콘 스타일은 공통 .search-wrap CSS를 그대로 사용한다.
+   여기서는 위치, 너비, 높이만 맞춘다.
+*/
+.outbound-filter .outbound-search {
+  min-width: 0 !important;
+  width: 100%;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.outbound-filter .outbound-search input {
+  width: 100%;
+}
+
+/* 조회 버튼 */
+.outbound-search-btn {
+  width: 86px;
+  height: 36px;
+  padding: 0 !important;
+  white-space: nowrap;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  align-self: end;
+}
+
+.outbound-search-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* ==========================================================================
+   테이블
+   ========================================================================== */
+
+.card-section {
+  overflow-x: auto;
+}
+
+.outbound-table {
+  table-layout: fixed;
+  min-width: 960px;
+}
+
+#outbound-docs .outbound-table {
+  min-width: 960px;
+}
+
+#outbound-release .outbound-table {
+  min-width: 1180px;
+}
+
+.outbound-empty {
+  height: 72px;
+  text-align: center;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+  background: #fff;
+}
+
+/* ==========================================================================
+   나중에 실제 데이터 연결 시 사용할 스타일
+   ========================================================================== */
+
+/* 상태 배지 */
+.outbound-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.outbound-badge.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.outbound-badge.wait {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.outbound-badge.progress {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.outbound-badge.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* 행 버튼 */
+.outbound-row-btn {
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  background: #334155;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.outbound-row-btn:hover {
+  background: #1e293b;
+}
+
+.outbound-row-btn.secondary {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.outbound-row-btn.secondary:hover {
+  background: #cbd5e1;
+}
+
+/* 파일보기 버튼 */
+.outbound-file-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.outbound-file-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* ==========================================================================
+   첨부파일 모달
+   ========================================================================== */
+
+.outbound-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.55);
+  align-items: center;
+  justify-content: center;
+}
+
+.outbound-modal.active {
+  display: flex;
+}
+
+.outbound-modal-box {
+  width: 520px;
+  max-width: calc(100vw - 40px);
+  background: #fff;
+  border: 1px solid #d8dee9;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
+}
+
+.outbound-modal-header {
+  height: 56px;
+  padding: 0 20px;
+  background: #334155;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.outbound-modal-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.outbound-modal-close {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.outbound-modal-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.outbound-modal-close .material-symbols-outlined {
+  font-size: 22px;
+}
+
+.outbound-modal-body {
+  padding: 18px 20px 20px;
+  background: #fff;
+}
+
+.outbound-file-empty {
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+}
+
+/* 파일 목록 */
+.outbound-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.outbound-file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.outbound-file-info {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.outbound-file-icon {
+  font-size: 24px;
+  color: #64748b;
+}
+
+.outbound-file-name {
+  font-size: 13px;
+  font-weight: 900;
+  color: #0f172a;
+  word-break: break-all;
+}
+
+.outbound-file-meta {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.outbound-file-download {
+  flex-shrink: 0;
+  min-width: 74px;
+  height: 32px;
+  padding: 0 12px;
+  background: #475569;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.outbound-file-download:hover {
+  background: #334155;
+  color: #fff;
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   반응형
+   ========================================================================== */
+
+@media (max-width: 1280px) {
+  .outbound-filter {
+    grid-template-columns: 300px 140px 140px minmax(260px, 1fr) 86px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .outbound-filter {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .outbound-filter .outbound-search {
+    grid-column: 1 / -1;
+  }
+
+  .outbound-search-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .outbound-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .outbound-filter .date-range {
+    grid-template-columns: 1fr;
+  }
+
+  .outbound-filter .date-range span {
+    display: none;
+  }
+
+  .outbound-modal-box {
+    width: calc(100vw - 28px);
+  }
+
+  .outbound-file-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .outbound-file-download {
+    width: 100%;
+  }
+}
+
+/* ==========================================================================
+   반출서류 목록 테이블 정렬 보정
+   - 다른 목록 화면처럼 기본은 왼쪽 정렬
+   - 상태/관리 칸만 가운데 정렬
+   ========================================================================== */
+
+.outbound-table th,
+.outbound-table td {
+  text-align: left !important;
+  vertical-align: middle !important;
+  padding-left: 16px;
+}
+
+/* D/O·신고필증 상태 칸 */
+#outbound-docs .outbound-table th:nth-child(6),
+#outbound-docs .outbound-table td:nth-child(6) {
+  text-align: center !important;
+  padding-left: 0;
+}
+
+/* 관리 칸 */
+#outbound-docs .outbound-table th:nth-child(7),
+#outbound-docs .outbound-table td:nth-child(7) {
+  text-align: center !important;
+  padding-left: 0;
+}
+
+/* 반출처리 관리 탭의 상태/관리 칸도 가운데 정렬 */
+#outbound-release .outbound-table th:nth-child(7),
+#outbound-release .outbound-table td:nth-child(7),
+#outbound-release .outbound-table th:nth-child(8),
+#outbound-release .outbound-table td:nth-child(8),
+#outbound-release .outbound-table th:nth-child(9),
+#outbound-release .outbound-table td:nth-child(9),
+#outbound-release .outbound-table th:nth-child(10),
+#outbound-release .outbound-table td:nth-child(10) {
+  text-align: center !important;
+  padding-left: 0;
+}
+
+/* ==========================================================================
+   수출입 유형 배지
+   ========================================================================== */
+
+.outbound-type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.outbound-type-badge.import {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.outbound-type-badge.export {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+/* =========================================================
+   반출 보완요청 모달 스타일 정리
+   - 기본 버튼 테두리 제거
+   - 상세보기 모달과 톤 통일
+   ========================================================= */
+
+/* 보완요청 모달 내부 박스 여백 정리 */
+#outboundSupplementModal .outbound-modal-body {
+  padding: 24px;
+  background: #ffffff;
+}
+
+/* 보완요청 모달의 정보 박스 */
+#outboundSupplementModal .outbound-form-box {
+  border: 1px solid #111827;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+/* label 정리 */
+#outboundSupplementModal label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+/* input / textarea 공통 */
+#outboundSupplementModal input,
+#outboundSupplementModal textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 9px 10px;
+  font-size: 14px;
+  color: #0f172a;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+/* textarea 높이 */
+#outboundSupplementModal textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* footer 버튼 영역 */
+#outboundSupplementModal .outbound-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+/* 버튼 공통: 기본 진한 테두리 제거 */
+#outboundSupplementModal button {
+  border: none;
+  outline: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+/* 버튼 focus 시 기본 검은 테두리 제거 */
+#outboundSupplementModal button:focus,
+#outboundSupplementModal button:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* 취소 버튼 */
+#outboundSupplementModal .outbound-supplement-cancel-btn {
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 보완요청 등록 버튼 */
+#outboundSupplementModal #outboundSupplementSubmitBtn {
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 4px;
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* 보완요청 등록 버튼 hover */
+#outboundSupplementModal #outboundSupplementSubmitBtn:hover {
+  background: #d97706;
+}
+
+/* 취소 버튼 hover */
+#outboundSupplementModal .outbound-supplement-cancel-btn:hover {
+  background: #f8fafc;
+}
+
+/* ==========================================================================
+   반출처리 목록 상태 배지 색상
+   - 기존 .outbound-badge 기본 모양 재사용
+   - 반출상태별 색상만 추가
+   ========================================================================== */
+
+.outbound-badge.release-wait {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.outbound-badge.release-fix {
+  background: #fed7aa;
+  color: #c2410c;
+}
+
+.outbound-badge.release-sent {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.outbound-badge.release-done {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.outbound-badge.release-reject {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.outbound-badge.release-default {
+  background: #e2e8f0;
+  color: #475569;
+}

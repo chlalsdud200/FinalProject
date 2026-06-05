@@ -1,0 +1,63 @@
+package kr.or.tacs.systemadmin.stats.support;
+
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * 수입신고 상태코드(imp_rqst.ir_status_cd) → 한글 라벨 단일 매핑.
+ *
+ * <p>통계 화면 등에서 상태 분포를 한글로 노출하기 위한 변환표.
+ * 시스템 곳곳에 CSTM_* / DCLR_* 계열 코드가 섞여 기록되므로 한 곳에서 일괄 변환한다.
+ * 매핑에 없는 코드는 원본 코드를 그대로 반환한다(영어 노출 방지가 아닌 추적 목적).
+ */
+public final class DeclarationStatusLabel {
+
+    private static final Map<String, String> LABELS;
+
+    static {
+        Map<String, String> m = new LinkedHashMap<>();
+        // 접수/요청 단계
+        m.put("REQ", "신고요청");
+        m.put("RQST_CMPT", "신고완료");
+        m.put("CSTM_REQ", "통관접수대기");
+        m.put("CSTM_ACPT", "통관접수완료");
+        m.put("CSTM_ACCEPT", "통관접수완료");
+        m.put("ACCEPTED", "통관접수완료");
+        m.put("ACPT", "통관접수완료");
+        // 심사 단계
+        m.put("CSTM_INPRG", "세관심사중");
+        m.put("DCLR_WAIT", "신고대기");
+        m.put("DCLR_REVIEW", "심사중");
+        // 보완 단계
+        m.put("CSTM_SUPP", "보완요청");
+        m.put("CSTM_SUPP_SUB", "보완제출");
+        m.put("DCLR_SUPP_REQ", "보완요청");
+        m.put("DCLR_SUPP_SUB", "보완제출");
+        // 반려
+        m.put("CSTM_REJ", "반려");
+        m.put("CSTM_REJECT", "반려");
+        m.put("DCLR_REJ", "반려");
+        // 수리/완료
+        m.put("DCLR_ACPT", "수리완료");
+        m.put("DCLR_DONE", "심사완료");
+        m.put("CSTM_DONE", "통관완료");
+        // 정산 단계
+        m.put("CSTM_TAX_REQ", "관부가세 청구");
+        m.put("CSTM_TAX_PAID", "관부가세 납부");
+        // 기타
+        m.put("CSTM_CANCEL", "취소");
+        LABELS = Collections.unmodifiableMap(m);
+    }
+
+    private DeclarationStatusLabel() {
+    }
+
+    /** 상태코드를 한글 라벨로 변환한다. 매핑에 없으면 원본 코드를 반환한다. */
+    public static String resolve(String code) {
+        if (code == null || code.isEmpty()) {
+            return "미지정";
+        }
+        return LABELS.getOrDefault(code, code);
+    }
+}

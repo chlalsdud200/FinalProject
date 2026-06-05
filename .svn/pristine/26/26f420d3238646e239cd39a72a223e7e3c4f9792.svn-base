@@ -1,0 +1,122 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ include file="/WEB-INF/views/officer/common/taglibs.jsp" %>
+<%@ taglib uri="http://www.springframework.org/security/tags" prefix="sec" %>
+
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <%@ include file="/WEB-INF/views/officer/header/head.jsp" %>
+        <title>TACS · 대시보드</title>
+        <link rel="stylesheet" href="${ctx}/resources/css/officer/pages/dashboard.css">
+    </head>
+
+    <body>
+        <%@ include file="/WEB-INF/views/officer/header/sidebar.jsp" %>
+        <%@ include file="/WEB-INF/views/officer/header/header.jsp" %>
+
+        <main class="main-content">
+            <div class="page-content dashboard-page">
+                <section class="dashboard-page page-section active" id="page-dashboard">
+                    <div class="dashboard-head">
+                        <div>
+                            <p class="dashboard-kicker">TACS · 행정공무원 업무 시작 화면</p>
+                            <h1>대시보드</h1>
+                            <p class="dashboard-desc">신규 접수, 검사·검역 결과, 보완요청, 세금 납부, 긴급 알림을 한 화면에서 확인하고 바로 처리 화면으로 이동합니다.</p>
+                        </div>
+                    </div>
+                    <div class="dashboard-stat-grid">
+                        <article class="dashboard-stat-card">
+                            <span class="stat-label">접수대기</span>
+                            <strong>14건</strong>
+                            <span class="stat-sub">IMP_RQST / EXP_DCLR</span>
+                        </article>
+                        <article class="dashboard-stat-card">
+                            <span class="stat-label">심사중</span>
+                            <strong>7건</strong>
+                            <span class="stat-sub">기본심사 · 요건확인</span>
+                        </article>
+                        <article class="dashboard-stat-card">
+                            <span class="stat-label">검사/검역중</span>
+                            <strong>5건</strong>
+                            <span class="stat-sub">IMP_INS_RESULT</span>
+                        </article>
+                        <article class="dashboard-stat-card">
+                            <span class="stat-label">보완요청</span>
+                            <strong>4건</strong>
+                            <span class="stat-sub">SUPP_RQST_ITEM</span>
+                        </article>
+                        <article class="dashboard-stat-card">
+                            <span class="stat-label">납부대기</span>
+                            <strong>3건</strong>
+                            <span class="stat-sub">CUSTOMS_TAX</span>
+                        </article>
+                    </div>
+                    <div class="dashboard-layout dashboard-layout-top">
+                        <article class="dashboard-card dashboard-card-wide">
+                            <div class="dashboard-card-head">
+                                <div>
+                                    <h2>신규 수입/수출 신고접수</h2>
+                                    <p>24시간 이내 접수된 신고 중 현재상태가 접수대기인 신규 건입니다.</p>
+                                </div>
+                                <button onclick="location.href='${ctx}/officer/basicScreening.do'" type="submit">전체보기 →</button>
+                            </div>
+                            <div class="dashboard-table-wrap">
+                                <table class="dashboard-table">
+                                    <thead>
+                                        <tr>
+                                            <th>신고번호</th>
+                                            <th>구분</th>
+                                            <th>업체명</th>
+                                            <th>접수일시</th>
+                                            <th>현재상태</th>
+                                            <th>처리</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach items="${list}" var="dash">
+                                            <tr>
+                                                <td>
+                                                    <span class="new-line-badge">NEW</span><strong>${dash.reqNo}</strong>
+                                                    </td>
+                                                    <td>${dash.declareType}</td>
+                                                    <td>${dash.companyName}</td>
+                                                    <td>${dash.requestDate}</td>
+                                                    <td><strong>${dash.statusCd}</strong></td>
+                                                    <td>
+                                                        <button class="btn-sm btn-secondary" type="button">접수확인</button>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </article>
+                            <article class="dashboard-card">
+                                <div class="dashboard-card-head compact">
+                                    <h2>자주 하는 업무</h2>
+                                    <span class="dashboard-head-tag">바로가기</span>
+                                </div>
+                                <div class="shortcut-grid">
+                                    <button class="dash-btn" onclick="location.href='${ctx}/officer/basicScreening.do'" type="button">접수·기본심사</button>
+                                    <button class="dash-btn" onclick="location.href='${ctx}/officer/checkRequirement.do'" type="button">요건확인</button>
+                                    <button class="dash-btn" onclick="location.href='${ctx}/officer/loadedCargoList.do'" type="button">적재화물 조회</button>
+                                    <button class="dash-btn" onclick="location.href='${ctx}/officer/taxInquiryForward.do'" type="button">세금조회</button>
+                                    <button class="dash-btn" onclick="location.href='${ctx}/officer/confirmationQuarantine.do'" type="button">검역관리</button>
+                                    <button class="dash-btn" onclick="location.href='${ctx}/officer/supplementaryRequest.do'" type="button">보완요청</button>
+                                    <button class="dash-btn" onclick="location.href='${ctx}/officer/customsHoldRegistration.do'" type="button">통관보류</button>
+                                    <button class="dash-btn" onclick="location.href='${ctx}/officer/repairReportProcessing.do'" type="button">신고수리</button>
+                                </div>
+
+                            </div>
+                        </section>
+                    </div>
+                </main>
+
+                <%@ include file="/WEB-INF/views/officer/footer/footer.jsp" %>
+                <%@ include file="/WEB-INF/views/officer/footer/scripts.jsp" %>
+
+                <script defer src="${ctx}/resources/js/officer/pages/dashboard.js"></script>
+            </body>
+        </html>

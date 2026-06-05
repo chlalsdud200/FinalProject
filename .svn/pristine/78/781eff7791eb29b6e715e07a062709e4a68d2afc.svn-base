@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.owner.payment.mapper.IOwnerPaymentMapper">
+
+    <!-- 운임정산 결제 대상 조회 -->
+    <select id="selectFreightPaymentTarget" resultType="kr.or.tacs.dto.owner.OwnerPaymentTargetDTO">
+        SELECT
+            TCS_NO             AS claimNo
+             , TCS_OWR_ID         AS owrId
+             , TCS_TOT_BILL_AMT   AS amount
+             , TCS_STL_STATUS_CD  AS statusCd
+        FROM TRAN_COST_STL
+        WHERE TCS_NO = #{claimNo}
+          AND TCS_OWR_ID = #{owrId}
+    </select>
+
+    <!-- 관세사 청구 결제 대상 조회 -->
+    <select id="selectBrokerPaymentTarget" resultType="kr.or.tacs.dto.owner.OwnerPaymentTargetDTO">
+        SELECT
+            BC_NO        AS claimNo
+             , BC_OWR_ID    AS owrId
+             , BC_TOTAL_AMT AS amount
+             , BC_STATUS_CD AS statusCd
+             , BC_ORDER_NM  AS orderName
+        FROM BROKER_CHARGE
+        WHERE BC_NO = #{claimNo}
+          AND BC_OWR_ID = #{owrId}
+    </select>
+
+    <!-- 결제 대기 이력 등록 -->
+    <insert id="insertPayReady"
+            parameterType="kr.or.tacs.dto.owner.OwnerPayRecordDTO">
+        INSERT INTO OWNER_PAY_RECORD (
+                                       OPR_NO
+                                     , OPR_CLAIM_NO
+                                     , OPR_PAYMENT_ID
+                                     , OPR_HANDLE_STATUS_CD
+                                     , OPR_PAY_STATUS_CD
+                                     , OPR_AMT
+                                     , OPR_PAY_METHOD_CD
+                                     , OPR_APPROVED_DT
+                                     , OPR_REGIST_DT
+                                     , OPR_RECORD_TY
+        ) VALUES (
+                   #{oprNo}
+                 , #{oprClaimNo}
+                 , #{oprPaymentId}
+                 , #{oprHandleStatusCd}
+                 , #{oprPayStatusCd}
+                 , #{oprAmt}
+                 , #{oprPayMethodCd}
+                 , #{oprApprovedDt}
+                 , SYSDATE
+                 , #{oprRecordTy}
+                 )
+    </insert>
+
+    <!-- orderId 기준 결제 이력 조회 -->
+    <select id="selectPayRecordByPaymentId" parameterType="string" resultType="kr.or.tacs.dto.owner.OwnerPayRecordDTO">
+        SELECT
+            OPR_NO
+             , OPR_CLAIM_NO
+             , OPR_PAYMENT_ID
+             , OPR_HANDLE_STATUS_CD
+             , OPR_PAY_STATUS_CD
+             , OPR_AMT
+             , OPR_PAY_METHOD_CD
+             , OPR_APPROVED_DT
+             , OPR_REGIST_DT
+             , OPR_RECORD_TY
+        FROM OWNER_PAY_RECORD
+        WHERE OPR_PAYMENT_ID = #{orderId}
+    </select>
+
+    <!-- 결제 승인 완료 처리 -->
+    <update id="updatePayDone" parameterType="kr.or.tacs.dto.owner.OwnerPayRecordDTO">
+        UPDATE OWNER_PAY_RECORD
+        SET
+            OPR_HANDLE_STATUS_CD = #{oprHandleStatusCd}
+          , OPR_PAY_STATUS_CD = #{oprPayStatusCd}
+          , OPR_PAY_METHOD_CD = #{oprPayMethodCd}
+          , OPR_APPROVED_DT = #{oprApprovedDt}
+        WHERE OPR_NO = #{oprNo}
+    </update>
+
+    <!-- 결제 실패 처리 -->
+    <update id="updatePayFail" parameterType="kr.or.tacs.dto.owner.OwnerPayRecordDTO">
+        UPDATE OWNER_PAY_RECORD
+        SET OPR_PAY_STATUS_CD = #{oprPayStatusCd}
+        WHERE OPR_NO = #{oprNo}
+    </update>
+
+    <!-- 결제 실패 이력 등록 -->
+    <insert id="insertPayFailed" parameterType="map">
+        INSERT INTO OWNER_PAY_FAILED (
+                                       OPF_NO
+                                     , OPF_OPR_NO
+                                     , OPF__FAILED_DT
+                                     , OPF__FAIL_CD
+                                     , OPF__FAIL_MSG
+        ) VALUES (
+                   #{opfNo}
+                 , #{oprNo}
+                 , SYSDATE
+                 , #{failCd}
+                 , #{failMsg}
+                 )
+    </insert>
+
+    <select id="selectIrNoByClaimNo" resultType="string">
+        <choose>
+            <when test="recordTy == 'BROKER_CHARGE'">
+                SELECT BC_IR_NO FROM BROKER_CHARGE WHERE BC_NO = #{claimNo}
+            </when>
+            <otherwise>
+                SELECT TCS_TRE_ID FROM TRAN_COST_STL WHERE TCS_NO = #{claimNo}
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 운임정산 결제 완료 처리 -->
+    <update id="updateFreightPaid" parameterType="kr.or.tacs.dto.owner.OwnerPayRecordDTO">
+        UPDATE TRAN_COST_STL
+        SET TCS_STL_STATUS_CD = #{statusCd}
+        WHERE TCS_NO = #{oprClaimNo}
+    </update>
+
+    <!-- 관세사 청구 결제 완료 처리 -->
+    <update id="updateBrokerPaid" parameterType="kr.or.tacs.dto.owner.OwnerPayRecordDTO">
+        UPDATE BROKER_CHARGE
+        SET
+            BC_STATUS_CD = #{statusCd}
+          , BC_PAY_CMPL_DT = SYSDATE
+          , BC_UPDT_DT = SYSDATE
+        WHERE BC_NO = #{oprClaimNo}
+    </update>
+
+    <!-- 관세사 청구 결제 완료 후 수입통관의뢰 상태 변경 -->
+    <update id="updateImportTaxPaid"
+            parameterType="kr.or.tacs.dto.owner.OwnerPayRecordDTO">
+        UPDATE IMP_RQST
+        SET IR_STATUS_CD = 'CSTM_TAX_PAID'
+          , IR_REGIST_DT = SYSDATE
+        WHERE IR_NO = (
+            SELECT BC_IR_NO
+            FROM BROKER_CHARGE
+            WHERE BC_NO = #{oprClaimNo}
+        )
+    </update>
+
+    <!-- 관세사 청구 결제 실패 처리 -->
+    <update id="updateBrokerPayFail"
+            parameterType="kr.or.tacs.dto.owner.OwnerPayRecordDTO">
+        UPDATE BROKER_CHARGE
+        SET BC_STATUS_CD = #{statusCd}
+          , BC_UPDT_DT = SYSDATE
+        WHERE BC_NO = #{oprClaimNo}
+    </update>
+
+    <select id="selectPaymentReceipt"
+            parameterType="map"
+            resultType="kr.or.tacs.dto.owner.OwnerPayRecordDTO">
+        SELECT
+            opr_no
+             , opr_claim_no
+             , opr_payment_id
+             , opr_amt
+             , opr_record_ty
+             , opr_pay_status_cd
+             , opr_pay_method_cd
+             , opr_handle_status_cd
+             , opr_approved_dt
+        FROM owner_pay_record
+        WHERE opr_record_ty = #{recordTy}
+          AND opr_claim_no = #{claimNo}
+          AND opr_pay_status_cd = #{payDone}
+          AND (
+            (
+                #{recordTy} = 'FREIGHT'
+                    AND EXISTS (
+                    SELECT 1
+                    FROM tran_cost_stl tcs
+                    WHERE tcs.tcs_no = owner_pay_record.opr_claim_no
+                      AND tcs.tcs_owr_id = #{owrId}
+                )
+                )
+                OR
+            (
+                #{recordTy} = 'BROKER_CHARGE'
+                    AND EXISTS (
+                    SELECT 1
+                    FROM broker_charge bc
+                    WHERE bc.bc_no = owner_pay_record.opr_claim_no
+                      AND bc.bc_owr_id = #{owrId}
+                )
+                )
+            )
+        ORDER BY opr_approved_dt DESC
+            FETCH FIRST 1 ROW ONLY
+    </select>
+</mapper>

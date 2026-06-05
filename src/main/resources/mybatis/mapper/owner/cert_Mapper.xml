@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.owner.certs.mapper.IOwnerCertMapper">
+    <select id="selectOwnerCertList" resultType="kr.or.tacs.dto.owner.OwnerCertDTO">
+        SELECT
+            ci.CI_NO             AS ciNo
+             , ci.CI_DCLR_TYPE_CD   AS ciDclrTypeCd
+             , CASE ci.CI_DCLR_TYPE_CD
+                   WHEN 'IMPORT' THEN '수입'
+                   WHEN 'EXPORT' THEN '수출'
+                   ELSE ci.CI_DCLR_TYPE_CD
+            END                  AS ciDclrTypeNm
+             , ci.CI_DCLR_NO        AS ciDclrNo
+             , ci.TFG_NO            AS tfgNo
+             , ci.CI_STATUS_CD      AS ciStatusCd
+             , ci.CI_ISSUE_DT       AS ciIssueDt
+             , dfi.DFI_FILE_NO      AS fileNo
+             , dfi.DFI_ORG_NM       AS fileName
+             , CASE ci.CI_DCLR_TYPE_CD
+                   WHEN 'IMPORT' THEN NVL(imp.IR_CN, '-')
+                   WHEN 'EXPORT' THEN NVL(exp.ER_COMMENT, '-')
+                   ELSE '-'
+            END                  AS itemName
+        FROM CERT_INSURANCE ci
+                 LEFT JOIN IMP_RQST imp
+                           ON ci.CI_DCLR_TYPE_CD = 'IMPORT'
+                               AND ci.CI_DCLR_NO = imp.IR_NO
+                 LEFT JOIN EXP_RQST exp
+                           ON ci.CI_DCLR_TYPE_CD = 'EXPORT'
+                               AND ci.CI_DCLR_NO = exp.ER_NO
+                 LEFT JOIN TACS_FILE_MAP tfm
+                           ON ci.TFG_NO = tfm.TFM_TFG_NO
+                 LEFT JOIN DOCS_FILE_DATA dfi
+                           ON tfm.TFM_DFI_NO = dfi.DFI_FILE_NO
+                               AND dfi.DFI_DEL_YN = 'N'
+                               AND dfi.DFI_UPLOAD_STTS_CD = 'DONE'
+        WHERE ci.CI_STATUS_CD IN ('ISSUED', 'CERT_ISSUED', 'CERT_REISSUED')
+          AND (
+            imp.IR_OWR_ID = #{owrId}
+                OR exp.ER_OWR_ID = #{owrId}
+            )
+        ORDER BY ci.CI_ISSUE_DT DESC, ci.CI_NO DESC
+    </select>
+
+</mapper>

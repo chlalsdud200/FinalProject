@@ -1,0 +1,1271 @@
+@charset "UTF-8";
+
+/* =========================================================
+   수입운송 좌측 목록 화면 공통 CSS  (최종 통일본)
+   기준 화면 : 내륙운송 배차처리 조회버튼 (검정 배경 #334155 · 흰 글씨)
+   정리일    : 2026-05-25
+   ========================================================= */
+
+/* ----------------------------------------------------------
+   1. 특수 모달 / 공통 테이블 행 동작
+   ---------------------------------------------------------- */
+#pickupDispatchListPanel .tbl td,
+#pickupDispatchListPanel .tbl th,
+#pickupDispatchModal .tbl td,
+#pickupDispatchModal .tbl th{white-space:normal!important;word-break:keep-all;vertical-align:middle}
+#pickupDispatchModal tbody tr{cursor:pointer}
+#pickupDispatchModal tbody tr:hover td{background:#eef4fb!important}
+
+#bondedReleaseRequestModal .field-select,
+#bondedReleaseRequestModal .field-input,
+#bondedReleaseRequestModal .field-textarea{font-size:13px!important}
+#bondedReleaseRequestModal textarea,
+#bondedReleaseRejectModal textarea{resize:none}
+
+.import-manifest-row td{white-space:normal!important;word-break:keep-all;vertical-align:middle}
+.import-manifest-row:hover td{background:#eef4fb!important}
+#manifestCustomsModal textarea{resize:none}
+
+.do-row{cursor:pointer}
+.do-row:hover td{background:#eef4fb!important}
+.do-row td{white-space:normal!important;word-break:keep-all;vertical-align:middle}
+.do-settlement-cell .info-chip,
+.do-status-cell .info-chip{min-width:64px!important;height:28px!important;padding:0 10px!important;justify-content:center!important}
+
+#detail-body .import-manifest-arrival-status-btn{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:74px!important;
+  min-width:74px!important;
+  max-width:74px!important;
+  height:30px!important;
+  min-height:30px!important;
+  padding:0!important;
+  border-radius:0!important;
+  font-family:Pretendard,"Noto Sans KR","Malgun Gothic",Arial,sans-serif!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  line-height:30px!important;
+  letter-spacing:0!important;
+  text-align:center!important;
+  text-decoration:none!important;
+  text-indent:0!important;
+  white-space:nowrap!important;
+  box-sizing:border-box!important;
+  vertical-align:middle!important;
+  cursor:pointer!important;
+  user-select:none!important;
+  box-shadow:none!important;
+  transition:none!important;
+}
+
+#detail-body .import-manifest-arrival-status-btn.is-issued{
+  border-color:#86efac!important;
+  background:#ecfdf5!important;
+  color:#047857!important;
+  -webkit-text-fill-color:#047857!important;
+}
+
+#detail-body .import-manifest-arrival-status-btn.is-pending{
+  border-color:#cbd5e1!important;
+  background:#f8fafc!important;
+  color:#334155!important;
+  -webkit-text-fill-color:#334155!important;
+}
+
+#detail-body .import-manifest-arrival-action-btn{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:74px!important;
+  height:30px!important;
+  min-height:30px!important;
+  padding:0 10px!important;
+  border:1px solid #334155!important;
+  border-radius:0!important;
+  background:#334155!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  font-family:Pretendard,"Noto Sans KR","Malgun Gothic",Arial,sans-serif!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  line-height:30px!important;
+  letter-spacing:0!important;
+  white-space:nowrap!important;
+  box-sizing:border-box!important;
+  box-shadow:none!important;
+  transition:none!important;
+}
+
+/* ----------------------------------------------------------
+   2. 적하목록 비교 화면
+   ---------------------------------------------------------- */
+#manifestPackingDownloadBtn,
+#manifestPackingViewBtn,
+#manifestManualConfirmArea{display:none!important}
+
+.manifest-pdf-value-input{background:#fff!important;color:#0f172a!important}
+.manifest-compare-result span{white-space:nowrap}
+
+#manifestPackingUploadInput{display:none!important}
+
+#manifestPackingUploadBtn,
+.manifest-packing-upload-btn{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-width:92px!important;height:34px!important;padding:0 16px!important;
+  background:#64748b!important;border:1px solid #64748b!important;border-radius:4px!important;
+  color:#fff!important;-webkit-text-fill-color:#fff!important;
+  font-size:12px!important;font-weight:800!important;line-height:1!important;
+  white-space:nowrap!important;cursor:pointer!important;
+  transition:all 0.2s!important;
+  opacity:1!important;visibility:visible!important;text-indent:0!important;box-shadow:none!important;
+}
+.manifest-packing-upload-btn:hover{
+  background:#334155!important;border-color:#334155!important;
+}
+#manifestPackingUploadBtn::before,
+#manifestPackingUploadBtn::after,
+.manifest-packing-upload-btn::before,
+.manifest-packing-upload-btn::after{
+  content:none!important;display:none!important;
+}
+#manifestPackingUploadBtn input,
+.manifest-packing-upload-btn input{display:none!important}
+
+/* ----------------------------------------------------------
+   3. D/O 정산 처리 버튼
+   ---------------------------------------------------------- */
+.import-ui-do-settle-btn,
+button.import-ui-do-settle-btn{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-width:92px!important;height:36px!important;padding:0 14px!important;
+  background:#334155!important;border:1px solid #334155!important;border-radius:0!important;
+  color:#fff!important;-webkit-text-fill-color:#fff!important;
+  font-size:13px!important;font-weight:800!important;line-height:36px!important;
+  text-align:center!important;opacity:1!important;visibility:visible!important;box-shadow:none!important;cursor:pointer!important;
+}
+.import-ui-do-settle-btn:hover,
+button.import-ui-do-settle-btn:hover{
+  background:#1e293b!important;border-color:#1e293b!important;color:#fff!important;
+}
+
+/* ----------------------------------------------------------
+   4. 상세 패널 내 일반 액션 버튼 (공통 흰색 버튼)
+   ---------------------------------------------------------- */
+#detail-body .import-ui-actions .import-ui-btn,
+#detail-body .import-ui-btn,
+#detail-body .import-ui-do-issue-btn,
+#detail-body .import-ui-do-deliver-btn,
+#detail-body .import-ui-inbound-send-btn,
+#detail-body .import-ui-inbound-supp-btn,
+#detail-body .import-ui-release-send-btn,
+#detail-body .import-ui-release-supp-btn,
+#detail-body .import-ui-arrival-send-btn,
+#detail-body .import-ui-inland-process-btn,
+#detail-body .import-request-save-btn,
+#detail-body .import-request-submit-btn,
+#detail-body .request-reject-btn,
+#detail-body .import-ui-doc-select,
+#detail-body .import-ui-doc-upload-btn,
+#detail-body .import-ui-doc-action a,
+#detail-body .import-ui-doc-remove,
+#detail-body .do-select-btn,
+#detail-body a.import-ui-file-download{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  width:auto!important;min-width:58px!important;max-width:none!important;
+  height:30px!important;min-height:30px!important;padding:0 12px!important;
+  border:1px solid #b7c7d9!important;border-radius:0!important;
+  background:#fff!important;color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+  font-size:12px!important;font-weight:900!important;line-height:1!important;
+  text-align:center!important;text-decoration:none!important;
+  box-shadow:none!important;opacity:1!important;cursor:pointer!important;
+}
+#detail-body .import-ui-actions .import-ui-btn:hover,
+#detail-body .import-ui-btn:hover,
+#detail-body .import-ui-do-issue-btn:hover,
+#detail-body .import-ui-do-deliver-btn:hover,
+#detail-body .import-ui-inbound-send-btn:hover,
+#detail-body .import-ui-inbound-supp-btn:hover,
+#detail-body .import-ui-release-send-btn:hover,
+#detail-body .import-ui-release-supp-btn:hover,
+#detail-body .import-ui-arrival-send-btn:hover,
+#detail-body .import-ui-inland-process-btn:hover,
+#detail-body .import-request-save-btn:hover,
+#detail-body .import-request-submit-btn:hover,
+#detail-body .request-reject-btn:hover,
+#detail-body .import-ui-doc-select:hover,
+#detail-body .import-ui-doc-upload-btn:hover,
+#detail-body .import-ui-doc-action a:hover,
+#detail-body .import-ui-doc-remove:hover,
+#detail-body .do-select-btn:hover,
+#detail-body a.import-ui-file-download:hover{
+  background:#f8fafc!important;border-color:#9fb4cc!important;
+  color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+}
+#detail-body .import-ui-btn:disabled,
+#detail-body .import-ui-do-settle-btn:disabled,
+#detail-body .import-ui-do-issue-btn:disabled,
+#detail-body .import-ui-do-deliver-btn:disabled,
+#detail-body button:disabled{
+  background:#fff!important;border-color:#b7c7d9!important;
+  color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+  opacity:1!important;cursor:not-allowed!important;box-shadow:none!important;
+}
+
+/* ----------------------------------------------------------
+   5. 좌측 목록 카드 공통 레이아웃
+   ---------------------------------------------------------- */
+#detail-body .import-left-list-card{
+  width:100%!important;border:1px solid #cbd5e1!important;border-radius:0!important;
+  background:#fff!important;box-shadow:none!important;overflow:hidden!important;
+}
+
+/* 카드 헤더 */
+#detail-body .import-left-list-card > .bg-slate-50,
+#detail-body .import-left-list-card > div:first-child[class*="border-b"],
+#detail-body .import-left-list-card > div:first-child[class*="bg-slate-50"]{
+  height:48px!important;min-height:48px!important;
+  display:flex!important;align-items:center!important;
+  padding:0 24px!important;background:#f8fafc!important;
+  border-bottom:1px solid #cbd5e1!important;
+}
+#detail-body .import-left-list-card h4{
+  margin:0!important;font-size:13px!important;font-weight:900!important;
+  line-height:1!important;color:#0f172a!important;
+}
+#detail-body .import-left-list-card > .bg-slate-50:first-child p,
+#detail-body .import-left-list-card > div:first-child[class*="bg-slate-50"] p{
+  display:none!important;
+}
+
+/* 카드 바디 패딩 */
+#detail-body .import-left-list-card > .p-5,
+#detail-body .import-left-list-card > .p-6,
+#detail-body .import-left-list-card > div[class*="p-5"],
+#detail-body .import-left-list-card > div[class*="p-6"]{padding:24px!important;}
+
+/* ----------------------------------------------------------
+   6. 검색 그리드
+   ---------------------------------------------------------- */
+#detail-body .import-left-list-card .list-search-grid,
+#detail-body .import-left-list-card .do-list-search-grid,
+#detail-body .import-left-list-card .release-search-grid,
+#detail-body .import-left-list-card .inland-search-grid,
+#detail-body .import-left-list-card .import-list-search-grid,
+#detail-body #importManifestListOnlyPanel .grid{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr)) 52px!important;
+  gap:10px!important;align-items:end!important;margin-bottom:14px!important;
+}
+#detail-body .import-left-list-card .list-search-grid > div,
+#detail-body .import-left-list-card .do-list-search-grid > div,
+#detail-body .import-left-list-card .release-search-grid > div,
+#detail-body .import-left-list-card .inland-search-grid > div,
+#detail-body .import-left-list-card .import-list-search-grid > div{
+  min-width:0!important;display:flex!important;flex-direction:column!important;gap:6px!important;
+}
+
+/* flex column 구조(gap 쓰는 화면) 간격 보정 */
+#detail-body .section-card .p-6[style*="flex-direction:column"] > .overflow-x-auto,
+#detail-body .section-card .p-6[style*="flex-direction: column"] > .overflow-x-auto,
+#detail-body .section-card .p-6[style*="flex-direction:column"] > div,
+#detail-body .section-card .p-6[style*="flex-direction: column"] > div{margin-top:0!important;}
+
+/* 검색 라벨 */
+#detail-body .import-left-list-card .field-label,
+#detail-body .import-left-list-card label{
+  display:block!important;margin:0 0 6px 0!important;
+  font-size:12px!important;font-weight:900!important;
+  line-height:1!important;color:#0f172a!important;letter-spacing:-0.01em!important;
+}
+
+/* 검색 입력칸 / 셀렉트 */
+#detail-body .import-left-list-card .field-input,
+#detail-body .import-left-list-card .field-select,
+#detail-body .import-left-list-card input[type="text"],
+#detail-body .import-left-list-card input[type="date"],
+#detail-body .import-left-list-card select{
+  width:100%!important;height:40px!important;min-height:40px!important;
+  padding:0 12px!important;margin:0!important;
+  border:1px solid #cbd5e1!important;border-radius:0!important;
+  background:#fff!important;color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+  font-size:12px!important;font-weight:800!important;line-height:40px!important;
+  box-shadow:none!important;outline:none!important;
+}
+#detail-body .import-left-list-card .field-input::placeholder,
+#detail-body .import-left-list-card input[type="text"]::placeholder{
+  color:#0f172a!important;opacity:1!important;font-weight:800!important;
+}
+
+/* ----------------------------------------------------------
+   7. ★ 조회 버튼 통일 (기준: 내륙운송 배차처리 — 검정 배경 · 흰 글씨)
+      모든 탭의 조회버튼을 이 규칙 하나로 동일하게 적용
+   ---------------------------------------------------------- */
+/* 검색 그리드 안 버튼 (각 탭 조회 버튼) */
+#detail-body .import-left-list-card .list-search-grid > button,
+#detail-body .import-left-list-card .do-list-search-grid > button,
+#detail-body .import-left-list-card .release-search-grid > button,
+#detail-body .import-left-list-card .inland-search-grid > button,
+#detail-body .import-left-list-card .import-list-search-grid > button,
+  /* ID로 직접 지정된 각 탭 조회 버튼 */
+#importInboundSearchBtn,
+#importReleaseSearchBtn,
+#importInlandDispatchSearchBtn,
+#doListSearchBtn,
+#manifestSearchBtn,
+#importManifestSearchBtn,
+  /* js-refresh 버튼 (운송의뢰 등) */
+#detail-body .import-left-list-card .js-import-request-refresh{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  justify-self:start!important;align-self:end!important;
+  width:52px!important;min-width:52px!important;max-width:52px!important;
+  height:40px!important;min-height:40px!important;
+  padding:0!important;margin:0!important;
+  border:1px solid #334155!important;border-radius:0!important;
+  background:#334155!important;
+  color:#fff!important;-webkit-text-fill-color:#fff!important;
+  font-size:12px!important;font-weight:900!important;line-height:1!important;
+  text-align:center!important;box-shadow:none!important;opacity:1!important;cursor:pointer!important;
+}
+#detail-body .import-left-list-card .list-search-grid > button:hover,
+#detail-body .import-left-list-card .do-list-search-grid > button:hover,
+#detail-body .import-left-list-card .release-search-grid > button:hover,
+#detail-body .import-left-list-card .inland-search-grid > button:hover,
+#detail-body .import-left-list-card .import-list-search-grid > button:hover,
+#importInboundSearchBtn:hover,
+#importReleaseSearchBtn:hover,
+#importInlandDispatchSearchBtn:hover,
+#doListSearchBtn:hover,
+#manifestSearchBtn:hover,
+#importManifestSearchBtn:hover,
+#detail-body .import-left-list-card .js-import-request-refresh:hover{
+  background:#1e293b!important;border-color:#1e293b!important;
+  color:#fff!important;-webkit-text-fill-color:#fff!important;
+}
+
+/* ----------------------------------------------------------
+   8. 테이블 래퍼
+   ---------------------------------------------------------- */
+#detail-body .import-left-list-card .overflow-x-auto,
+#detail-body .import-left-list-card .overflow-hidden,
+#detail-body .import-left-list-card .inland-table-wrap{
+  width:100%!important;margin:0!important;
+  border:1px solid #cbd5e1!important;border-radius:0!important;
+  overflow-x:auto!important;background:#fff!important;box-shadow:none!important;
+}
+
+/* 검색 그리드 → 테이블 래퍼 상단 간격 */
+#detail-body .import-left-list-card .list-search-grid + .overflow-x-auto,
+#detail-body .import-left-list-card .do-list-search-grid + .overflow-x-auto,
+#detail-body .import-left-list-card .do-list-search-grid + .overflow-hidden,
+#detail-body .import-left-list-card .release-search-grid + .overflow-x-auto,
+#detail-body .import-left-list-card .inland-search-grid + .overflow-x-auto,
+#detail-body .import-left-list-card .import-list-search-grid + .overflow-x-auto,
+#detail-body .import-left-list-card .p-5 > .overflow-x-auto,
+#detail-body .import-left-list-card .p-6 > .overflow-x-auto,
+#detail-body .import-left-list-card .p-5 > .overflow-hidden,
+#detail-body .import-left-list-card .p-6 > .overflow-hidden{margin-top:16px!important;}
+
+/* ----------------------------------------------------------
+   9. 테이블 (thead / tbody)
+   ---------------------------------------------------------- */
+#detail-body .import-left-list-card table,
+#detail-body .import-left-list-card .tbl,
+#detail-body .import-left-list-card .inland-table{
+  width:100%!important;border-collapse:collapse!important;
+  table-layout:fixed!important;margin:0!important;
+  background:#fff!important;font-size:12px!important;
+}
+#detail-body .import-left-list-card table thead th,
+#detail-body .import-left-list-card .tbl thead th,
+#detail-body .import-left-list-card .inland-table thead th{
+  height:40px!important;padding:0 12px!important;
+  background:#f8fafc!important;border-bottom:1px solid #cbd5e1!important;
+  color:#0f172a!important;font-size:12px!important;font-weight:900!important;
+  line-height:1.25!important;text-align:center!important;
+  vertical-align:middle!important;white-space:nowrap!important;
+}
+#detail-body .import-left-list-card table tbody td,
+#detail-body .import-left-list-card .tbl tbody td,
+#detail-body .import-left-list-card .inland-table tbody td{
+  height:46px!important;padding:0 12px!important;
+  border-bottom:1px solid #e2e8f0!important;
+  color:#0f172a!important;font-size:12px!important;font-weight:800!important;
+  line-height:1.25!important;text-align:center!important;
+  vertical-align:middle!important;white-space:normal!important;word-break:keep-all!important;
+}
+#detail-body .import-left-list-card table tbody tr:last-child td,
+#detail-body .import-left-list-card .tbl tbody tr:last-child td,
+#detail-body .import-left-list-card .inland-table tbody tr:last-child td{border-bottom:0!important;}
+
+/* ----------------------------------------------------------
+   10. 상태 칩 (공통 기본)
+   ---------------------------------------------------------- */
+#detail-body .import-left-list-card .tacs-status-chip,
+#detail-body .import-left-list-card .info-chip,
+#detail-body .import-left-list-card .inland-chip,
+#detail-body .import-left-list-card .status-chip,
+#detail-body .import-left-list-card span[class*="bg-green"],
+#detail-body .import-left-list-card span[class*="bg-yellow"],
+#detail-body .import-left-list-card span[class*="bg-red"],
+#detail-body .import-left-list-card span[class*="bg-blue"]{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-width:58px!important;height:30px!important;min-height:30px!important;padding:0 12px!important;
+  border:1px solid #b7c7d9!important;border-radius:0!important;
+  background:#fff!important;color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+  font-size:12px!important;font-weight:900!important;line-height:1!important;
+  white-space:nowrap!important;box-shadow:none!important;
+}
+
+/* 상태 칩 색상 */
+#detail-body .import-left-list-card .tacs-status-done,
+#detail-body .import-left-list-card span.tacs-status-done,
+#detail-body .import-left-list-card button.tacs-status-done{
+  border:1px solid #86efac!important;background:#dcfce7!important;
+  color:#166534!important;-webkit-text-fill-color:#166534!important;
+}
+#detail-body .import-left-list-card .tacs-status-reject,
+#detail-body .import-left-list-card span.tacs-status-reject,
+#detail-body .import-left-list-card button.tacs-status-reject{
+  border:1px solid #fecaca!important;background:#fee2e2!important;
+  color:#b91c1c!important;-webkit-text-fill-color:#b91c1c!important;
+}
+#detail-body .import-left-list-card .tacs-status-wait,
+#detail-body .import-left-list-card span.tacs-status-wait,
+#detail-body .import-left-list-card button.tacs-status-wait{
+  border:1px solid #bfdbfe!important;background:#dbeafe!important;
+  color:#1d4ed8!important;-webkit-text-fill-color:#1d4ed8!important;
+}
+#detail-body .import-left-list-card .tacs-status-neutral,
+#detail-body .import-left-list-card span.tacs-status-neutral,
+#detail-body .import-left-list-card button.tacs-status-neutral{
+  border:1px solid #cbd5e1!important;background:#f8fafc!important;
+  color:#334155!important;-webkit-text-fill-color:#334155!important;
+}
+
+#detail-body .import-left-list-card .import-request-table-wrap{
+  overflow-x:hidden!important;
+}
+#detail-body .import-left-list-card .import-request-table{
+  width:100%!important;
+  min-width:0!important;
+  table-layout:fixed!important;
+}
+#detail-body .import-left-list-card .import-request-table th:nth-child(1){width:17%!important;}
+#detail-body .import-left-list-card .import-request-table th:nth-child(2){width:11%!important;}
+#detail-body .import-left-list-card .import-request-table th:nth-child(3){width:12%!important;}
+#detail-body .import-left-list-card .import-request-table th:nth-child(4){width:18%!important;}
+#detail-body .import-left-list-card .import-request-table th:nth-child(5){width:9%!important;}
+#detail-body .import-left-list-card .import-request-table th:nth-child(6){width:11%!important;}
+#detail-body .import-left-list-card .import-request-table th:nth-child(7){width:14%!important;}
+#detail-body .import-left-list-card .import-request-table th:nth-child(8){width:8%!important;}
+#detail-body .import-left-list-card table.import-request-table.tbl tbody td{
+  height:46px!important;
+  padding:0 10px!important;
+}
+#detail-body .import-left-list-card table.import-request-table.tbl tbody td:first-child{
+  white-space:nowrap!important;
+  word-break:normal!important;
+}
+#detail-body .import-left-list-card table.import-request-table.tbl tbody td.import-request-status-cell,
+#detail-body .import-left-list-card table.import-request-table.tbl tbody td.import-request-action-cell{
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+#detail-body .import-left-list-card table.import-request-table.tbl tbody td.import-request-no-cell,
+#detail-body .import-left-list-card table.import-request-table.tbl tbody td.import-request-owner-cell,
+#detail-body .import-left-list-card table.import-request-table.tbl tbody td.import-request-buyer-cell,
+#detail-body .import-left-list-card table.import-request-table.tbl tbody td.import-request-bl-cell,
+#detail-body .import-left-list-card table.import-request-table.tbl tbody td.import-request-port-cell,
+#detail-body .import-left-list-card table.import-request-table.tbl tbody td.import-request-date-cell{
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+#detail-body .import-left-list-card .import-request-progress-summary{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  gap:8px!important;
+  width:100%!important;
+  min-width:0!important;
+}
+#detail-body .import-left-list-card .import-request-main-status{
+  display:flex!important;
+  justify-content:center!important;
+  width:100%!important;
+  margin-top:2px!important;
+}
+#detail-body .import-left-list-card .import-request-progress-list{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  position:relative!important;
+  justify-content:center!important;
+  gap:0!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:250px!important;
+  margin:2px auto 0!important;
+  padding-top:2px!important;
+}
+#detail-body .import-left-list-card .import-request-progress-list::before{
+  content:""!important;
+  position:absolute!important;
+  left:20px!important;
+  right:20px!important;
+  top:7px!important;
+  height:1px!important;
+  background:#cbd5e1!important;
+  z-index:0!important;
+}
+#detail-body .import-left-list-card .import-request-status-badge{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  border:1px solid #cbd5e1!important;
+  border-radius:0!important;
+  font-weight:900!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  box-shadow:none!important;
+  min-width:68px!important;
+  height:24px!important;
+  min-height:24px!important;
+  padding:0 8px!important;
+  font-size:11px!important;
+}
+#detail-body .import-left-list-card .import-request-progress-step{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  grid-template-rows:10px 12px!important;
+  align-items:center!important;
+  justify-items:center!important;
+  min-width:0!important;
+  height:24px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  box-shadow:none!important;
+  position:relative!important;
+  z-index:1!important;
+}
+#detail-body .import-left-list-card .import-request-progress-label{
+  width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  text-align:center!important;
+  color:#64748b!important;
+  -webkit-text-fill-color:#64748b!important;
+}
+#detail-body .import-left-list-card .import-request-progress-dot{
+  display:block!important;
+  width:7px!important;
+  height:7px!important;
+  border:1px solid currentColor!important;
+  border-radius:50%!important;
+  background:currentColor!important;
+}
+#detail-body .import-left-list-card .import-tone-done{
+  border-color:#bbf7d0!important;background:#f0fdf4!important;
+  color:#166534!important;-webkit-text-fill-color:#166534!important;
+}
+#detail-body .import-left-list-card .import-tone-warn{
+  border-color:#fde68a!important;background:#fffbeb!important;
+  color:#92400e!important;-webkit-text-fill-color:#92400e!important;
+}
+#detail-body .import-left-list-card .import-tone-active{
+  border-color:#bae6fd!important;background:#f0f9ff!important;
+  color:#075985!important;-webkit-text-fill-color:#075985!important;
+}
+#detail-body .import-left-list-card .import-tone-danger{
+  border-color:#fecaca!important;background:#fef2f2!important;
+  color:#b91c1c!important;-webkit-text-fill-color:#b91c1c!important;
+}
+#detail-body .import-left-list-card .import-tone-wait,
+#detail-body .import-left-list-card .import-tone-muted,
+#detail-body .import-left-list-card .import-tone-neutral{
+  border-color:#cbd5e1!important;background:#f8fafc!important;
+  color:#334155!important;-webkit-text-fill-color:#334155!important;
+}
+#detail-body .import-left-list-card .import-request-progress-step{
+  border:0!important;
+  background:transparent!important;
+  color:#334155!important;
+  -webkit-text-fill-color:#334155!important;
+}
+#detail-body .import-left-list-card .import-request-progress-step .import-tone-done{
+  background:#16a34a!important;
+  border-color:#16a34a!important;
+  color:#16a34a!important;
+  -webkit-text-fill-color:#16a34a!important;
+}
+#detail-body .import-left-list-card .import-request-progress-step .import-tone-warn,
+#detail-body .import-left-list-card .import-request-progress-step .import-tone-wait{
+  background:#2563eb!important;
+  border-color:#2563eb!important;
+  color:#2563eb!important;
+  -webkit-text-fill-color:#2563eb!important;
+}
+#detail-body .import-left-list-card .import-request-progress-step .import-tone-danger{
+  background:#dc2626!important;
+  border-color:#dc2626!important;
+  color:#dc2626!important;
+  -webkit-text-fill-color:#dc2626!important;
+}
+#detail-body .import-left-list-card .import-request-progress-step .import-tone-active{
+  background:#0284c7!important;
+  border-color:#0284c7!important;
+  color:#0284c7!important;
+  -webkit-text-fill-color:#0284c7!important;
+}
+#detail-body .import-left-list-card .import-request-progress-step .import-tone-muted,
+#detail-body .import-left-list-card .import-request-progress-step .import-tone-neutral{
+  background:#fff!important;
+  border-color:#94a3b8!important;
+  color:#94a3b8!important;
+  -webkit-text-fill-color:#94a3b8!important;
+}
+
+/* ----------------------------------------------------------
+   11. 처리 버튼 (상세·반려사유 등 테이블 안 버튼)
+   ---------------------------------------------------------- */
+#detail-body .import-left-list-card .do-select-btn,
+#detail-body .import-left-list-card .import-list-action-btn{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-width:58px!important;height:30px!important;padding:0 12px!important;
+  border:1px solid #b7c7d9!important;border-radius:0!important;
+  background:#fff!important;color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+  font-size:12px!important;font-weight:900!important;line-height:1!important;
+}
+/* ----------------------------------------------------------
+   12. 내륙운송 배차처리 목록 보정
+      - 운송의뢰 목록처럼 테이블 칸 세로선까지 동일하게 표시
+      - 반출상태/배차상태 칩 모양을 다른 목록 상태칩과 동일하게 통일
+   ---------------------------------------------------------- */
+#detail-body .import-left-list-card table thead th,
+#detail-body .import-left-list-card .tbl thead th,
+#detail-body .import-left-list-card .inland-table thead th,
+#pickupDispatchListPanel table thead th,
+#pickupDispatchListPanel .tbl thead th,
+#pickupDispatchListPanel .inland-table thead th{
+  border-right:1px solid #cbd5e1!important;
+}
+#detail-body .import-left-list-card table thead th:last-child,
+#detail-body .import-left-list-card .tbl thead th:last-child,
+#detail-body .import-left-list-card .inland-table thead th:last-child,
+#pickupDispatchListPanel table thead th:last-child,
+#pickupDispatchListPanel .tbl thead th:last-child,
+#pickupDispatchListPanel .inland-table thead th:last-child{
+  border-right:0!important;
+}
+#detail-body .import-left-list-card table tbody td,
+#detail-body .import-left-list-card .tbl tbody td,
+#detail-body .import-left-list-card .inland-table tbody td,
+#pickupDispatchListPanel table tbody td,
+#pickupDispatchListPanel .tbl tbody td,
+#pickupDispatchListPanel .inland-table tbody td{
+  border-right:1px solid #e2e8f0!important;
+}
+#detail-body .import-left-list-card table tbody td:last-child,
+#detail-body .import-left-list-card .tbl tbody td:last-child,
+#detail-body .import-left-list-card .inland-table tbody td:last-child,
+#pickupDispatchListPanel table tbody td:last-child,
+#pickupDispatchListPanel .tbl tbody td:last-child,
+#pickupDispatchListPanel .inland-table tbody td:last-child{
+  border-right:0!important;
+}
+
+#pickupDispatchListPanel .overflow-x-auto,
+#pickupDispatchListPanel .overflow-hidden,
+#pickupDispatchListPanel .inland-table-wrap{
+  width:100%!important;margin:0!important;
+  border:1px solid #cbd5e1!important;border-radius:0!important;
+  overflow-x:auto!important;background:#fff!important;box-shadow:none!important;
+}
+#pickupDispatchListPanel table,
+#pickupDispatchListPanel .tbl,
+#pickupDispatchListPanel .inland-table{
+  width:100%!important;border-collapse:collapse!important;
+  table-layout:fixed!important;margin:0!important;
+  background:#fff!important;font-size:12px!important;
+}
+#pickupDispatchListPanel table thead th,
+#pickupDispatchListPanel .tbl thead th,
+#pickupDispatchListPanel .inland-table thead th{
+  height:40px!important;padding:0 12px!important;
+  background:#f8fafc!important;border-bottom:1px solid #cbd5e1!important;
+  color:#0f172a!important;font-size:12px!important;font-weight:900!important;
+  line-height:1.25!important;text-align:center!important;
+  vertical-align:middle!important;white-space:nowrap!important;
+}
+#pickupDispatchListPanel table tbody td,
+#pickupDispatchListPanel .tbl tbody td,
+#pickupDispatchListPanel .inland-table tbody td{
+  height:46px!important;padding:0 12px!important;
+  border-bottom:1px solid #e2e8f0!important;
+  color:#0f172a!important;font-size:12px!important;font-weight:800!important;
+  line-height:1.25!important;text-align:center!important;
+  vertical-align:middle!important;white-space:normal!important;word-break:keep-all!important;
+}
+#pickupDispatchListPanel table tbody tr:last-child td,
+#pickupDispatchListPanel .tbl tbody tr:last-child td,
+#pickupDispatchListPanel .inland-table tbody tr:last-child td{border-bottom:0!important;}
+
+#pickupDispatchListPanel .tacs-status-chip,
+#pickupDispatchListPanel .info-chip,
+#pickupDispatchListPanel .inland-chip,
+#pickupDispatchListPanel .status-chip,
+#pickupDispatchListPanel span[class*="bg-green"],
+#pickupDispatchListPanel span[class*="bg-yellow"],
+#pickupDispatchListPanel span[class*="bg-red"],
+#pickupDispatchListPanel span[class*="bg-blue"]{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-width:58px!important;height:30px!important;min-height:30px!important;padding:0 12px!important;
+  border:1px solid #b7c7d9!important;border-radius:0!important;
+  background:#fff!important;color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+  font-size:12px!important;font-weight:900!important;line-height:1!important;
+  white-space:nowrap!important;box-shadow:none!important;
+}
+#pickupDispatchListPanel .tacs-status-done,
+#pickupDispatchListPanel span.tacs-status-done,
+#pickupDispatchListPanel button.tacs-status-done,
+#pickupDispatchListPanel span[class*="bg-green"]{
+  border:1px solid #86efac!important;background:#dcfce7!important;
+  color:#166534!important;-webkit-text-fill-color:#166534!important;
+}
+#pickupDispatchListPanel .tacs-status-wait,
+#pickupDispatchListPanel span.tacs-status-wait,
+#pickupDispatchListPanel button.tacs-status-wait,
+#pickupDispatchListPanel span[class*="bg-blue"]{
+  border:1px solid #bfdbfe!important;background:#dbeafe!important;
+  color:#1d4ed8!important;-webkit-text-fill-color:#1d4ed8!important;
+}
+#pickupDispatchListPanel .tacs-status-reject,
+#pickupDispatchListPanel span.tacs-status-reject,
+#pickupDispatchListPanel button.tacs-status-reject,
+#pickupDispatchListPanel span[class*="bg-red"]{
+  border:1px solid #fecaca!important;background:#fee2e2!important;
+  color:#b91c1c!important;-webkit-text-fill-color:#b91c1c!important;
+}
+
+/* =========================================================
+   13. 최종 강제 보정: 좌측 6개 목록 테이블 세로칸선/칩/조회버튼 고정
+   - 새로고침/캐시/개별 JS 클래스 차이로 테이블 선이 사라지는 문제 방지
+   - 운송의뢰 목록 기준으로 모든 목록 테이블 칸선을 동일하게 표시
+   ========================================================= */
+#detail-body .import-left-list-card table,
+#detail-body .import-left-list-card .tbl,
+#detail-body .import-left-list-card .inland-table,
+#pickupDispatchListPanel table,
+#pickupDispatchListPanel .tbl,
+#pickupDispatchListPanel .inland-table,
+#importManifestListOnlyPanel table,
+#importManifestListOnlyPanel .tbl,
+#importInboundListPanel table,
+#importInboundListPanel .tbl,
+#doListPanel table,
+#doListPanel .tbl,
+#importReleaseListPanel table,
+#importReleaseListPanel .tbl{
+  width:100%!important;
+  border-collapse:collapse!important;
+  border-spacing:0!important;
+  table-layout:fixed!important;
+  margin:0!important;
+  background:#fff!important;
+  border:0!important;
+}
+
+#detail-body .import-left-list-card table thead th,
+#detail-body .import-left-list-card .tbl thead th,
+#detail-body .import-left-list-card .inland-table thead th,
+#pickupDispatchListPanel table thead th,
+#pickupDispatchListPanel .tbl thead th,
+#pickupDispatchListPanel .inland-table thead th,
+#importManifestListOnlyPanel table thead th,
+#importManifestListOnlyPanel .tbl thead th,
+#importInboundListPanel table thead th,
+#importInboundListPanel .tbl thead th,
+#doListPanel table thead th,
+#doListPanel .tbl thead th,
+#importReleaseListPanel table thead th,
+#importReleaseListPanel .tbl thead th{
+  height:40px!important;
+  padding:0 12px!important;
+  background:#f8fafc!important;
+  border-top:0!important;
+  border-left:1px solid #cbd5e1!important;
+  border-right:1px solid #cbd5e1!important;
+  border-bottom:1px solid #cbd5e1!important;
+  color:#0f172a!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  line-height:1.25!important;
+  text-align:center!important;
+  vertical-align:middle!important;
+  white-space:nowrap!important;
+}
+
+#detail-body .import-left-list-card table tbody td,
+#detail-body .import-left-list-card .tbl tbody td,
+#detail-body .import-left-list-card .inland-table tbody td,
+#pickupDispatchListPanel table tbody td,
+#pickupDispatchListPanel .tbl tbody td,
+#pickupDispatchListPanel .inland-table tbody td,
+#importManifestListOnlyPanel table tbody td,
+#importManifestListOnlyPanel .tbl tbody td,
+#importInboundListPanel table tbody td,
+#importInboundListPanel .tbl tbody td,
+#doListPanel table tbody td,
+#doListPanel .tbl tbody td,
+#importReleaseListPanel table tbody td,
+#importReleaseListPanel .tbl tbody td{
+  height:46px!important;
+  padding:0 12px!important;
+  background:#fff!important;
+  border-left:1px solid #e2e8f0!important;
+  border-right:1px solid #e2e8f0!important;
+  border-bottom:1px solid #e2e8f0!important;
+  color:#0f172a!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  line-height:1.25!important;
+  text-align:center!important;
+  vertical-align:middle!important;
+  white-space:normal!important;
+  word-break:keep-all!important;
+}
+
+#detail-body .import-left-list-card table thead th:first-child,
+#detail-body .import-left-list-card .tbl thead th:first-child,
+#detail-body .import-left-list-card .inland-table thead th:first-child,
+#pickupDispatchListPanel table thead th:first-child,
+#pickupDispatchListPanel .tbl thead th:first-child,
+#pickupDispatchListPanel .inland-table thead th:first-child,
+#importManifestListOnlyPanel table thead th:first-child,
+#importManifestListOnlyPanel .tbl thead th:first-child,
+#importInboundListPanel table thead th:first-child,
+#importInboundListPanel .tbl thead th:first-child,
+#doListPanel table thead th:first-child,
+#doListPanel .tbl thead th:first-child,
+#importReleaseListPanel table thead th:first-child,
+#importReleaseListPanel .tbl thead th:first-child,
+#detail-body .import-left-list-card table tbody td:first-child,
+#detail-body .import-left-list-card .tbl tbody td:first-child,
+#detail-body .import-left-list-card .inland-table tbody td:first-child,
+#pickupDispatchListPanel table tbody td:first-child,
+#pickupDispatchListPanel .tbl tbody td:first-child,
+#pickupDispatchListPanel .inland-table tbody td:first-child,
+#importManifestListOnlyPanel table tbody td:first-child,
+#importManifestListOnlyPanel .tbl tbody td:first-child,
+#importInboundListPanel table tbody td:first-child,
+#importInboundListPanel .tbl tbody td:first-child,
+#doListPanel table tbody td:first-child,
+#doListPanel .tbl tbody td:first-child,
+#importReleaseListPanel table tbody td:first-child,
+#importReleaseListPanel .tbl tbody td:first-child{
+  border-left:0!important;
+}
+
+#detail-body .import-left-list-card table thead th:last-child,
+#detail-body .import-left-list-card .tbl thead th:last-child,
+#detail-body .import-left-list-card .inland-table thead th:last-child,
+#pickupDispatchListPanel table thead th:last-child,
+#pickupDispatchListPanel .tbl thead th:last-child,
+#pickupDispatchListPanel .inland-table thead th:last-child,
+#importManifestListOnlyPanel table thead th:last-child,
+#importManifestListOnlyPanel .tbl thead th:last-child,
+#importInboundListPanel table thead th:last-child,
+#importInboundListPanel .tbl thead th:last-child,
+#doListPanel table thead th:last-child,
+#doListPanel .tbl thead th:last-child,
+#importReleaseListPanel table thead th:last-child,
+#importReleaseListPanel .tbl thead th:last-child,
+#detail-body .import-left-list-card table tbody td:last-child,
+#detail-body .import-left-list-card .tbl tbody td:last-child,
+#detail-body .import-left-list-card .inland-table tbody td:last-child,
+#pickupDispatchListPanel table tbody td:last-child,
+#pickupDispatchListPanel .tbl tbody td:last-child,
+#pickupDispatchListPanel .inland-table tbody td:last-child,
+#importManifestListOnlyPanel table tbody td:last-child,
+#importManifestListOnlyPanel .tbl tbody td:last-child,
+#importInboundListPanel table tbody td:last-child,
+#importInboundListPanel .tbl tbody td:last-child,
+#doListPanel table tbody td:last-child,
+#doListPanel .tbl tbody td:last-child,
+#importReleaseListPanel table tbody td:last-child,
+#importReleaseListPanel .tbl tbody td:last-child{
+  border-right:0!important;
+}
+
+#detail-body .import-left-list-card table tbody tr:last-child td,
+#detail-body .import-left-list-card .tbl tbody tr:last-child td,
+#detail-body .import-left-list-card .inland-table tbody tr:last-child td,
+#pickupDispatchListPanel table tbody tr:last-child td,
+#pickupDispatchListPanel .tbl tbody tr:last-child td,
+#pickupDispatchListPanel .inland-table tbody tr:last-child td,
+#importManifestListOnlyPanel table tbody tr:last-child td,
+#importManifestListOnlyPanel .tbl tbody tr:last-child td,
+#importInboundListPanel table tbody tr:last-child td,
+#importInboundListPanel .tbl tbody tr:last-child td,
+#doListPanel table tbody tr:last-child td,
+#doListPanel .tbl tbody tr:last-child td,
+#importReleaseListPanel table tbody tr:last-child td,
+#importReleaseListPanel .tbl tbody tr:last-child td{
+  border-bottom:0!important;
+}
+
+#detail-body .import-left-list-card .overflow-x-auto,
+#detail-body .import-left-list-card .overflow-hidden,
+#detail-body .import-left-list-card .inland-table-wrap,
+#pickupDispatchListPanel .overflow-x-auto,
+#pickupDispatchListPanel .overflow-hidden,
+#pickupDispatchListPanel .inland-table-wrap,
+#importManifestListOnlyPanel .overflow-x-auto,
+#importInboundListPanel .overflow-x-auto,
+#doListPanel .overflow-x-auto,
+#importReleaseListPanel .overflow-x-auto{
+  border:1px solid #cbd5e1!important;
+  border-radius:0!important;
+  background:#fff!important;
+  overflow-x:auto!important;
+  box-shadow:none!important;
+}
+
+#detail-body .import-left-list-card .tacs-status-chip,
+#detail-body .import-left-list-card .info-chip,
+#detail-body .import-left-list-card .inland-chip,
+#detail-body .import-left-list-card .status-chip,
+#pickupDispatchListPanel .tacs-status-chip,
+#pickupDispatchListPanel .info-chip,
+#pickupDispatchListPanel .inland-chip,
+#pickupDispatchListPanel .status-chip{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:58px!important;
+  height:30px!important;
+  min-height:30px!important;
+  padding:0 12px!important;
+  border-radius:0!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  box-shadow:none!important;
+}
+
+/* ==========================================================
+   2026-05-25 수입운송 최종 CSS 정리
+   - PDF 업로드 버튼 중복 텍스트 제거
+   - 반출관리 품목사항을 입고관리와 동일한 크기/간격으로 보정
+   - 적하목록 조회 아코디언 상세영역 간격 보정
+   ========================================================== */
+
+/* PDF 버튼은 실제 버튼 텍스트만 사용한다. 이전 ::after 강제 문구 때문에
+   "PDF 텍스트PDF 업로드"처럼 겹쳐 보이던 문제 방지 */
+#manifestPackingUploadBtn,
+.manifest-packing-upload-label{
+  min-width:120px!important;
+  height:34px!important;
+  padding:0 16px!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  line-height:34px!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  background:#334155!important;
+  border:1px solid #334155!important;
+  border-radius:4px!important;
+  text-indent:0!important;
+}
+#manifestPackingUploadBtn::after,
+.manifest-packing-upload-label::after{
+  content:none!important;
+  display:none!important;
+}
+#manifestPackingUploadBtn *,
+.manifest-packing-upload-label *{
+  font-size:12px!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+}
+#manifestPackingUploadBtn input,
+.manifest-packing-upload-label input{
+  display:none!important;
+}
+
+/* 상세 탭 공통: 품목사항 표가 반출관리에서만 커지는 현상 보정 */
+#detail-body .import-ui-goods-edit-wrap,
+#detail-body .import-ui-goods-wrap,
+#detail-body .import-ui-items-wrap{
+  margin-top:10px!important;
+  border:1px solid #cbd5e1!important;
+  background:#fff!important;
+  overflow-x:auto!important;
+}
+#detail-body table.import-ui-goods-edit,
+#detail-body .import-ui-goods-edit-wrap table,
+#detail-body .import-ui-goods-wrap table,
+#detail-body .import-ui-items-wrap table{
+  width:100%!important;
+  min-width:1120px!important;
+  border-collapse:collapse!important;
+  table-layout:fixed!important;
+  font-size:12px!important;
+  line-height:1.25!important;
+}
+#detail-body table.import-ui-goods-edit th,
+#detail-body table.import-ui-goods-edit td,
+#detail-body .import-ui-goods-edit-wrap th,
+#detail-body .import-ui-goods-edit-wrap td,
+#detail-body .import-ui-goods-wrap th,
+#detail-body .import-ui-goods-wrap td,
+#detail-body .import-ui-items-wrap th,
+#detail-body .import-ui-items-wrap td{
+  height:34px!important;
+  padding:6px 8px!important;
+  border:1px solid #cbd5e1!important;
+  vertical-align:middle!important;
+  text-align:center!important;
+  font-size:12px!important;
+  font-weight:700!important;
+  color:#0f172a!important;
+  background:#fff!important;
+  white-space:nowrap!important;
+}
+#detail-body table.import-ui-goods-edit th,
+#detail-body .import-ui-goods-edit-wrap th,
+#detail-body .import-ui-goods-wrap th,
+#detail-body .import-ui-items-wrap th{
+  background:#e8f1ff!important;
+  color:#0f172a!important;
+  font-weight:800!important;
+}
+#detail-body table.import-ui-goods-edit input,
+#detail-body table.import-ui-goods-edit select,
+#detail-body .import-ui-goods-edit-wrap input,
+#detail-body .import-ui-goods-edit-wrap select,
+#detail-body .import-ui-goods-wrap input,
+#detail-body .import-ui-goods-wrap select,
+#detail-body .import-ui-items-wrap input,
+#detail-body .import-ui-items-wrap select{
+  width:100%!important;
+  height:30px!important;
+  min-height:30px!important;
+  padding:0 8px!important;
+  border:1px solid #94a3b8!important;
+  border-radius:0!important;
+  background:#fff!important;
+  color:#0f172a!important;
+  font-size:12px!important;
+  font-weight:700!important;
+  line-height:30px!important;
+  box-sizing:border-box!important;
+}
+
+/* 적하목록 조회 아코디언 상세: 다닥다닥 붙는 것 방지 */
+#importManifestListPanel tr.manifest-row-detail > td,
+#importManifestListPanel tr.manifest-detail-row > td,
+#importManifestListPanel .manifest-detail-cell{
+  padding:18px 24px 22px!important;
+  background:#fff!important;
+  border-top:1px solid #cbd5e1!important;
+  border-bottom:1px solid #cbd5e1!important;
+}
+#importManifestListPanel .manifest-detail-box,
+#importManifestListPanel .manifest-detail-section,
+#importManifestListPanel .manifest-accordion-detail,
+#importManifestListPanel .manifest-detail-content{
+  display:block!important;
+  padding:14px 16px!important;
+  margin:0 0 14px 0!important;
+  border:1px solid #d7e2f2!important;
+  background:#fff!important;
+}
+#importManifestListPanel .manifest-detail-box:last-child,
+#importManifestListPanel .manifest-detail-section:last-child{
+  margin-bottom:0!important;
+}
+#importManifestListPanel .manifest-detail-title,
+#importManifestListPanel .manifest-section-title,
+#importManifestListPanel h3,
+#importManifestListPanel h4{
+  margin:0 0 10px 0!important;
+  padding:0 0 6px 8px!important;
+  border-left:4px solid #334155!important;
+  color:#0f172a!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  line-height:1.3!important;
+}
+#importManifestListPanel .manifest-detail-grid,
+#importManifestListPanel .manifest-info-grid,
+#importManifestListPanel .manifest-detail-fields{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:12px 14px!important;
+  align-items:start!important;
+}
+#importManifestListPanel .manifest-detail-field,
+#importManifestListPanel .manifest-info-item,
+#importManifestListPanel .manifest-field{
+  min-width:0!important;
+  padding:0!important;
+}
+#importManifestListPanel .manifest-detail-field label,
+#importManifestListPanel .manifest-info-item label,
+#importManifestListPanel .manifest-field label{
+  display:block!important;
+  margin:0 0 5px 0!important;
+  color:#0f172a!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  line-height:1.25!important;
+}
+#importManifestListPanel .manifest-detail-value,
+#importManifestListPanel .manifest-info-value,
+#importManifestListPanel .manifest-field-value{
+  display:flex!important;
+  align-items:center!important;
+  min-height:32px!important;
+  padding:7px 10px!important;
+  border:1px solid #d7e2f2!important;
+  background:#eef4ff!important;
+  color:#334155!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  line-height:1.25!important;
+  word-break:break-all!important;
+}
+
+
+/* 20260525 final import CSS cleanup: keep manifest screen stable after refresh and remove duplicate hotfix artifacts */
+#detail-body .search-panel,
+#detail-body .filter-area,
+#detail-body .list-search-panel,
+#detail-body .import-list-search-panel,
+#detail-body .import-request-search-panel{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:12px!important;
+  align-items:end!important;
+}
+#detail-body .search-panel > *,
+#detail-body .filter-area > *,
+#detail-body .list-search-panel > *,
+#detail-body .import-list-search-panel > *,
+#detail-body .import-request-search-panel > *{
+  min-width:0!important;
+}
+#detail-body .search-panel button,
+#detail-body .filter-area button,
+#detail-body .list-search-panel button,
+#detail-body .import-list-search-panel button,
+#detail-body .import-request-search-panel button{
+  height:36px!important;
+  padding:0 18px!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  color:#fff!important;
+  white-space:nowrap!important;
+}
+
+/* manifest-packing-upload-btn 스타일은 상단 공통 정의를 따름 */
+#detail-body .manifest-packing-upload-btn input{display:none!important;}
+
+#detail-body .import-ui-section{border:1px solid #cbd5e1!important;background:#fff!important;padding:14px!important;margin-bottom:14px!important;}
+#detail-body .import-ui-section h3,
+#detail-body .import-ui-section-title{font-size:14px!important;font-weight:900!important;margin:0 0 10px!important;color:#0f172a!important;}
+#detail-body .import-ui-detail-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important;align-items:start!important;}
+#detail-body .import-ui-field label{font-size:11px!important;font-weight:800!important;color:#334155!important;margin-bottom:5px!important;display:block!important;}
+#detail-body .import-ui-field input,
+#detail-body .import-ui-field select,
+#detail-body .import-ui-field textarea{width:100%!important;min-height:36px!important;font-size:12px!important;font-weight:700!important;border:1px solid #cbd5e1!important;border-radius:0!important;padding:8px 10px!important;background:#fff!important;color:#1e293b!important;}
+#detail-body .import-ui-field input[readonly],
+#detail-body .import-ui-field textarea[readonly],
+#detail-body .import-ui-field .readonly{background:#e5e7eb!important;color:#334155!important;}
+
+#detail-body .import-ui-goods-wrap{margin-top:8px!important;overflow-x:auto!important;border:1px solid #cbd5e1!important;background:#fff!important;}
+#detail-body .import-ui-goods-table{width:100%!important;border-collapse:collapse!important;table-layout:fixed!important;margin:0!important;}
+#detail-body .import-ui-goods-table th{height:32px!important;background:#eaf2ff!important;border:1px solid #cbd5e1!important;font-size:12px!important;font-weight:900!important;color:#1e293b!important;text-align:center!important;padding:6px 8px!important;}
+#detail-body .import-ui-goods-table td{border:1px solid #cbd5e1!important;padding:6px 8px!important;background:#fff!important;vertical-align:middle!important;}
+#detail-body .import-ui-goods-table input,
+#detail-body .import-ui-goods-table select{height:34px!important;min-height:34px!important;width:100%!important;font-size:12px!important;font-weight:700!important;padding:6px 8px!important;border:1px solid #94a3b8!important;background:#fff!important;color:#0f172a!important;box-sizing:border-box!important;}
+
+#detail-body .import-manifest-accordion-row > td{padding:0!important;background:#f8fafc!important;}
+#detail-body .import-manifest-accordion-row td > div{margin:14px!important;padding:16px!important;border:1px solid #cbd5e1!important;background:#fff!important;}
+#detail-body .import-manifest-accordion-row .grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important;align-items:start!important;}
+#detail-body .import-manifest-accordion-row .grid > div{min-width:0!important;}
+#detail-body .import-manifest-accordion-row .grid > div > div:first-child{font-size:11px!important;font-weight:900!important;color:#475569!important;margin-bottom:5px!important;}
+#detail-body .import-manifest-accordion-row .grid > div > div:last-child{min-height:36px!important;padding:9px 10px!important;border:1px solid #cbd5e1!important;background:#eef4ff!important;font-size:12px!important;font-weight:800!important;color:#1e293b!important;display:flex!important;align-items:center!important;}
+#detail-body .import-manifest-accordion-close{height:30px!important;padding:0 12px!important;border:1px solid #64748b!important;background:#fff!important;color:#334155!important;font-size:12px!important;font-weight:900!important;}
+
+@media (max-width:1200px){
+  #detail-body .search-panel,
+  #detail-body .filter-area,
+  #detail-body .list-search-panel,
+  #detail-body .import-list-search-panel,
+  #detail-body .import-request-search-panel{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+  #detail-body .import-ui-detail-grid,
+  #detail-body .import-manifest-accordion-row .grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
+
+/* === 2026-05-27 D/O 버튼 상태 통일 ===
+   미정산: 정산요청만 활성화
+   정산요청/정산완료: 정산 버튼은 완료/대기 표시로 잠금
+   정산완료 후 D/O 발급 활성화, 발급 후 전달요청 활성화
+*/
+#detail-body .import-ui-do-flow-btn,
+.import-ui-do-flow-btn{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  width:112px!important;
+  min-width:112px!important;
+  max-width:112px!important;
+  height:34px!important;
+  min-height:34px!important;
+  max-height:34px!important;
+  padding:0 12px!important;
+  border:1px solid #1e293b!important;
+  border-radius:0!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+  box-shadow:none!important;
+  opacity:1!important;
+}
+#detail-body .import-ui-do-flow-btn.is-active,
+.import-ui-do-flow-btn.is-active{
+  background:#1e293b!important;
+  border-color:#1e293b!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  cursor:pointer!important;
+  pointer-events:auto!important;
+}
+#detail-body .import-ui-do-flow-btn.is-locked,
+#detail-body .import-ui-do-flow-btn.is-done,
+#detail-body .import-ui-do-flow-btn:disabled,
+.import-ui-do-flow-btn.is-locked,
+.import-ui-do-flow-btn.is-done,
+.import-ui-do-flow-btn:disabled{
+  background:#e5e7eb!important;
+  border-color:#cbd5e1!important;
+  color:#64748b!important;
+  -webkit-text-fill-color:#64748b!important;
+  cursor:not-allowed!important;
+  pointer-events:none!important;
+  opacity:1!important;
+  box-shadow:none!important;
+}

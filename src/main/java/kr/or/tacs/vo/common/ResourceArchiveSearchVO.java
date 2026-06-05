@@ -1,0 +1,12 @@
+package kr.or.tacs.vo.common;
+
+import lombok.Data;
+
+@Data
+public class ResourceArchiveSearchVO {
+
+    private String roleCd;     // 서버 로그인 사용자 권한코드. 화면에서 받지 않고 Controller에서 주입한다.
+    private String keyword;    // 제목/내용/파일명 검색어
+    private String fromDate;   // 등록일 시작일. yyyy-MM-dd
+    private String toDate;     // 등록일 종료일. yyyy-MM-dd
+}

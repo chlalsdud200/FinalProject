@@ -1,0 +1,63 @@
+.certs-page-kicker {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+    letter-spacing: .5px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.certs-filter-bar {
+    margin-bottom: 20px;
+    border-left: 3px solid #565e74;
+}
+
+.certs-filter-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex: 1;
+}
+
+.certs-type-filter {
+    min-width: 100px;
+}
+
+.certs-date-input {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 12px;
+}
+
+.certs-date-sep {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.certs-search-wrap {
+    flex: 1;
+}
+
+.certs-search-input {
+    width: 100%;
+}
+
+.certs-list-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 10px;
+}
+
+.certs-empty {
+    text-align: center;
+    color: #94a3b8;
+    padding: 28px;
+}
+
+.certs-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}

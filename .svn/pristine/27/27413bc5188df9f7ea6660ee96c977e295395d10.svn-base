@@ -1,0 +1,7 @@
+﻿
+(function bootTransportPage(){
+  const initialBackBtn = document.getElementById('backBtn');
+  if (initialBackBtn && typeof showDashboard === 'function') initialBackBtn.onclick = showDashboard;
+  if (typeof autoBuildNav === 'function') autoBuildNav();
+  if (typeof openInitialTransportView === 'function') openInitialTransportView();
+})();

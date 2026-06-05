@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.tacs.transport.importp.mapper.ImportTransportMapper">
+  <!-- 수입운송 적하목록 탭에서 신고 자료와 패킹리스트 비교 목록을 조회한다. -->
+  <select id="retriveImpManifestList" resultType="kr.or.tacs.vo.transport.TransportRequestVO">
+        
+        SELECT
+        NVL(T.TRC_NO, FTCS.TCS_TRC_NO)                      AS trcNo
+        , W.WIR_NO                                            AS wirNo
+        , W.WIR_NO                                            AS inRptNo
+        , NVL(W.WIR_GG_NO, T.TRC_TFG_NO)                      AS ggNo
+        , NVL(T.TRC_OWR_ID, W.WIR_OWR_ID)                     AS ownerId
+        , NVL(O.OWR_NM, W.WIR_OWR_NM)                         AS ownerNm
+        , O.OWR_TELNO                                         AS ownerTelno
+        , O.OWR_EMAIL                                         AS ownerEmail
+        , T.TRC_TRDR_NM                                       AS buyerNm
+        , T.TRC_TRDR_COUNTRY_CD                               AS buyerCountryCd
+        , NVL(W.WIR_INVOICE_NO, (
+        SELECT MAX(W2.WIR_INVOICE_NO)
+        FROM WH_IN_RPT W2
+        WHERE W2.WIR_IO_SE_CD = 'IMPORT'
+        AND W2.WIR_GG_NO = T.TRC_TFG_NO
+        ))                                                    AS invoiceNo
+        , INV_FILE.DFI_ORG_NM                                  AS invoiceFile
+        , INV_FILE.DFI_FILE_NO                                  AS invoiceFileNo
+        , INV_FILE.DFI_PATH                                    AS invoicePath
+        , INV_FILE.DFI_STR_NM                                  AS invoiceStoredName
+        , PKG_FILE.DFI_ORG_NM                                  AS packingListFile
+        , PKG_FILE.DFI_FILE_NO                                  AS packingListFileNo
+        , PKG_FILE.DFI_PATH                                    AS packingListPath
+        , PKG_FILE.DFI_STR_NM                                  AS packingListStoredName
+        , NVL(W.WIR_CARGO_MGMT_NO, (
+        SELECT MAX(W2.WIR_CARGO_MGMT_NO)
+        FROM WH_IN_RPT W2
+        WHERE W2.WIR_IO_SE_CD = 'IMPORT'
+        AND W2.WIR_GG_NO = T.TRC_TFG_NO
+        ))                                                    AS cargoMgmtNo
+        , NVL(W.WIR_INCO_TERMS_CD, (
+        SELECT MAX(W2.WIR_INCO_TERMS_CD)
+        FROM WH_IN_RPT W2
+        WHERE W2.WIR_IO_SE_CD = 'IMPORT'
+        AND W2.WIR_GG_NO = T.TRC_TFG_NO
+        ))                                                    AS incoTermsCd
+        , W.WIR_IO_SE_CD                                      AS ioSeCd
+        , W.WIR_STATUS_CD                                     AS warehouseInStatusCd
+        , W.WIR_WH_REPLY_STATUS_CD                            AS warehouseReplyStatusCd
+         , 'IN_DONE'                                          AS warehouseInStatusNm
+        , W.WIR_WZ_NO                                         AS wzNo
+        , W.WIR_WZ_NO                                         AS bondedZoneNo
+        , NVL(NVL(WZ.WZ_NM, WM.WM_DETAIL_ADRES), TO_CHAR(W.WIR_WZ_NO)) AS warehouseZoneNm
+        , W.WIR_WM_ID                                         AS wmId
+        , W.WIR_WM_ID                                         AS bondedManagerId
+        , WM.WM_NM                                            AS bondedManagerNm
+        , NVL(WM.WM_NM, W.WIR_WM_ID)                          AS warehouseManagerNm
+        , TO_CHAR(W.WIR_IN_PLAN_DT, 'YYYY-MM-DD')             AS inPlanDt
+        , M.ICM_NO                                            AS icmNo
+        , M.ICM_NO                                            AS manifestNo
+        , NVL(M.ICM_MBL_NO, NVL(BI.BI_MBL_NO, NVL(FB.BI_MBL_NO, FTCS.TCS_MBL_NO))) AS mblNo
+        , NVL(M.ICM_HBL_NO, NVL(BI.BI_HBL_NO, NVL(FB.BI_HBL_NO, FTCS.TCS_HBL_NO))) AS hblNo
+        , NVL(M.ICM_MBL_NO, NVL(BI.BI_MBL_NO, NVL(FB.BI_MBL_NO, FTCS.TCS_MBL_NO))) AS blNo
+        , CASE
+        WHEN NVL(M.ICM_HBL_NO, NVL(BI.BI_HBL_NO, NVL(FB.BI_HBL_NO, FTCS.TCS_HBL_NO))) IS NULL THEN NULL
+        WHEN LOWER(NVL(M.ICM_HBL_NO, NVL(BI.BI_HBL_NO, NVL(FB.BI_HBL_NO, FTCS.TCS_HBL_NO)))) LIKE '%.pdf' THEN NVL(M.ICM_HBL_NO, NVL(BI.BI_HBL_NO, NVL(FB.BI_HBL_NO, FTCS.TCS_HBL_NO)))
+        ELSE NVL(M.ICM_HBL_NO, NVL(BI.BI_HBL_NO, NVL(FB.BI_HBL_NO, FTCS.TCS_HBL_NO))) || '.pdf'
+        END                                                 AS requestFile
+        , NULL                                                AS carrierNm
+        , T.TRC_DEPT_PORT_CD                                  AS deptPortCd
+        , CASE T.TRC_DEPT_PORT_CD
+        WHEN 'KRPUS' THEN 'BUSAN'
+        WHEN 'BUSAN' THEN 'BUSAN'
+        WHEN 'THBKK' THEN 'BANGKOK'
+        WHEN 'BANGKOK' THEN 'BANGKOK'
+        ELSE T.TRC_DEPT_PORT_CD
+        END                                                 AS deptPortNm
+        , T.TRC_ARVL_PORT_CD                                  AS arvlPortCd
+        , CASE T.TRC_ARVL_PORT_CD
+        WHEN 'KRPUS' THEN 'BUSAN'
+        WHEN 'BUSAN' THEN 'BUSAN'
+        WHEN 'THBKK' THEN 'BANGKOK'
+        WHEN 'BANGKOK' THEN 'BANGKOK'
+        ELSE T.TRC_ARVL_PORT_CD
+        END                                                 AS arvlPortNm
+        , TO_CHAR(IAN_FOR_ETA.IAN_ARRV_DT, 'YYYY-MM-DD')      AS eta
+        , TRIM(REGEXP_REPLACE(M.ICM_RMRK_CN, ' *\[(WIR_NO|TRC_NO|TFG_NO|MBL_NO):[^]]+\]', '')) AS manifestRemark
+        , M.ICM_GG_NO                                        AS manifestTfgNo
+        , MF_FILE.DFI_ORG_NM                                  AS manifestPdfFile
+        , C.CG_NO                                             AS cgNo
+        , C.GOODS_NO                                          AS goodsNo
+        , C.GOODS_NAME                                       AS goodsName
+        , C.CG_QTY                                            AS qty
+        , C.CG_PRICE                                          AS price
+        , C.CG_TOTAL_PRICE                                    AS goodsTotalPrice
+        , C.CG_WEIGHT                                         AS weight
+        , C.CG_WEIGHT                                         AS netWeight
+        , C.CG_WEIGHT                                         AS grossWeight
+        , C.CG_ORIGIN                                         AS origin
+        FROM TRAN_RCP T
+        LEFT JOIN WH_IN_RPT W
+        ON W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMPORT'
+        AND (
+        W.WIR_OWR_ID = T.TRC_OWR_ID
+        OR W.WIR_OWR_ID IS NULL
+        )
+        LEFT JOIN OWNER O
+        ON O.OWR_ID = NVL(T.TRC_OWR_ID, W.WIR_OWR_ID)
+        LEFT JOIN WAREHOUSE_MANAGER WM
+        ON WM.WM_ID = W.WIR_WM_ID
+        LEFT JOIN WAREHOUSE_ZONE WZ
+        ON WZ.WZ_NO = W.WIR_WZ_NO
+        LEFT JOIN BL_ISSU BI
+        ON BI.BI_TRE_ID = T.TRC_NO
+        
+        LEFT JOIN TRAN_COST_STL FTCS
+        ON T.TRC_NO IS NULL
+        AND FTCS.TCS_GG_NO = W.WIR_GG_NO
+        AND FTCS.TCS_TRC_NO LIKE 'TRC-IMP-%'
+        LEFT JOIN BL_ISSU FB
+        ON FB.BI_TRE_ID = FTCS.TCS_TRC_NO
+        LEFT JOIN (
+        SELECT *
+        FROM (
+        SELECT IAN0.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY IAN0.IAN_TRC_NO
+        ORDER BY IAN0.IAN_REGIST_DT DESC NULLS LAST, IAN0.IAN_NO DESC
+        ) AS RN
+        FROM IMP_ARRV_NTC IAN0
+        )
+        WHERE RN = 1
+        ) IAN_FOR_ETA
+        ON IAN_FOR_ETA.IAN_TRC_NO = NVL(T.TRC_NO, FTCS.TCS_TRC_NO)
+        LEFT JOIN TACS_FILE_MAP INV_MAP
+        ON INV_MAP.TFM_TFG_NO = T.TRC_TFG_NO
+        AND (INV_MAP.TFM_DOC_TY_CD = 'INVOICE' OR INV_MAP.TFM_DOC_TY_CD IS NULL)
+        LEFT JOIN DOCS_FILE_DATA INV_FILE
+        ON INV_FILE.DFI_FILE_NO = INV_MAP.TFM_DFI_NO
+        AND INV_FILE.DFI_DEL_YN = 'N'
+        AND INV_FILE.DFI_UPLOAD_STTS_CD = 'DONE'
+        AND INV_FILE.DFI_DRIVE_FILE_ID IS NOT NULL
+        AND (
+        INV_MAP.TFM_DOC_TY_CD = 'INVOICE'
+        OR LOWER(INV_FILE.DFI_ORG_NM) LIKE '%invoice%'
+        OR INV_FILE.DFI_ORG_NM LIKE '%???뚯궋%'
+        )
+        LEFT JOIN TACS_FILE_MAP PKG_MAP
+        ON PKG_MAP.TFM_TFG_NO = T.TRC_TFG_NO
+        AND (PKG_MAP.TFM_DOC_TY_CD = 'PACKING_LIST' OR PKG_MAP.TFM_DOC_TY_CD IS NULL)
+        LEFT JOIN DOCS_FILE_DATA PKG_FILE
+        ON PKG_FILE.DFI_FILE_NO = PKG_MAP.TFM_DFI_NO
+        AND PKG_FILE.DFI_DEL_YN = 'N'
+        AND PKG_FILE.DFI_UPLOAD_STTS_CD = 'DONE'
+        AND PKG_FILE.DFI_DRIVE_FILE_ID IS NOT NULL
+        AND (
+        PKG_MAP.TFM_DOC_TY_CD = 'PACKING_LIST'
+        OR LOWER(PKG_FILE.DFI_ORG_NM) LIKE '%packing%'
+        OR LOWER(PKG_FILE.DFI_ORG_NM) LIKE '%pack%'
+        OR PKG_FILE.DFI_ORG_NM LIKE '%?????'
+        OR PKG_FILE.DFI_ORG_NM LIKE '%????'
+        )
+        LEFT JOIN (
+        SELECT *
+        FROM (
+        SELECT
+        M0.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY M0.ICM_GG_NO, M0.ICM_OWR_ID, NVL(M0.ICM_MBL_NO, '#'), NVL(M0.ICM_HBL_NO, '#')
+        ORDER BY M0.ICM_SBMSN_DT DESC NULLS LAST, M0.ICM_NO DESC
+        ) AS RN
+        FROM IMP_CARGO_MANIFEST M0
+        )
+        WHERE RN = 1
+        ) M
+        ON M.ICM_GG_NO = NVL(W.WIR_GG_NO, T.TRC_TFG_NO)
+        AND M.ICM_OWR_ID = NVL(T.TRC_OWR_ID, W.WIR_OWR_ID)
+        LEFT JOIN (
+        SELECT
+        FM.TFM_TFG_NO
+        , LISTAGG(FD.DFI_ORG_NM, ', ') WITHIN GROUP (ORDER BY FM.TFM_NO) AS DFI_ORG_NM
+        FROM TACS_FILE_MAP FM
+        INNER JOIN DOCS_FILE_DATA FD
+        ON FD.DFI_FILE_NO = FM.TFM_DFI_NO
+        AND FD.DFI_DEL_YN = 'N'
+        GROUP BY FM.TFM_TFG_NO
+        ) MF_FILE
+        ON MF_FILE.TFM_TFG_NO = M.ICM_GG_NO
+        LEFT JOIN (
+        SELECT
+        CG_NO
+        , GOODS_NO
+        , GOODS_NAME
+        , GG_NO
+        , CG_QTY
+        , CG_PRICE
+        , CG_TOTAL_PRICE
+        , CG_WEIGHT
+        , CG_ORIGIN
+        FROM (
+        SELECT
+        CG.CG_NO
+        , CG.GOODS_NO
+        , G.GOODS_NAME
+        , CG.GG_NO
+        , CG.CG_QTY
+        , CG.CG_PRICE
+        , CG.CG_TOTAL_PRICE
+        , CG.CG_WEIGHT
+        , CG.CG_ORIGIN
+        , ROW_NUMBER() OVER (
+          PARTITION BY CG.GG_NO
+          ORDER BY
+            CASE
+              WHEN G.GOODS_NAME IS NOT NULL
+                OR CG.CG_QTY IS NOT NULL
+                OR CG.CG_WEIGHT IS NOT NULL THEN 0
+              ELSE 1
+            END,
+            CG.CG_NO DESC
+        ) AS RN
+        FROM CUSTOMS_GOODS CG
+        LEFT JOIN GOODS G
+        ON G.GOODS_NO = CG.GOODS_NO
+        )
+        WHERE RN = 1
+        ) C
+        ON C.GG_NO = NVL(W.WIR_GG_NO, T.TRC_TFG_NO)
+        WHERE T.TRC_SE_CD = 'IMPORT'
+        <if test="tmId != null and tmId != ''">
+            AND T.TRC_TM_NO = (
+            SELECT TM.TM_NO
+            FROM TRANSPORT_MANAGER TM
+            WHERE TM.TM_ID = #{tmId}
+            )
+        </if>
+        AND T.TRC_STATUS_CD IN ('TRC_DONE', 'TRC_END', 'TRC_COMPLETE')
+        ORDER BY T.TRC_RCEPT_DT DESC NULLS LAST, T.TRC_RQST_DT DESC NULLS LAST, W.WIR_NO DESC, FTCS.TCS_TRC_NO
+    </select>
+  <select id="retriveImpManifestCompareList" resultType="kr.or.tacs.vo.transport.TransportRequestVO">
+        SELECT
+        T.TRC_NO                                            AS trcNo
+        , W.WIR_NO                                            AS wirNo
+        , NVL(M.ICM_GG_NO, T.TRC_TFG_NO)                      AS ggNo
+        , NVL(M.ICM_OWR_ID, T.TRC_OWR_ID)                     AS ownerId
+        , NVL(O.OWR_NM, T.TRC_OWR_ID)                         AS ownerNm
+        , O.OWR_TELNO                                          AS ownerTelno
+        , O.OWR_EMAIL                                          AS ownerEmail
+        , T.TRC_TRDR_NM                                        AS buyerNm
+        , T.TRC_TRDR_COUNTRY_CD                                AS buyerCountryCd
+        , T.TRC_TRAN_MN_CD                                     AS transportMeanCd
+        , W.WIR_INVOICE_NO                                    AS invoiceNo
+        , W.WIR_INVOICE_NO                                    AS wirInvoiceNo
+        , NVL(M_INV_FILE.DFI_ORG_NM, INV_FILE.DFI_ORG_NM)     AS invoiceFile
+        , NVL(M_INV_FILE.DFI_FILE_NO, INV_FILE.DFI_FILE_NO)   AS invoiceFileNo
+        , NVL(M_INV_FILE.DFI_PATH, INV_FILE.DFI_PATH)         AS invoicePath
+        , NVL(M_INV_FILE.DFI_STR_NM, INV_FILE.DFI_STR_NM)     AS invoiceStoredName
+        , NVL(M_PKG_FILE.DFI_ORG_NM, PKG_FILE.DFI_ORG_NM)     AS packingListFile
+        , NVL(M_PKG_FILE.DFI_FILE_NO, PKG_FILE.DFI_FILE_NO)   AS packingListFileNo
+        , NVL(M_PKG_FILE.DFI_PATH, PKG_FILE.DFI_PATH)         AS packingListPath
+        , NVL(M_PKG_FILE.DFI_STR_NM, PKG_FILE.DFI_STR_NM)     AS packingListStoredName
+        , NVL(W.WIR_CARGO_MGMT_NO, (
+        SELECT MAX(W2.WIR_CARGO_MGMT_NO)
+        FROM WH_IN_RPT W2
+        WHERE W2.WIR_IO_SE_CD = 'IMPORT'
+        AND W2.WIR_GG_NO = NVL(M.ICM_GG_NO, T.TRC_TFG_NO)
+        ))                                                  AS cargoMgmtNo
+        , NVL(W.WIR_INCO_TERMS_CD, (
+        SELECT MAX(W2.WIR_INCO_TERMS_CD)
+        FROM WH_IN_RPT W2
+        WHERE W2.WIR_IO_SE_CD = 'IMPORT'
+        AND W2.WIR_GG_NO = NVL(M.ICM_GG_NO, T.TRC_TFG_NO)
+        ))                                                  AS incoTermsCd
+        , M.ICM_NO                                            AS icmNo
+        , M.ICM_NO                                            AS manifestNo
+        , NVL(M.ICM_MBL_NO, BI.BI_MBL_NO)                     AS mblNo
+        , NVL(M.ICM_HBL_NO, BI.BI_HBL_NO)                     AS hblNo
+        , T.TRC_ITEM_CTGRY_NM                                  AS itemCategory
+        , C.GOODS_NAME                                         AS itemNm
+        , C.GOODS_NAME                                         AS frghtIemNm
+        , T.TRC_DEPT_PORT_CD                                  AS deptPortCd
+        , CASE T.TRC_DEPT_PORT_CD
+        WHEN 'KRPUS' THEN 'BUSAN'
+        WHEN 'BUSAN' THEN 'BUSAN'
+        WHEN 'THBKK' THEN 'BANGKOK'
+        WHEN 'BANGKOK' THEN 'BANGKOK'
+        ELSE T.TRC_DEPT_PORT_CD
+        END                                                 AS deptPortNm
+        , T.TRC_ARVL_PORT_CD                                  AS arvlPortCd
+        , CASE T.TRC_ARVL_PORT_CD
+        WHEN 'KRPUS' THEN 'BUSAN'
+        WHEN 'BUSAN' THEN 'BUSAN'
+        WHEN 'THBKK' THEN 'BANGKOK'
+        WHEN 'BANGKOK' THEN 'BANGKOK'
+        ELSE T.TRC_ARVL_PORT_CD
+        END                                                 AS arvlPortNm
+        , IAN.IAN_NO                                          AS reqNo
+        , IAN.IAN_NO                                          AS arrivalNoticeNo
+        , IAN.IAN_NO                                          AS arrivalNoticeReqNo
+        , TO_CHAR(NVL(IAN.IAN_ARRV_DT, NVL(IAN.IAN_REGIST_DT, NVL(T.TRC_RCEPT_DT, T.TRC_RQST_DT)) + 1), 'YYYY-MM-DD') AS eta
+        , NVL(IAN.IAN_CURR_LOC, T.TRC_ARVL_PORT_CD)           AS currentLoc
+        , NVL(IAN.IAN_ARRV_STATUS_CD, 'TRC_ARR_PENDING')      AS arrivalStatus
+        , CASE NVL(IAN.IAN_ARRV_STATUS_CD, 'TRC_ARR_PENDING')
+        WHEN 'TRC_ARR_ARRIVED' THEN 'ARRIVED'
+        WHEN 'ARRIVED' THEN 'ARRIVED'
+        WHEN 'TRC_ARR_IN_TRANSIT' THEN 'IN_TRANSIT'
+        WHEN 'IN_TRANSIT' THEN 'IN_TRANSIT'
+        WHEN 'SAILING' THEN 'SAILING'
+        WHEN 'TRC_ARR_DELAYED' THEN 'DELAYED'
+        WHEN 'DELAYED' THEN 'DELAYED'
+        WHEN 'TRC_ARR_PENDING' THEN 'PENDING'
+        WHEN 'PENDING' THEN 'PENDING'
+        WHEN 'BEFORE_ARRIVAL' THEN 'PENDING'
+        ELSE NVL(IAN.IAN_ARRV_STATUS_CD, 'PENDING')
+        END                                                   AS arrivalStatusNm
+        , NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT')          AS noticeStatus
+        , CASE NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT')
+        WHEN 'TRC_NTC_SENT' THEN 'SENT'
+        WHEN 'SENT' THEN 'SENT'
+        ELSE 'NOT_SENT'
+        END                                                   AS noticeStatusNm
+        , CASE NVL(IAN.IAN_SEND_STTS_CD, 'TRC_NTC_NSENT')
+        WHEN 'TRC_NTC_SENT' THEN 'SENT'
+        WHEN 'SENT' THEN 'SENT'
+        ELSE 'NOT_SENT'
+        END                                                   AS arrivalNoticeStatusNm
+        , IAN.IAN_SEND_DT                                     AS noticeSendDt
+        , NVL(M.ICM_GG_NO, T.TRC_TFG_NO)                    AS manifestTfgNo
+        , CASE
+        WHEN M.ICM_RMRK_CN IS NULL THEN NULL
+        ELSE TRIM(REGEXP_REPLACE(M.ICM_RMRK_CN, ' *\[(WIR_NO|TRC_NO|TFG_NO|MBL_NO):[^]]+\]', ''))
+        END                                                   AS manifestRemark
+        , C.CG_NO                                             AS cgNo
+        , C.GOODS_NO                                          AS goodsNo
+        , C.GOODS_NAME                                        AS goodsName
+        , C.CG_QTY                                            AS qty
+        , C.CG_PRICE                                          AS price
+        , C.CG_TOTAL_PRICE                                    AS goodsTotalPrice
+        , C.CG_WEIGHT                                         AS weight
+        , C.CG_WEIGHT                                         AS netWeight
+        , C.CG_WEIGHT                                         AS grossWeight
+        , C.CG_ORIGIN                                         AS origin
+        FROM TRAN_RCP T
+        LEFT JOIN BL_ISSU BI
+        ON BI.BI_TRE_ID = T.TRC_NO
+        LEFT JOIN (
+        SELECT
+        ICM_NO
+        , ICM_GG_NO
+        , ICM_OWR_ID
+        , ICM_MBL_NO
+        , ICM_HBL_NO
+        , ICM_SBMSN_DT
+        , ICM_RMRK_CN
+        FROM (
+        SELECT
+        M0.ICM_NO
+        , M0.ICM_GG_NO
+        , M0.ICM_OWR_ID
+        , M0.ICM_MBL_NO
+        , M0.ICM_HBL_NO
+        , M0.ICM_SBMSN_DT
+        , M0.ICM_RMRK_CN
+        , ROW_NUMBER() OVER (
+        PARTITION BY M0.ICM_GG_NO, M0.ICM_OWR_ID, NVL(M0.ICM_MBL_NO, '#'), NVL(M0.ICM_HBL_NO, '#')
+        ORDER BY M0.ICM_SBMSN_DT DESC NULLS LAST, M0.ICM_NO DESC
+        ) AS RN
+        FROM IMP_CARGO_MANIFEST M0
+        )
+        WHERE RN = 1
+        ) M
+        ON M.ICM_GG_NO = T.TRC_TFG_NO
+        AND (
+        M.ICM_OWR_ID = T.TRC_OWR_ID
+        OR T.TRC_OWR_ID IS NULL
+        OR M.ICM_OWR_ID IS NULL
+        )
+        LEFT JOIN WH_IN_RPT W
+        ON W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMPORT'
+        AND (
+        W.WIR_OWR_ID = T.TRC_OWR_ID
+        OR W.WIR_OWR_ID IS NULL
+        )
+        LEFT JOIN (
+        SELECT *
+        FROM (
+        SELECT
+        IAN0.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY IAN0.IAN_TRC_NO
+        ORDER BY
+        CASE WHEN IAN0.IAN_SEND_STTS_CD IN ('TRC_NTC_SENT', 'SENT') THEN 0 ELSE 1 END,
+        IAN0.IAN_SEND_DT DESC NULLS LAST,
+        IAN0.IAN_REGIST_DT DESC NULLS LAST,
+        IAN0.IAN_NO DESC
+        ) AS RN
+        FROM IMP_ARRV_NTC IAN0
+        )
+        WHERE RN = 1
+        ) IAN
+        ON IAN.IAN_TRC_NO = T.TRC_NO
+        LEFT JOIN OWNER O
+        ON O.OWR_ID = T.TRC_OWR_ID
+        LEFT JOIN TACS_FILE_MAP INV_MAP
+        ON INV_MAP.TFM_TFG_NO = T.TRC_TFG_NO
+        AND INV_MAP.TFM_DOC_TY_CD = 'INVOICE'
+        LEFT JOIN DOCS_FILE_DATA INV_FILE
+        ON INV_FILE.DFI_FILE_NO = INV_MAP.TFM_DFI_NO
+        AND INV_FILE.DFI_DEL_YN = 'N'
+        AND INV_FILE.DFI_UPLOAD_STTS_CD = 'DONE'
+        AND INV_FILE.DFI_DRIVE_FILE_ID IS NOT NULL
+        LEFT JOIN TACS_FILE_MAP M_INV_MAP
+        ON M_INV_MAP.TFM_TFG_NO = NVL(M.ICM_GG_NO, T.TRC_TFG_NO)
+        AND M_INV_MAP.TFM_DOC_TY_CD = 'INVOICE'
+        LEFT JOIN DOCS_FILE_DATA M_INV_FILE
+        ON M_INV_FILE.DFI_FILE_NO = M_INV_MAP.TFM_DFI_NO
+        AND M_INV_FILE.DFI_DEL_YN = 'N'
+        AND M_INV_FILE.DFI_UPLOAD_STTS_CD = 'DONE'
+        AND M_INV_FILE.DFI_DRIVE_FILE_ID IS NOT NULL
+        LEFT JOIN TACS_FILE_MAP PKG_MAP
+        ON PKG_MAP.TFM_TFG_NO = T.TRC_TFG_NO
+        AND PKG_MAP.TFM_DOC_TY_CD = 'PACKING_LIST'
+        LEFT JOIN DOCS_FILE_DATA PKG_FILE
+        ON PKG_FILE.DFI_FILE_NO = PKG_MAP.TFM_DFI_NO
+        AND PKG_FILE.DFI_DEL_YN = 'N'
+        AND PKG_FILE.DFI_UPLOAD_STTS_CD = 'DONE'
+        AND PKG_FILE.DFI_DRIVE_FILE_ID IS NOT NULL
+        LEFT JOIN TACS_FILE_MAP M_PKG_MAP
+        ON M_PKG_MAP.TFM_TFG_NO = NVL(M.ICM_GG_NO, T.TRC_TFG_NO)
+        AND M_PKG_MAP.TFM_DOC_TY_CD = 'PACKING_LIST'
+        LEFT JOIN DOCS_FILE_DATA M_PKG_FILE
+        ON M_PKG_FILE.DFI_FILE_NO = M_PKG_MAP.TFM_DFI_NO
+        AND M_PKG_FILE.DFI_DEL_YN = 'N'
+        LEFT JOIN (
+        SELECT
+        CG_NO
+        , GOODS_NO
+        , GOODS_NAME
+        , GG_NO
+        , CG_QTY
+        , CG_PRICE
+        , CG_TOTAL_PRICE
+        , CG_WEIGHT
+        , CG_ORIGIN
+        FROM (
+        SELECT
+        CG.CG_NO
+        , CG.GOODS_NO
+        , G.GOODS_NAME
+        , CG.GG_NO
+        , CG.CG_QTY
+        , CG.CG_PRICE
+        , CG.CG_TOTAL_PRICE
+        , CG.CG_WEIGHT
+        , CG.CG_ORIGIN
+        , ROW_NUMBER() OVER (
+          PARTITION BY CG.GG_NO
+          ORDER BY
+            CASE
+              WHEN G.GOODS_NAME IS NOT NULL
+                OR CG.CG_QTY IS NOT NULL
+                OR CG.CG_WEIGHT IS NOT NULL THEN 0
+              ELSE 1
+            END,
+            CG.CG_NO DESC
+        ) AS RN
+        FROM CUSTOMS_GOODS CG
+        LEFT JOIN GOODS G
+        ON G.GOODS_NO = CG.GOODS_NO
+        )
+        WHERE RN = 1
+        ) C
+        ON C.GG_NO = NVL(M.ICM_GG_NO, T.TRC_TFG_NO)
+        <where>
+            T.TRC_SE_CD = 'IMPORT'
+            AND T.TRC_STATUS_CD IN ('TRC_DONE', 'TRC_END', 'TRC_COMPLETE')
+
+        </where>
+        ORDER BY NVL(M.ICM_SBMSN_DT, T.TRC_RCEPT_DT) DESC NULLS LAST
+        , T.TRC_NO DESC
+        , W.WIR_NO DESC
+        , M.ICM_NO DESC
+    </select>
+</mapper>

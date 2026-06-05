@@ -1,0 +1,344 @@
+/* ===== 처리현황 페이지 전용 JS =====
+ * - 통합조회: openStatusDetail, renderStatusModalList, selectStatusDeclare, closeStDetailPreview, statusDeclareStore, currentStatusClient
+ * - 세금납부: openTaxDetail, openTaxPay, openTaxSchedule, taxDataStore
+ * - 신고필증: openCertDetail, openCertPrint, openCertSend, certDataStore
+ */
+
+/* ============================================================
+ * 1) 통합조회 — 화주별 신고서 모달 & 하단 미리보기
+ * ============================================================ */
+
+/* 화주별 신고서 Mock 데이터 (화주와 접수일시 기준으로 조회) */
+
+/* ============================================================
+ * 통합조회 — 보완수정 모델/규격 행 추가/삭제
+ * ============================================================ */
+function addSuppMdlspecRow() {
+  var body = document.getElementById('supp-mdlspec-body');
+  if (!body) return;
+
+  var tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td><input name="idimMdlspecNo" placeholder="규격번호"></td>' +
+    '<td><input name="idimMdlspecNm" placeholder="모델/규격명"></td>' +
+    '<td><input name="idimQty1" placeholder="수량"></td>' +
+    '<td><input name="idimQty1UnitCd" placeholder="EA"></td>' +
+    '<td><input name="idimUnitPrc" placeholder="단가"></td>' +
+    '<td><input name="idimAmt" placeholder="금액"></td>' +
+    '<td><button type="button" class="mini mini-reject" onclick="removeSuppMdlspecRow(this)">삭제</button></td>';
+
+  body.appendChild(tr);
+}
+
+function removeSuppMdlspecRow(btn) {
+  var tr = btn.closest('tr');
+  var body = document.getElementById('supp-mdlspec-body');
+  if (!tr || !body) return;
+
+  if (body.querySelectorAll('tr').length <= 1) {
+    tr.querySelectorAll('input').forEach(function (input) {
+      input.value = '';
+    });
+    return;
+  }
+
+  tr.remove();
+}
+
+
+/* ============================================================
+ * 2) 세금납부 관리 — 상세/납부/일정 모달
+ * ============================================================ */
+
+var taxDataStore = {
+  'IMP-20240520-001': {
+    client: 'SK하이닉스(주)', bizNo: '221-81-54321', item: '정밀기기',
+    hs: '9018.19', bl: 'MSKU1234567', acceptDate: '2024-05-18',
+    customs: '₩12,450,000', vat: '₩4,580,000', edu: '₩320,000', spc: '₩0', other: '₩0',
+    total: '₩17,350,000', totalNum: 17350000, dueDate: '2024-05-22', dday: 2,
+    status: 'unpaid', enpNo: '-', payDate: '-',
+    installments: []
+  },
+  'IMP-20240519-012': {
+    client: '포스코(주)', bizNo: '302-81-77777', item: '철강제품',
+    hs: '7208.51', bl: 'KMTC20240519B', acceptDate: '2024-05-17',
+    customs: '₩89,200,000', vat: '₩31,220,000', edu: '₩0', spc: '₩0', other: '₩0',
+    total: '₩120,420,000', totalNum: 120420000, dueDate: '2024-05-23', dday: 3,
+    status: 'unpaid', enpNo: '-', payDate: '-',
+    installments: []
+  },
+  'IMP-20240518-008': {
+    client: 'LG화학(주)', bizNo: '110-81-12345', item: '수입원재료',
+    hs: '2915.29', bl: 'HJSCU20240518', acceptDate: '2024-05-16',
+    customs: '₩5,600,000', vat: '₩1,960,000', edu: '₩0', spc: '₩0', other: '₩0',
+    total: '₩7,560,000', totalNum: 7560000, dueDate: '2024-05-28', dday: 8,
+    status: 'installment', enpNo: 'ENP-2024-0518-001', payDate: '-',
+    installments: [
+      { n: '1/2', amt: '₩3,780,000', date: '2024-05-20', status: 'paid' },
+      { n: '2/2', amt: '₩3,780,000', date: '2024-05-28', status: 'scheduled' }
+    ]
+  },
+  'IMP-20240510-021': {
+    client: 'CJ제일제당(주)', bizNo: '104-86-09456', item: '식품첨가물',
+    hs: '2106.90', bl: 'EMC20240510A', acceptDate: '2024-05-08',
+    customs: '₩34,000,000', vat: '₩11,800,000', edu: '₩0', spc: '₩0', other: '₩0',
+    total: '₩45,800,000', totalNum: 45800000, dueDate: '2024-06-10', dday: 21,
+    status: 'installment', enpNo: 'ENP-2024-0510-002', payDate: '-',
+    installments: [
+      { n: '1/3', amt: '₩15,266,667', date: '2024-06-10', status: 'scheduled' },
+      { n: '2/3', amt: '₩15,266,667', date: '2024-07-10', status: 'pending' },
+      { n: '3/3', amt: '₩15,266,666', date: '2024-08-10', status: 'pending' }
+    ]
+  }
+};
+
+/* ===== 상세 ===== */
+function openTaxDetail(no) {
+  var d = taxDataStore[no]; if (!d) d = taxDataStore['IMP-20240520-001'];
+  document.getElementById('taxD-no').textContent = no;
+  document.getElementById('taxD-client').textContent = d.client;
+  document.getElementById('taxD-bizNo').textContent = d.bizNo;
+  document.getElementById('taxD-item').textContent = d.item;
+  document.getElementById('taxD-hs').textContent = d.hs;
+  document.getElementById('taxD-bl').textContent = d.bl;
+  document.getElementById('taxD-acceptDate').textContent = d.acceptDate;
+  document.getElementById('taxD-customs').textContent = d.customs;
+  document.getElementById('taxD-vat').textContent = d.vat;
+  document.getElementById('taxD-edu').textContent = d.edu;
+  document.getElementById('taxD-spc').textContent = d.spc;
+  document.getElementById('taxD-other').textContent = d.other;
+  document.getElementById('taxD-total').textContent = d.total;
+  document.getElementById('taxD-dueDate').textContent = d.dueDate;
+  document.getElementById('taxD-enpNo').textContent = d.enpNo;
+  document.getElementById('taxD-payDate').textContent = d.payDate;
+
+  var statusMap = {
+    unpaid: { label: '미납', cls: 'unpaid', icon: 'error' },
+    installment: { label: '분납중', cls: 'installment', icon: 'schedule' },
+    paid: { label: '납부완료', cls: 'paid', icon: 'check_circle' }
+  };
+  var s = statusMap[d.status] || statusMap.unpaid;
+  document.getElementById('taxD-status').innerHTML =
+    '<span class="pay-badge ' + s.cls + '"><span class="material-symbols-outlined">' + s.icon + '</span>' + s.label + '</span>';
+
+  var ddayCls = d.dday <= 3 ? 'danger' : (d.dday <= 7 ? 'warn' : 'safe');
+  document.getElementById('taxD-dday').innerHTML =
+    '<span class="dday-chip ' + ddayCls + '">D-' + d.dday + '</span>';
+
+  showModal('tax-detail-v2');
+}
+
+/* ===== 납부 ===== */
+function openTaxPay(no) {
+  var d = taxDataStore[no]; if (!d) d = taxDataStore['IMP-20240520-001'];
+  document.getElementById('taxP-no').textContent = no;
+  document.getElementById('taxP-client').textContent = d.client;
+  document.getElementById('taxP-total').textContent = d.total;
+  document.getElementById('taxP-dueDate').textContent = d.dueDate;
+  showModal('tax-pay-v2');
+}
+
+/* ===== 일정 ===== */
+function openTaxSchedule(no) {
+  var d = taxDataStore[no]; if (!d) d = taxDataStore['IMP-20240518-008'];
+  document.getElementById('taxS-no').textContent = no;
+  document.getElementById('taxS-client').textContent = d.client;
+  document.getElementById('taxS-total').textContent = d.total;
+
+  var paid = d.installments.filter(function (i) { return i.status === 'paid' }).length;
+  var totalCnt = d.installments.length;
+  document.getElementById('taxS-progress').textContent = paid + ' / ' + totalCnt;
+  document.getElementById('taxS-progressBar').style.width = (totalCnt ? paid / totalCnt * 100 : 0) + '%';
+
+  var stepMap = { paid: 'done', scheduled: 'active', pending: '' };
+  var stepperHtml = '';
+  d.installments.forEach(function (ins, i) {
+    stepperHtml += '<div class="step ' + stepMap[ins.status] + '"><div class="circle">' + (i + 1) + '</div>' + ins.n + '차</div>';
+  });
+  document.getElementById('taxS-stepper').innerHTML = stepperHtml;
+
+  var statusLabel = {
+    paid: '<span class="pay-badge paid"><span class="material-symbols-outlined">check_circle</span>납부완료</span>',
+    scheduled: '<span class="pay-badge scheduled"><span class="material-symbols-outlined">event</span>납부예정</span>',
+    pending: '<span class="pay-badge pending">예정</span>'
+  };
+  var rows = '';
+  d.installments.forEach(function (ins) {
+    var rowBg = ins.status === 'scheduled' ? 'style="background:#fffbeb"' : '';
+    var actionBtn = ins.status === 'scheduled'
+      ? '<button class="mini" style="background:#565e74;color:#fff;font-size:9px" onclick="hideModal(\'tax-schedule\');openTaxPay(\'' + document.getElementById('taxS-no').textContent + '\')">지금 납부</button>'
+      : (ins.status === 'paid' ? '<button class="mini mini-view" onclick="alert(\'영수증 출력\')">영수증</button>' : '-');
+    rows += '<tr ' + rowBg + '><td style="font-weight:800">' + ins.n + '</td><td style="font-weight:700">' + ins.amt + '</td><td>' + ins.date + '</td><td>' + statusLabel[ins.status] + '</td><td>' + actionBtn + '</td></tr>';
+  });
+  document.getElementById('taxS-rows').innerHTML = rows;
+
+  showModal('tax-schedule');
+}
+
+/* ============================================================
+ * 3) 신고필증 관리 — 상세/출력/화주전달 모달
+ * ============================================================ */
+
+var certDataStore = {
+  'IMP-20240519-015': {
+    type: '수입', client: '삼성전자(주)', clientCode: 'ABCD1234', bizNo: '124-81-00998',
+    item: '정밀 의료기기 외 2건', hs: '9018.19', acceptDate: '2024-05-20 14:35:22', customs: '인천세관 심사1과',
+    officer: '김세관 (032-890-1234)', taxTotal: '₩4,884,840', payStatus: '납부완료', payDate: '2024-05-20',
+    enpNo: 'ENP-2024-0519-003', bl: 'MSKU1234567', invoice: '$45,230', exchange: '1,300.50'
+  },
+  'EXP-20240520-421': {
+    type: '수출', client: '삼성전자(주)', clientCode: 'ABCD1234', bizNo: '124-81-00998',
+    item: '전자부품 (반도체)', hs: '8542.31', acceptDate: '2024-05-20 11:20:05', customs: '인천세관 수출과',
+    officer: '이세관 (032-890-2345)', taxTotal: '해당없음', payStatus: '해당없음', payDate: '-',
+    enpNo: '-', bl: 'HJSCU2024052011', invoice: '$128,500', exchange: '1,299.80'
+  },
+  'IMP-20240517-003': {
+    type: '수입', client: '현대모비스(주)', clientCode: 'IJKL9012', bizNo: '132-81-99887',
+    item: '자동차 부품 조립체', hs: '8708.30', acceptDate: '2024-05-19 16:10:48', customs: '부산세관 심사2과',
+    officer: '박세관 (051-460-1234)', taxTotal: '₩12,042,000', payStatus: '납부완료', payDate: '2024-05-19',
+    enpNo: 'ENP-2024-0517-001', bl: 'COSCO20240517A', invoice: '$89,200', exchange: '1,305.00'
+  },
+  'EXP-20240519-420': {
+    type: '수출', client: '포스코(주)', clientCode: 'QRST7890', bizNo: '302-81-77777',
+    item: '철강제품', hs: '7208.51', acceptDate: '2024-05-19 09:45:12', customs: '부산세관 수출과',
+    officer: '최세관 (051-460-5678)', taxTotal: '해당없음', payStatus: '해당없음', payDate: '-',
+    enpNo: '-', bl: 'KMTC20240519B', invoice: '$892,000', exchange: '1,298.50'
+  }
+};
+
+/* 1) 상세 모달 */
+function openCertDetail(no) {
+  var d = certDataStore[no] || certDataStore['IMP-20240519-015'];
+  document.getElementById('certD-no').textContent = no;
+  document.getElementById('certD-type').textContent = d.type + '신고필증';
+  document.getElementById('certD-type').style.color = (d.type === '수입') ? '#565e74' : '#1d6b4f';
+  document.getElementById('certD-client').textContent = d.client;
+  document.getElementById('certD-clientCode').textContent = d.clientCode;
+  document.getElementById('certD-bizNo').textContent = d.bizNo;
+  document.getElementById('certD-item').textContent = d.item;
+  document.getElementById('certD-hs').textContent = d.hs;
+  document.getElementById('certD-acceptDate').textContent = d.acceptDate;
+  document.getElementById('certD-customs').textContent = d.customs;
+  document.getElementById('certD-officer').textContent = d.officer;
+  document.getElementById('certD-bl').textContent = d.bl;
+  document.getElementById('certD-invoice').textContent = d.invoice;
+  document.getElementById('certD-exchange').textContent = d.exchange;
+  document.getElementById('certD-tax').textContent = d.taxTotal;
+  document.getElementById('certD-payStatus').textContent = d.payStatus;
+  document.getElementById('certD-payDate').textContent = d.payDate;
+  document.getElementById('certD-enpNo').textContent = d.enpNo;
+  showModal('cert-detail-v2');
+}
+
+/* 2) 출력 모달 */
+function openCertPrint(no) {
+  var d = certDataStore[no] || certDataStore['IMP-20240519-015'];
+  document.getElementById('certP-no').textContent = no;
+  document.getElementById('certP-client').textContent = d.client;
+  document.getElementById('certP-item').textContent = d.item;
+  document.getElementById('certP-type').textContent = d.type + '신고필증';
+  showModal('cert-print');
+}
+
+/* 3) 화주전달 모달 */
+function openCertSend(no) {
+  var d = certDataStore[no] || certDataStore['IMP-20240519-015'];
+  document.getElementById('certS-no').textContent = no;
+  document.getElementById('certS-client').textContent = d.client;
+  document.getElementById('certS-item').textContent = d.item;
+  document.getElementById('certS-type').textContent = d.type + '신고필증';
+  document.getElementById('certS-fileName').textContent = no + '_' + d.type + '신고필증.pdf';
+  showModal('cert-send');
+}
+
+
+/* ============================================================
+ * 세금납부 · 화주청구 계산상세 모달
+ * - status.jsp의 계산상세 버튼 data-* 값을 읽어서 모달에 출력
+ * ============================================================ */
+
+function chargeCalcNumber(value) {
+  if (value === undefined || value === null || value === '') {
+    return 0;
+  }
+
+  var num = Number(String(value).replaceAll(',', ''));
+  if (isNaN(num)) {
+    return 0;
+  }
+
+  return num;
+}
+
+function chargeCalcWon(value) {
+  return chargeCalcNumber(value).toLocaleString('ko-KR') + '원';
+}
+
+function chargeCalcRate(value) {
+  var num = chargeCalcNumber(value);
+
+  if (num <= 1) {
+    return (num * 100).toLocaleString('ko-KR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }) + '%';
+  }
+
+  return num.toLocaleString('ko-KR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }) + '%';
+}
+
+function chargeCalcText(value) {
+  if (value === undefined || value === null || value === '') {
+    return '-';
+  }
+  return value;
+}
+
+function setChargeCalcText(id, value) {
+  var el = document.getElementById(id);
+  if (el) {
+    el.textContent = value;
+  }
+}
+
+function openChargeCalcModal(btn) {
+  if (!btn) {
+    return;
+  }
+
+  var ds = btn.dataset;
+
+  setChargeCalcText('ccm-bc-no', chargeCalcText(ds.bcNo));
+  setChargeCalcText('ccm-ir-no', chargeCalcText(ds.irNo));
+  setChargeCalcText('ccm-owr-nm', chargeCalcText(ds.owrNm));
+  setChargeCalcText('ccm-item-nm', chargeCalcText(ds.reprItemNm));
+
+  setChargeCalcText('ccm-policy-nm', chargeCalcText(ds.policyNm));
+
+  var minDclrAmt = ds.minDclrAmt || '';
+  var maxDclrAmt = ds.maxDclrAmt || '';
+
+  if (minDclrAmt !== '' || maxDclrAmt !== '') {
+    setChargeCalcText(
+      'ccm-policy-range',
+      chargeCalcWon(minDclrAmt) + ' ~ ' + (maxDclrAmt === '' ? '상한 없음' : chargeCalcWon(maxDclrAmt))
+    );
+  } else {
+    setChargeCalcText('ccm-policy-range', '-');
+  }
+
+  setChargeCalcText('ccm-base-fee', chargeCalcWon(ds.baseFee));
+  setChargeCalcText('ccm-rate', chargeCalcRate(ds.rate));
+  setChargeCalcText('ccm-min-max-fee', chargeCalcWon(ds.minFee) + ' / ' + chargeCalcWon(ds.maxFee));
+
+  setChargeCalcText('ccm-dclr-amt', chargeCalcWon(ds.dclrAmt));
+  setChargeCalcText('ccm-tax-amt', chargeCalcWon(ds.taxAmt));
+  setChargeCalcText('ccm-broker-fee', chargeCalcWon(ds.brokerFee));
+  setChargeCalcText('ccm-fee-vat', chargeCalcWon(ds.feeVat));
+  setChargeCalcText('ccm-total-amt', chargeCalcWon(ds.totalAmt));
+
+  showModal('charge-calc');
+}

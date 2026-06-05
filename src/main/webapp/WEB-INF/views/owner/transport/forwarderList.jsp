@@ -1,0 +1,225 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%
+    request.setAttribute("activeMenu", "transport");
+    request.setAttribute("activeGroup", "transport");
+    request.setAttribute("activeSub", "forwarder");
+    request.setAttribute("transportTab", "forwarder");
+%>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="ctx-path" content="${pageContext.request.contextPath}">
+    <title>TACS 운송업체 계약 관리</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/owner.css">
+</head>
+<body>
+<div class="app" id="app">
+    <%@ include file="/WEB-INF/views/owner/sidebar.jsp" %>
+
+    <div class="main-wrap">
+        <%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+        <main class="content">
+            <div class="page active" id="pg-transport">
+                <div class="page-title-row">
+                    <h2>운송</h2>
+                </div>
+
+                <%@ include file="/WEB-INF/views/owner/transport/fragments/transportTabs.jsp" %>
+
+                <div id="trans-fwd-list-view">
+
+                    <form method="get"
+                          action="${pageContext.request.contextPath}/owner/transport/forwarder/list.do"
+                          class="filter-bar forwarder-list-filter">
+
+                        <div class="search-wrap forwarder-search-wrap">
+                            <span class="material-symbols-outlined">search</span>
+                            <input name="keyword"
+                                   value="${searchDTO.keyword}"
+                                   class="forwarder-search-input"
+                                   placeholder="운송업체명, 담당자명, 요청사항 검색"/>
+                        </div>
+
+                        <select name="statusCd" class="forwarder-filter-select">
+                            <option value="">전체 상태</option>
+                            <option value="CONTRACT_ACTIVE" ${searchDTO.statusCd eq 'CONTRACT_ACTIVE' ? 'selected' : ''}>계약중</option>
+                            <option value="TRC_END" ${searchDTO.statusCd eq 'TRC_END' ? 'selected' : ''}>완료대기</option>
+                            <option value="TRC_COMPLETE" ${searchDTO.statusCd eq 'TRC_COMPLETE' ? 'selected' : ''}>완료</option>
+                        </select>
+
+                        <select name="dateType" class="forwarder-filter-select">
+                            <option value="RQST" ${empty searchDTO.dateType or searchDTO.dateType eq 'RQST' ? 'selected' : ''}>신청일</option>
+                            <option value="RCEPT" ${searchDTO.dateType eq 'RCEPT' ? 'selected' : ''}>접수일</option>
+                        </select>
+
+                        <input name="startDate"
+                               value="${searchDTO.startDate}"
+                               class="forwarder-date-input"
+                               type="date"/>
+
+                        <span class="forwarder-date-sep">~</span>
+
+                        <input name="endDate"
+                               value="${searchDTO.endDate}"
+                               class="forwarder-date-input"
+                               type="date"/>
+
+                        <button class="btn btn-dark" type="submit">조회</button>
+
+                        <a class="btn btn-primary forwarder-contract-btn"
+                           href="${pageContext.request.contextPath}/owner/transport/contract/form.do">
+                            <span class="material-symbols-outlined">handshake</span>
+                            운송업체 계약
+                        </a>
+                    </form>
+
+                    <div class="forwarder-list-title">운송업체 계약 목록</div>
+
+                    <div class="card-section">
+                        <table class="data-table">
+                            <thead>
+                            <tr>
+                                <th>운송업체명</th>
+                                <th>담당자 / 연락처</th>
+                                <th>수출입구분</th>
+                                <th>계약요청일</th>
+                                <th>최종 업데이트</th>
+                                <th>상태</th>
+                                <th class="forwarder-manage-col">관리</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <c:choose>
+                                <c:when test="${empty contractList}">
+                                    <tr>
+                                        <td colspan="8" class="forwarder-empty-cell">
+                                            조회된 운송업체 계약 내역이 없습니다.
+                                        </td>
+                                    </tr>
+                                </c:when>
+
+                                <c:otherwise>
+                                    <c:forEach var="contract" items="${contractList}">
+                                        <tr>
+                                            <td>
+                                                    ${contract.tmCpNm}
+                                            </td>
+
+                                            <td>
+                                                    ${contract.tmName}
+                                                <br>
+                                                <span class="td-muted">${contract.tmCpTelno}</span>
+                                            </td>
+
+                                            <td>
+                                                    ${contract.trcSeNm}
+                                            </td>
+
+                                            <td>
+                                                <fmt:formatDate value="${contract.trcRqstDt}" pattern="yyyy-MM-dd"/>
+                                            </td>
+
+                                            <td>
+                                                <fmt:formatDate value="${contract.lastUpdateDt}" pattern="yyyy-MM-dd"/>
+                                            </td>
+
+                                            <td>
+                                                <c:choose>
+                                                    <c:when test="${contract.trcStatusNm eq 'CONTRACT_ACTIVE'}">
+                                                        <span class="doc-status ok">계약중</span>
+                                                    </c:when>
+                                                    <c:when test="${contract.trcStatusNm eq 'TRC_END'}">
+                                                        <span class="doc-status wait">완료대기</span>
+                                                    </c:when>
+                                                    <c:when test="${contract.trcStatusNm eq 'TRC_COMPLETE'}">
+                                                        <span class="doc-status none">완료</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="doc-status none">${contract.trcStatusNm}</span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
+
+                                            <td>
+                                                <div class="btn-row">
+                                                    <a class="mini mini-view"
+                                                       href="${pageContext.request.contextPath}/owner/transport/forwarder/detail.do/${contract.trcTmNo}">
+                                                        상세
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </c:forEach>
+                                </c:otherwise>
+                            </c:choose>
+                            </tbody>
+                        </table>
+
+                        <!-- 페이지네이션 -->
+                        <div class="pagination"
+                             style="display:flex;justify-content:center;gap:4px;margin:20px 0">
+
+                            <c:if test="${searchDTO.prev}">
+                                <c:url var="fwdPrevUrl" value="/owner/transport/forwarder/list.do">
+                                    <c:param name="page" value="${searchDTO.startPage - 1}" />
+                                    <c:param name="size" value="${searchDTO.size}" />
+                                    <c:param name="keyword" value="${searchDTO.keyword}" />
+                                    <c:param name="statusCd" value="${searchDTO.statusCd}" />
+                                    <c:param name="dateType" value="${searchDTO.dateType}" />
+                                    <c:param name="startDate" value="${searchDTO.startDate}" />
+                                    <c:param name="endDate" value="${searchDTO.endDate}" />
+                                </c:url>
+                                <a class="mini mini-view" href="${fwdPrevUrl}">이전</a>
+                            </c:if>
+
+                            <c:forEach begin="${searchDTO.startPage}" end="${searchDTO.endPage}" var="p">
+                                <c:url var="fwdPageUrl" value="/owner/transport/forwarder/list.do">
+                                    <c:param name="page" value="${p}" />
+                                    <c:param name="size" value="${searchDTO.size}" />
+                                    <c:param name="keyword" value="${searchDTO.keyword}" />
+                                    <c:param name="statusCd" value="${searchDTO.statusCd}" />
+                                    <c:param name="dateType" value="${searchDTO.dateType}" />
+                                    <c:param name="startDate" value="${searchDTO.startDate}" />
+                                    <c:param name="endDate" value="${searchDTO.endDate}" />
+                                </c:url>
+                                <a class="mini ${p eq searchDTO.page ? 'mini-primary' : 'mini-view'}"
+                                   href="${fwdPageUrl}">${p}</a>
+                            </c:forEach>
+
+                            <c:if test="${searchDTO.next}">
+                                <c:url var="fwdNextUrl" value="/owner/transport/forwarder/list.do">
+                                    <c:param name="page" value="${searchDTO.endPage + 1}" />
+                                    <c:param name="size" value="${searchDTO.size}" />
+                                    <c:param name="keyword" value="${searchDTO.keyword}" />
+                                    <c:param name="statusCd" value="${searchDTO.statusCd}" />
+                                    <c:param name="dateType" value="${searchDTO.dateType}" />
+                                    <c:param name="startDate" value="${searchDTO.startDate}" />
+                                    <c:param name="endDate" value="${searchDTO.endDate}" />
+                                </c:url>
+                                <a class="mini mini-view" href="${fwdNextUrl}">다음</a>
+                            </c:if>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <%@ include file="/WEB-INF/views/common/ownerModals.jsp" %>
+        <%@ include file="/WEB-INF/views/common/footer.jsp" %>
+    </div>
+</div>
+
+<%@ include file="/WEB-INF/views/common/ownerScripts.jsp" %>
+
+</body>
+</html>

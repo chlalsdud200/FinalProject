@@ -1,0 +1,833 @@
+package kr.or.tacs.transport.importp.service;
+
+import kr.or.tacs.cmmenums.TacsTrSt;
+import kr.or.tacs.cmmenums.TacsUserType;
+import kr.or.tacs.common.file.service.IFileService;
+import kr.or.tacs.transport.importp.mapper.ImportTransportMapper;
+import kr.or.tacs.vo.transport.TransportRequestVO;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
+@Service
+@RequiredArgsConstructor
+public class ImportTransportServiceImpl implements ImportTransportService {
+
+    private final ImportTransportMapper importTransportMapper;
+    private final IFileService fileService;
+    private static final String TRANSPORT_ACTOR_TYPE = "TRANSPORT_MANAGER";
+
+    @Override
+    public List<TransportRequestVO> retriveImpTransportReqList() {
+        return importTransportMapper.retriveImpTransportReqList(currentTmId());
+    }
+
+    @Override
+    @Transactional
+    public boolean modifyImpTransportReqStatus(String trcNo, String statusCd, String rejectType, String rejectMemo, String actorId) {
+        String normalizedStatus = normalizeRequestStatus(statusCd);
+        String rejectReason = buildRejectReason(rejectType, rejectMemo);
+
+        int updated = importTransportMapper.updateImpTransportReqStatus(
+                trcNo,
+                normalizedStatus,
+                rejectType,
+                rejectMemo,
+                rejectReason,
+                normalizeActorId(actorId)
+        );
+
+        /*
+         * 운송의뢰 접수완료는 후속 탭을 열 수 있게 하는 상태 변경까지만 처리한다.
+         * WH_IN_RPT의 WIR_NO/row는 입고관리 화면에서 운송담당자가 실제 입고요청 발송 버튼을
+         * 눌렀을 때 updateImpUnloadingInDelivered()에서만 생성되어야 한다.
+         */
+
+        if (updated > 0 && "TRC_REJECT".equals(normalizedStatus)) {
+            importTransportMapper.insertImportTransportReject(trcNo, rejectReason, normalizeActorId(actorId));
+        }
+
+        // 접수완료 시 BL_ISSU가 없으면 의뢰번호 기반으로 자동 생성 (TRC- → MBL- 치환)
+        if (updated > 0 && "TRC_DONE".equals(normalizedStatus) && trcNo != null && trcNo.startsWith("TRC-")) {
+            String autoMblNo = "MBL-" + trcNo.substring(4);
+            importTransportMapper.updateImpTransportReqMasterBl(trcNo, autoMblNo);
+        }
+
+        return updated > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean modifyImpTransportReqDetail(String trcNo,
+                                               String buyerNm,
+                                               String buyerCountryCd,
+                                               String transportMeanCd,
+                                               String transportTypeCd,
+                                               String incoTermsCd,
+                                               String deptPortCd,
+                                               String arvlPortCd,
+                                               String itemCategory,
+                                               String goodsName,
+                                               Integer qty,
+                                               Integer weight,
+                                               String mblNo,
+                                               String requestCn) {
+        int updated = importTransportMapper.updateImpTransportReqDetail(
+                trcNo,
+                buyerNm,
+                buyerCountryCd,
+                transportMeanCd,
+                transportTypeCd,
+                incoTermsCd,
+                deptPortCd,
+                arvlPortCd,
+                itemCategory,
+                requestCn
+        );
+        saveImpTransportReqDetailGoods(trcNo, goodsName, qty, weight);
+        // Master B/L이 입력된 경우 BL_ISSU에 저장한다. GOODS_GROUP 부모행은 mapper에서 자동 보장한다.
+        if (mblNo != null && !mblNo.trim().isEmpty()) {
+            try {
+                importTransportMapper.updateImpTransportReqMasterBl(trcNo, mblNo);
+            } catch (RuntimeException e) {
+                // 상세정보 저장과 B/L 동기화는 분리한다. B/L 기반 자료가 없어도 의뢰 상세 저장은 성공해야 한다.
+            }
+        }
+        return updated > 0;
+    }
+
+    private void saveImpTransportReqDetailGoods(String trcNo, String goodsName, Integer qty, Integer weight) {
+        if (trcNo == null || trcNo.isBlank()
+                || (blankToNull(goodsName) == null && qty == null && weight == null)) {
+            return;
+        }
+        TransportRequestVO goods = new TransportRequestVO();
+        goods.setGoodsName(goodsName);
+        goods.setItemNm(goodsName);
+        goods.setQty(qty);
+        goods.setWeight(weight);
+        goods.setOrigin("KR");
+        normalizeGoodsPayload(goods);
+        if (blankToNull(goods.getGoodsName()) == null && blankToNull(goods.getItemNm()) == null) {
+            throw new IllegalArgumentException("품명을 입력하세요.");
+        }
+
+        Integer existingGoodsNo = importTransportMapper.selectExistingImpGoodsNo(goods);
+        if (existingGoodsNo != null) {
+            goods.setGoodsNo(existingGoodsNo);
+        } else {
+            goods.setGoodsNo(importTransportMapper.selectNextImpGoodsNo());
+            importTransportMapper.insertImpGoodsMaster(goods);
+        }
+
+        goods.setCgNo(importTransportMapper.selectNextImpCustomsGoodsNo());
+        importTransportMapper.deleteImpTransportReqDetailGoods(trcNo);
+        importTransportMapper.insertImpTransportReqDetailGoods(trcNo, goods);
+    }
+
+    @Override
+    @Transactional
+    public boolean modifyImpUnloadingInSupplement(String wirNo,
+                                                  String receiverId,
+                                                  String wmId,
+                                                  String wzNo,
+                                                  String inPlanDt,
+                                                  String cargoMgmtNo,
+                                                  String invoiceNo,
+                                                  String incoTermsCd,
+                                                  String remark,
+                                                  List<TransportRequestVO> goodsList,
+                                                  String actorId) {
+        int updated = importTransportMapper.updateImpUnloadingInSupplementData(
+                wirNo,
+                blankToNull(wmId),
+                blankToNull(wzNo),
+                blankToNull(inPlanDt),
+                blankToNull(cargoMgmtNo),
+                blankToNull(invoiceNo),
+                blankToNull(incoTermsCd),
+                blankToNull(remark)
+        );
+
+        saveImpUnloadingInGoods(wirNo, goodsList);
+
+        int submitted = importTransportMapper.updateImpUnloadingInSupplementSubmitted(
+                wirNo,
+                normalizeActorId(actorId),
+                blankToNull(receiverId)
+        );
+
+        return updated != 0 || submitted != 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean modifyImpReleaseSupplement(String releaseReqNo,
+                                              String trcNo,
+                                              String receiverId,
+                                              String wmId,
+                                              String wzNo,
+                                              String releaseReqDt,
+                                              String itemNm,
+                                              String remark,
+                                              List<TransportRequestVO> goodsList,
+                                              String suppTypeCd,
+                                              String suppReqCn,
+                                              String actorId) {
+        int updated = importTransportMapper.updateImpReleaseReqData(
+                blankToNull(releaseReqNo),
+                blankToNull(trcNo),
+                blankToNull(wmId),
+                blankToNull(wzNo),
+                blankToNull(releaseReqDt),
+                blankToNull(itemNm),
+                blankToNull(remark)
+        );
+        saveImpReleaseGoods(trcNo, goodsList);
+
+        String reason = normalizeSupplementReason(suppReqCn);
+        int inserted = 0;
+        int requested = 0;
+        if (reason != null && blankToNull(releaseReqNo) != null) {
+            inserted = importTransportMapper.insertImportSupplementRequest(
+                    "CARGO_RELEASE_REQ",
+                    releaseReqNo,
+                    normalizeActorId(actorId),
+                    "WAREHOUSE",
+                    normalizeReceiverId(receiverId),
+                    "TRANSPORT",
+                    normalizeSupplementType(suppTypeCd),
+                    reason
+            );
+            requested = importTransportMapper.updateImpReleaseSupplementRequested(releaseReqNo);
+        }
+
+        int submitted = importTransportMapper.updateImpReleaseSupplementSubmitted(
+                blankToNull(releaseReqNo),
+                blankToNull(trcNo),
+                normalizeActorId(actorId),
+                blankToNull(receiverId)
+        );
+        return updated != 0 || inserted > 0 || requested > 0 || submitted > 0;
+    }
+
+    private void saveImpReleaseGoods(String trcNo, List<TransportRequestVO> goodsList) {
+        if (trcNo == null || trcNo.isBlank() || goodsList == null) {
+            return;
+        }
+        String wirNo = importTransportMapper.selectImpUnloadingInWirNoByTrcNo(trcNo);
+        if (wirNo == null || wirNo.isBlank()) {
+            return;
+        }
+        for (TransportRequestVO goods : goodsList) {
+            normalizeGoodsPayload(goods);
+            if (!hasImpGoodsValue(goods)) {
+                continue;
+            }
+            if (goods.getGoodsNo() == null) {
+                if (blankToNull(goods.getGoodsName()) == null && blankToNull(goods.getItemNm()) == null) {
+                    throw new IllegalArgumentException("품목명은 필수 입력값입니다.");
+                }
+
+                Integer existingGoodsNo = importTransportMapper.selectExistingImpGoodsNo(goods);
+                if (existingGoodsNo != null) {
+                    goods.setGoodsNo(existingGoodsNo);
+                } else {
+                    goods.setGoodsNo(importTransportMapper.selectNextImpGoodsNo());
+                    importTransportMapper.insertImpGoodsMaster(goods);
+                }
+            } else {
+                importTransportMapper.updateImpUnloadingInSupplementGoodsName(goods);
+            }
+
+            if (goods.getCgNo() != null) {
+                importTransportMapper.updateImpUnloadingInSupplementGoods(goods);
+            } else {
+                goods.setCgNo(importTransportMapper.selectNextImpCustomsGoodsNo());
+                importTransportMapper.insertImpUnloadingInGoods(wirNo, goods);
+            }
+        }
+    }
+
+    private String normalizeRequestStatus(String statusCd) {
+        if (statusCd == null) {
+            return null;
+        }
+        return switch (statusCd) {
+            case "ACC", "ACCEPTED", "TRC_DONE", "접수완료" -> "TRC_DONE";
+            case "REJ", "REJECTED", "TRC_REJECT", "접수반려" -> "TRC_REJECT";
+            default -> statusCd;
+        };
+    }
+
+    private String buildRejectReason(String rejectType, String rejectMemo) {
+        if (rejectType != null && !rejectType.isBlank()
+                && rejectMemo != null && !rejectMemo.isBlank()) {
+            return rejectType + " / " + rejectMemo;
+        }
+        if (rejectType != null && !rejectType.isBlank()) {
+            return rejectType;
+        }
+        if (rejectMemo != null && !rejectMemo.isBlank()) {
+            return rejectMemo;
+        }
+        return "운송의뢰 반려";
+    }
+
+
+    private void saveImpUnloadingInGoods(String wirNo, List<TransportRequestVO> goodsList) {
+        if (wirNo == null || wirNo.isBlank() || goodsList == null) {
+            return;
+        }
+
+        /*
+         * 화면의 품목사항 그리드는 행추가/삭제가 가능한 전체 편집 방식이다.
+         * 따라서 저장 시 현재 화면 행을 정답으로 보고 기존 CUSTOMS_GOODS를 지운 뒤 다시 넣는다.
+         * 이렇게 해야 화면에서 삭제한 행이 DB에도 삭제되고, 여러 행 추가도 1건으로 합쳐지지 않는다.
+         */
+        importTransportMapper.deleteImpUnloadingInGoodsByWirNo(wirNo);
+
+        for (TransportRequestVO goods : goodsList) {
+            normalizeGoodsPayload(goods);
+            if (!hasImpGoodsValue(goods)) {
+                continue;
+            }
+            if (goods.getGoodsNo() == null) {
+                if (blankToNull(goods.getGoodsName()) == null && blankToNull(goods.getItemNm()) == null) {
+                    throw new IllegalArgumentException("품목명은 필수 입력값입니다.");
+                }
+
+                /*
+                 * 같은 품목명/HS코드가 GOODS 마스터에 이미 있으면 기존 GOODS_NO를 재사용한다.
+                 * 화면에서 행추가를 여러 번 할 때마다 GOODS 마스터에 전자기기/식품이 계속 중복 생성되면
+                 * 자동완성/조회가 지저분해지고, PK 채번 충돌 가능성도 커진다.
+                 */
+                Integer existingGoodsNo = importTransportMapper.selectExistingImpGoodsNo(goods);
+                if (existingGoodsNo != null) {
+                    goods.setGoodsNo(existingGoodsNo);
+                } else {
+                    goods.setGoodsNo(importTransportMapper.selectNextImpGoodsNo());
+                    importTransportMapper.insertImpGoodsMaster(goods);
+                }
+            } else {
+                importTransportMapper.updateImpUnloadingInSupplementGoodsName(goods);
+            }
+
+            goods.setCgNo(importTransportMapper.selectNextImpCustomsGoodsNo());
+            importTransportMapper.insertImpUnloadingInGoods(wirNo, goods);
+        }
+    }
+
+    private boolean hasImpGoodsValue(TransportRequestVO goods) {
+        if (goods == null) {
+            return false;
+        }
+        return goods.getCgNo() != null
+                || goods.getGoodsNo() != null
+                || blankToNull(goods.getGoodsName()) != null
+                || blankToNull(goods.getItemNm()) != null
+                || blankToNull(goods.getHsCode()) != null
+                || blankToNull(goods.getGoodsHsCode()) != null
+                || goods.getQty() != null
+                || goods.getPrice() != null
+                || goods.getGoodsTotalPrice() != null
+                || goods.getWeight() != null
+                || blankToNull(goods.getOrigin()) != null;
+    }
+
+    private void normalizeGoodsPayload(TransportRequestVO goods) {
+        if (goods == null) {
+            return;
+        }
+        if (blankToNull(goods.getHsCode()) == null && blankToNull(goods.getGoodsHsCode()) != null) {
+            goods.setHsCode(goods.getGoodsHsCode().trim());
+        }
+        if (blankToNull(goods.getGoodsHsCode()) == null && blankToNull(goods.getHsCode()) != null) {
+            goods.setGoodsHsCode(goods.getHsCode().trim());
+        }
+        if (blankToNull(goods.getItemNm()) == null && blankToNull(goods.getGoodsName()) != null) {
+            goods.setItemNm(goods.getGoodsName().trim());
+        }
+    }
+
+    private String normalizeActorId(String actorId) {
+        if (actorId == null || actorId.isBlank()) {
+            String tmId = currentTmId();
+            if (tmId != null && !tmId.isBlank()) {
+                return tmId;
+            }
+            return "TRANSPORT";
+        }
+        return actorId;
+    }
+
+    private String normalizeReceiverId(String receiverId) {
+        if (receiverId == null || receiverId.isBlank()) {
+            return "WAREHOUSE";
+        }
+        return receiverId;
+    }
+
+    private String blankToNull(String value) {
+        if (value == null || value.isBlank() || "-".equals(value.trim())) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private String normalizeSupplementType(String suppTypeCd) {
+        if (suppTypeCd == null || suppTypeCd.isBlank()) {
+            return "DATA";
+        }
+        return suppTypeCd;
+    }
+
+    private String normalizeSupplementReason(String suppReqCn) {
+        if (suppReqCn == null || suppReqCn.isBlank()) {
+            return null;
+        }
+        return suppReqCn.trim();
+    }
+
+    @Override
+    public List<TransportRequestVO> retriveImpArrivalTrackingList() {
+        return importTransportMapper.retriveImpArrivalTrackingList(currentTmId());
+    }
+
+    @Override
+    @Transactional
+    public String modifyImpArrivalNoticeSent(String reqNo) {
+        String targetNo = importTransportMapper.selectImpArrivalNoticeTargetNo(reqNo);
+        if (targetNo == null || targetNo.isBlank()) {
+            targetNo = reqNo;
+        }
+        /*
+         * 도착통지서 발송완료는 입고관리 0단계다.
+         * 여기서 ensureImpTransportFlowBase()를 호출하면 WH_IN_RPT skeleton row와 WIR_NO가
+         * 미리 생성되어 창고 화면에 입고요청 전 찌꺼기가 노출된다.
+         * 따라서 도착통지서 상태만 발송완료로 바꾸고, WH_IN_RPT 생성은 입고요청 발송 API에만 맡긴다.
+         */
+        importTransportMapper.updateImpArrivalNoticeSent(targetNo);
+
+        /*
+         * 도착통지서 발송은 "입고관리 탭을 열 수 있게 하는 단계"까지만 처리한다.
+         * WH_IN_RPT 행은 운송담당자가 입고관리 화면에서 실제로 발송 버튼을 눌렀을 때
+         * updateImpUnloadingInDelivered()에서 생성/WAIT 처리해야 한다.
+         * 여기서 WH_IN_RPT를 미리 만들면 창고담당자 화면에 입고요청 전 찌꺼기가 노출된다.
+         */
+        String noticeNo = importTransportMapper.selectImpArrivalNoticeNo(targetNo);
+        if ((noticeNo == null || noticeNo.isBlank()) && !targetNo.equals(reqNo)) {
+            noticeNo = importTransportMapper.selectImpArrivalNoticeNo(reqNo);
+        }
+        // 이미 발송 UPDATE/INSERT가 예외 없이 끝났는데 기존 데이터의 번호 형식이 달라
+        // IAN_NO 재조회만 실패하는 경우 프론트에서 success=false로 떨어지는 것을 막는다.
+        return (noticeNo == null || noticeNo.isBlank()) ? targetNo : noticeNo;
+    }
+
+    @Override
+    public boolean modifyImpArrivalTrackingStatus(String reqNo, String currentLoc, String arrivalStatusCd) {
+        return importTransportMapper.updateImpArrivalTrackingStatus(reqNo, currentLoc, arrivalStatusCd) > 0;
+    }
+
+    @Override
+    public List<TransportRequestVO> retriveImpUnloadingInList() {
+        return importTransportMapper.retriveImpUnloadingInList(currentTmId());
+    }
+
+    @Override
+    public TransportRequestVO retriveImpUnloadingInDetail(String wirNo) {
+        TransportRequestVO detail = importTransportMapper.selectImpUnloadingInDetail(wirNo);
+        if (detail != null && detail.getGgNo() != null) {
+            detail.setGoodsList(importTransportMapper.retriveImpUnloadingInGoodsList(detail.getGgNo()));
+        }
+        return detail;
+    }
+
+    @Override
+    public List<TransportRequestVO> retriveImpUnloadingInGoodsList(Integer ggNo) {
+        return importTransportMapper.retriveImpUnloadingInGoodsList(ggNo);
+    }
+
+    @Override
+    public List<TransportRequestVO> retriveImportWarehouseManagerList() {
+        return importTransportMapper.retriveImportWarehouseManagerList();
+    }
+
+    @Override
+    @Transactional
+    public String modifyImpUnloadingInDelivered(String trcNo,
+                                                 String wirNo,
+                                                 String wmId,
+                                                 String wzNo,
+                                                 String inPlanDt,
+                                                 String cargoMgmtNo,
+                                                 String invoiceNo,
+                                                 String incoTermsCd,
+                                                 String remark,
+                                                 List<TransportRequestVO> goodsList) {
+        int updated = importTransportMapper.updateImpUnloadingInDelivered(
+                wirNo,
+                trcNo,
+                wmId,
+                wzNo,
+                inPlanDt,
+                cargoMgmtNo,
+                invoiceNo,
+                incoTermsCd,
+                remark
+        );
+
+        /*
+         * 여기서 MyBatis/Oracle PL/SQL 블록의 update count를 믿으면 안 된다.
+         * 실제 INSERT/UPDATE가 성공했어도 드라이버가 0 또는 -1을 돌려줄 수 있고,
+         * 그러면 Controller가 success:false를 반환해서 화면에는 "처리에 실패했습니다."가 뜬다.
+         *
+         * 그래서 DML이 예외 없이 끝나면 성공으로 보고, 실제 저장된 WIR_NO는
+         * 기존 상세조회(selectImpUnloadingInDetail)가 TRC_NO 조회도 허용한다는 점을 이용해 다시 찾는다.
+         * currentTmId()가 꼬인 테스트 데이터(TRC_TM_NO 1/3/5 혼재) 때문에 목록조회로 찾지 않는다.
+         */
+        String savedWirNo = null;
+        TransportRequestVO savedRow = null;
+        if (trcNo != null && !trcNo.isBlank()) {
+            savedRow = importTransportMapper.selectImpUnloadingInDetail(trcNo);
+        }
+        if ((savedRow == null || savedRow.getWirNo() == null || savedRow.getWirNo().isBlank())
+                && wirNo != null && !wirNo.isBlank()) {
+            savedRow = importTransportMapper.selectImpUnloadingInDetail(wirNo);
+        }
+        if (savedRow != null && savedRow.getWirNo() != null && !savedRow.getWirNo().isBlank()) {
+            savedWirNo = savedRow.getWirNo();
+        }
+        if (savedWirNo == null || savedWirNo.isBlank()) {
+            savedWirNo = blankToNull(wirNo);
+        }
+
+        // 실제 WIR_NO를 찾은 경우에만 품목을 저장한다. 찾지 못했을 때 TRC_NO로 억지 저장하지 않는다.
+        if (savedWirNo != null && !savedWirNo.isBlank()) {
+            saveImpUnloadingInGoods(savedWirNo, goodsList);
+        }
+
+        // DML에서 예외가 안 났으면 입고요청 처리는 성공이다. update count가 0이어도 실패로 보지 않는다.
+        // 화면 재조회용 WIR_NO를 못 찾은 특이 케이스도 TRC_NO를 반환해 프론트가 성공 처리 후 재조회하게 한다.
+        return savedWirNo != null && !savedWirNo.isBlank() ? savedWirNo : trcNo;
+    }
+
+    @Override
+    public List<TransportRequestVO> retriveImpManifestList() {
+        // 운송담당자는 적하목록 작성/제출을 하지 않고, 적하목록·패킹리스트 비교조회만 수행한다.
+        return importTransportMapper.retriveImpManifestCompareList(currentTmId());
+    }
+
+    @Override
+    public List<TransportRequestVO> retriveImpManifestCompareList() {
+        return importTransportMapper.retriveImpManifestCompareList(currentTmId());
+    }
+
+    @Override
+    @Transactional
+    public List<TransportRequestVO> retriveImpDoList() {
+        String tmId = currentTmId();
+        importTransportMapper.ensureImpDoReadyForPaidSettlement(null, tmId);
+        return importTransportMapper.retriveImpDoList(tmId);
+    }
+
+    @Override
+    @Transactional
+    public void ensureImpDoReadyAfterSettlementPaid(String trcNo) {
+        if (trcNo == null || trcNo.isBlank()) {
+            throw new IllegalArgumentException("운송의뢰번호가 없습니다.");
+        }
+        importTransportMapper.ensureImpDoReadyForPaidSettlement(trcNo, null);
+    }
+
+    @Override
+    @Transactional
+    public boolean modifyImpDoSettlementPaid(String trcNo, Integer freightAmt, Integer warehouseAmt, Integer totalBillAmt, String settlementExpln) {
+        importTransportMapper.updateImpDoSettlementPaid(trcNo, freightAmt, warehouseAmt, totalBillAmt, settlementExpln);
+        return importTransportMapper.countImpDoSettlementPaid(trcNo) > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean modifyImpDoFilesUploaded(String trcNo,
+                                            String actorId,
+                                            List<MultipartFile> docFiles) {
+        Long doTfgNo = uploadDoRequestFiles(trcNo, actorId, docFiles);
+        if (doTfgNo == null) {
+            return false;
+        }
+        importTransportMapper.updateImpDoUploadedFiles(trcNo, doTfgNo);
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public boolean deleteImpDoFile(String trcNo, Long fileNo) {
+        if (trcNo == null || trcNo.isBlank()) {
+            throw new IllegalArgumentException("운송의뢰번호를 찾을 수 없습니다.");
+        }
+        if (fileNo == null || fileNo <= 0) {
+            throw new IllegalArgumentException("삭제할 첨부문서 번호를 찾을 수 없습니다.");
+        }
+
+        int mapDeleted = importTransportMapper.deleteImpDoFileMap(trcNo, fileNo);
+        if (mapDeleted <= 0) {
+            throw new IllegalArgumentException("해당 D/O 첨부문서를 찾을 수 없습니다.");
+        }
+        importTransportMapper.updateImpDoFileDeleted(fileNo);
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public String modifyImpDoIssued(String trcNo,
+                                    String doNo,
+                                    String receiveDt,
+                                    String actorId,
+                                    List<MultipartFile> docFiles) {
+        String manualDoNo = doNo == null ? "" : doNo.trim();
+        if (manualDoNo.length() > 30) {
+            throw new IllegalArgumentException("D/O 번호는 30자 이내로 입력해주세요.");
+        }
+
+        ensureImpDoReadyAfterSettlementPaid(trcNo);
+
+        // D/O 발급 단계는 파일명에 D/O가 들어가야 한다고 막지 않는다.
+        // 화면의 단일 첨부문서 영역에서 선택한 PDF 1개 이상이면 발급 가능하게 처리한다.
+        Long doTfgNo = null;
+        if (docFiles != null && !docFiles.isEmpty()) {
+            doTfgNo = uploadDoRequestFiles(trcNo, actorId, docFiles);
+        }
+
+        if (doTfgNo == null && importTransportMapper.countImpDoAnyPdfFile(trcNo) <= 0) {
+            throw new IllegalArgumentException("첨부문서 PDF를 선택해야 D/O 발급이 가능합니다.");
+        }
+
+        int result = importTransportMapper.updateImpDoIssued(trcNo, manualDoNo, receiveDt, doTfgNo);
+        // MyBatis/Oracle PL/SQL 블록은 실제 UPDATE/INSERT가 성공해도 -1을 반환할 수 있다.
+        // 0만 실패로 보고, -1은 성공 가능 값으로 처리한 뒤 발급된 D/O 번호를 다시 조회한다.
+        if (result == 0) {
+            return null;
+        }
+        return importTransportMapper.selectIssuedImpDoNo(trcNo);
+    }
+
+    private Long uploadDoRequestFiles(String trcNo,
+                                      String actorId,
+                                      List<MultipartFile> docFiles) {
+        if (docFiles == null || docFiles.isEmpty()) {
+            return null;
+        }
+
+        List<MultipartFile> uploadFiles = new ArrayList<>();
+        for (MultipartFile file : docFiles) {
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
+            validatePdfFile(file);
+            uploadFiles.add(file);
+        }
+
+        if (uploadFiles.isEmpty()) {
+            return null;
+        }
+
+        String uploadActorId = actorId;
+        if (uploadActorId == null || uploadActorId.isBlank()) {
+            uploadActorId = trcNo;
+        }
+
+        try {
+            // 화주(owner) 첨부파일 방식과 동일하게 문서유형을 나누지 않고 하나의 파일그룹으로 저장한다.
+            // TACS_FILE_MAP.TFM_DOC_TY_CD는 NULL로 들어가고, DO_ISSUANCE.DI_TFG_NO가 그 파일그룹을 참조한다.
+            return fileService.uploadFiles(
+                    TacsTrSt.TRC_DO_REQ.name(),
+                    uploadFiles,
+                    uploadActorId,
+                    TacsUserType.TRANSPORT_MANAGER.name()
+            );
+        } catch (Exception e) {
+            throw new IllegalStateException("D/O 요청 첨부파일 저장에 실패했습니다.", e);
+        }
+    }
+
+
+
+    private void validateDoPdfIncluded(List<MultipartFile> docFiles) {
+        boolean hasDoPdf = false;
+
+        if (docFiles != null) {
+            for (MultipartFile file : docFiles) {
+                if (file == null || file.isEmpty()) {
+                    continue;
+                }
+
+                validatePdfFile(file);
+
+                String filename = file.getOriginalFilename();
+                String normalized = filename == null ? "" : filename.toLowerCase();
+
+                /*
+                 * D/O 발급 단계에서는 D/O PDF가 반드시 필요하다.
+                 * 파일명이 한글/영문 어느 쪽으로 오더라도 최대한 판단한다.
+                 */
+                if (normalized.contains("d/o")
+                        || normalized.contains("do")
+                        || normalized.contains("delivery order")
+                        || normalized.contains("delivery-order")
+                        || normalized.contains("디오")
+                        || normalized.contains("d_o")) {
+                    hasDoPdf = true;
+                }
+            }
+        }
+
+        if (!hasDoPdf) {
+            throw new IllegalArgumentException("D/O PDF를 첨부해야 D/O 발급이 가능합니다.");
+        }
+    }
+
+    private void validatePdfFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return;
+        }
+
+        String filename = file.getOriginalFilename();
+        String contentType = file.getContentType();
+        boolean pdfByName = filename != null && filename.toLowerCase().endsWith(".pdf");
+        boolean pdfByType = contentType != null && contentType.toLowerCase().contains("pdf");
+
+        if (!pdfByName && !pdfByType) {
+            throw new IllegalArgumentException("PDF 파일만 첨부할 수 있습니다.");
+        }
+    }
+
+    private boolean isImportDeclarationCert(MultipartFile file) {
+        String filename = file.getOriginalFilename();
+        if (filename == null) {
+            return false;
+        }
+        String normalized = filename.toLowerCase();
+        return normalized.contains("cert")
+                || normalized.contains("declaration")
+                || normalized.contains("신고")
+                || normalized.contains("필증");
+    }
+
+    @Override
+    @Transactional
+    public boolean modifyImpDoDelivered(String trcNo, String deliveryDt, String deliveryTargetNm, String deliveryMethodCd) {
+        /*
+         * D/O 탭 첨부영역은 화면에서 문서종류를 분리하지 않고 단일 첨부목록으로 운영한다.
+         * 따라서 전달 시점에는 IMP_DO / IMP_DO_CERT 같은 문서코드나 파일명(신고, 필증 포함 여부)으로
+         * 판정하지 않고, 해당 D/O 파일그룹에 PDF가 1개 이상 등록되어 있으면 전달 가능하게 한다.
+         *
+         * 기존 countImpDoPdfFile + countImpDoCertFile 검사는 단일 첨부 UI와 충돌해서
+         * 포장명세서/상업송장처럼 PDF가 이미 등록되어도 "수입신고필증 PDF" 오류가 발생했다.
+         */
+        if (importTransportMapper.countImpDoAnyPdfFile(trcNo) <= 0) {
+            throw new IllegalArgumentException("PDF 첨부문서를 등록해야 D/O 전달이 가능합니다.");
+        }
+
+        int updated = importTransportMapper.updateImpDoDelivered(trcNo, deliveryDt, deliveryTargetNm, deliveryMethodCd);
+
+        // Oracle/MyBatis 환경에서 UPDATE가 성공해도 -1로 반환되는 경우가 있으므로 0만 실패로 본다.
+        if (updated == 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+
+    // 수입 보세구역 반출요청
+    @Override
+    public List<TransportRequestVO> retriveImpReleaseReqList() {
+        return importTransportMapper.retriveImpReleaseReqList(currentTmId());
+    }
+
+    @Override
+    public TransportRequestVO retriveImpReleaseReqDetail(String trcNo) {
+        return importTransportMapper.selectImpReleaseReqDetail(trcNo);
+    }
+
+    @Override
+    public List<TransportRequestVO> retriveImpReleaseReqGoodsList(Integer ggNo) {
+        return importTransportMapper.retriveImpReleaseReqGoodsList(ggNo);
+    }
+
+    @Override
+    @Transactional
+    public boolean registImpReleaseReq(String trcNo,
+                                       String wmId,
+                                       String wzNo,
+                                       String releaseReqDt,
+                                       String itemNm,
+                                       String remark,
+                                       List<TransportRequestVO> goodsList) {
+        importTransportMapper.insertImpReleaseReq(
+                trcNo,
+                blankToNull(wmId),
+                blankToNull(wzNo),
+                blankToNull(releaseReqDt),
+                blankToNull(itemNm),
+                blankToNull(remark)
+        );
+        int updated = importTransportMapper.updateImpReleaseReqData(
+                null,
+                trcNo,
+                blankToNull(wmId),
+                blankToNull(wzNo),
+                blankToNull(releaseReqDt),
+                blankToNull(itemNm),
+                blankToNull(remark)
+        );
+        saveImpReleaseGoods(trcNo, goodsList);
+
+        if (updated > 0 || importTransportMapper.countImpReleaseReqByTrcNo(trcNo) > 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+
+
+
+
+    @Override
+    public List<TransportRequestVO> retriveImpInlandDispatchList() {
+        return importTransportMapper.retriveImpInlandDispatchList(currentTmId());
+    }
+
+    @Override
+    public List<TransportRequestVO> retriveImpAvailableCarList() {
+        return importTransportMapper.retriveImpAvailableCarList(currentTmId());
+    }
+
+    @Override
+    public int modifyImpInlandDispatch(TransportRequestVO vo) {
+        if (vo == null || vo.getCarNo() == null) {
+            throw new IllegalStateException("배차완료 처리할 차량번호를 선택해주세요.");
+        }
+        if (importTransportMapper.countImpReleaseApprovedByTrcNo(vo.getTrcNo()) <= 0) {
+            throw new IllegalStateException("창고관리자 반출승인 완료 이후에만 내륙배차가 가능합니다.");
+        }
+        return importTransportMapper.updateImpInlandDispatch(vo);
+    }
+
+    private String currentTmId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            return null;
+        }
+        return authentication.getName();
+    }
+}

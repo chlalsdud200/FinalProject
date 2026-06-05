@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.owner.importp.mapper.IImportMapper">
+
+    <select id="selectImpRqstSeq" resultType="long">
+        SELECT SEQ_IMP_RQST_NO.NEXTVAL
+        FROM DUAL
+    </select>
+
+    <select id="selectOwnerInfo" parameterType="string" resultType="kr.or.tacs.vo.OwnerVO">
+        SELECT
+            owr_id,
+            owr_password,
+            owr_ty_cd,
+            owr_nm,
+            owr_bizrno,
+            owr_ident_no,
+            owr_cstm_idf_no,
+            owr_email,
+            owr_telno,
+            owr_zip,
+            owr_adres,
+            owr_detail_adres,
+            owr_use_yn,
+            owr_regist_dt,
+            owr_updt_dt,
+            privacy_agree_yn,
+            owr_corp_reg_no
+        FROM owner
+        WHERE owr_id = #{owrId}
+    </select>
+
+    <select id="selectBrokerList" resultType="kr.or.tacs.vo.BrokerVO">
+        SELECT
+            broker_id,
+            broker_ty_cd,
+            broker_nm,
+            broker_office_nm,
+            broker_reg_no,
+            broker_bizrno,
+            broker_spclty_cd,
+            broker_email,
+            broker_telno,
+            broker_zip,
+            broker_adres,
+            broker_detail_adres,
+            broker_use_yn,
+            broker_regist_dt,
+            broker_updt_dt
+        FROM broker
+    </select>
+
+    <select id="selectImpList"
+            parameterType="kr.or.tacs.dto.owner.OwnerImportSearchDTO"
+            resultType="kr.or.tacs.dto.owner.OwnerImportRequestDTO">
+        SELECT
+        ir.ir_no,
+        ir.ir_owr_id,
+        ir.ir_broker_id,
+        ir.ir_arrv_port_cd,
+        ir.ir_tfg_no,
+        ir.ir_status_cd,
+        ir.ir_cstm_idf_no,
+        ir.ir_corp_reg_no,
+        ir.ir_arrv_schd_ymd,
+        ir.ir_bl_awb_no,
+        ir.ir_dclr_curr_cd,
+        ir.ir_invc_amt,
+        ir.ir_cn,
+        ir.ir_dt,
+        ir.ir_acpt_dt,
+        ir.ir_use_yn,
+        ir.ir_regist_dt,
+        ir.ir_pay_mthd_cd,
+        ir.ir_pay_type_cd,
+        ir.ir_instl_pay_cnt,
+        ir.ir_comment,
+        br.broker_nm
+        FROM imp_rqst ir
+        LEFT JOIN broker br
+        ON ir.ir_broker_id = br.broker_id
+        WHERE ir.ir_owr_id = #{owrId}
+        AND ir.ir_use_yn = 'Y'
+
+        <if test="irNo != null and irNo != ''">
+            AND ir.ir_no LIKE '%' || #{irNo} || '%'
+        </if>
+
+        <if test="statusCd != null and statusCd != ''">
+            AND ir.ir_status_cd = #{statusCd}
+        </if>
+
+        <if test="startDate != null and startDate != ''">
+            AND ir.ir_regist_dt &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+        </if>
+
+        <if test="endDate != null and endDate != ''">
+            AND ir.ir_regist_dt &lt; TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+        </if>
+
+        <if test="blAwbNo != null and blAwbNo != ''">
+            AND ir.ir_bl_awb_no LIKE '%' || #{blAwbNo} || '%'
+        </if>
+
+        <if test="brokerNm != null and brokerNm != ''">
+            AND br.broker_nm LIKE '%' || #{brokerNm} || '%'
+        </if>
+
+        <if test="keyword != null and keyword != ''">
+            AND ir.ir_cn LIKE '%' || #{keyword} || '%'
+        </if>
+
+        ORDER BY ir.ir_regist_dt DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
+    </select>
+
+    <select id="selectImpCount"
+            parameterType="kr.or.tacs.dto.owner.OwnerImportSearchDTO"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM imp_rqst ir
+        LEFT JOIN broker br
+        ON ir.ir_broker_id = br.broker_id
+        WHERE ir.ir_owr_id = #{owrId}
+        AND ir.ir_use_yn = 'Y'
+
+        <if test="irNo != null and irNo != ''">
+            AND ir.ir_no LIKE '%' || #{irNo} || '%'
+        </if>
+
+        <if test="statusCd != null and statusCd != ''">
+            AND ir.ir_status_cd = #{statusCd}
+        </if>
+
+        <if test="startDate != null and startDate != ''">
+            AND ir.ir_regist_dt &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+        </if>
+
+        <if test="endDate != null and endDate != ''">
+            AND ir.ir_regist_dt &lt; TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+        </if>
+
+        <if test="blAwbNo != null and blAwbNo != ''">
+            AND ir.ir_bl_awb_no LIKE '%' || #{blAwbNo} || '%'
+        </if>
+
+        <if test="brokerNm != null and brokerNm != ''">
+            AND br.broker_nm LIKE '%' || #{brokerNm} || '%'
+        </if>
+
+        <if test="keyword != null and keyword != ''">
+            AND ir.ir_cn LIKE '%' || #{keyword} || '%'
+        </if>
+    </select>
+
+    <select id="selectPortList" resultType="kr.or.tacs.vo.transport.PortVO">
+        SELECT port_cd, port_country_cd, port_nm, port_ag_cd, port_use_yn
+        FROM port
+        WHERE port_use_yn = 'Y'
+    </select>
+
+    <insert id="insertImp" parameterType="kr.or.tacs.dto.owner.OwnerImportRequestDTO">
+        INSERT INTO imp_rqst(
+            ir_no,
+            ir_owr_id,
+            ir_broker_id,
+            ir_arrv_port_cd,
+            ir_tfg_no,
+            ir_status_cd,
+            ir_cstm_idf_no,
+            ir_corp_reg_no,
+            ir_arrv_schd_ymd,
+            ir_bl_awb_no,
+            ir_dclr_curr_cd,
+            ir_invc_amt,
+            ir_cn,
+            ir_dt,
+            ir_use_yn,
+            ir_regist_dt,
+            ir_pay_mthd_cd,
+            ir_pay_type_cd,
+            ir_instl_pay_cnt,
+            ir_comment
+        )VALUES (
+            #{irNo},
+            #{irOwrId},
+            #{irBrokerId},
+            #{irArrvPortCd},
+            #{irTfgNo},
+            NVL(#{irStatusCd}, 'REQ'),
+            #{irCstmIdfNo},
+            #{irCorpRegNo},
+            REPLACE(#{irArrvSchdYmd}, '-', ''),
+            #{irBlAwbNo},
+            #{irDclrCurrCd},
+            #{irInvcAmt},
+            #{irCn},
+            SYSDATE,
+            'Y',
+            SYSDATE,
+            #{irPayMthdCd},
+            #{irPayTypeCd},
+            #{irInstlPayCnt},
+            #{irComment}
+        )
+    </insert>
+
+    <select id="selectImp" parameterType="String" resultType="kr.or.tacs.dto.owner.OwnerImportRequestDTO">
+        SELECT ir_no, ir_owr_id, ir_broker_id, ir_arrv_port_cd, ir_tfg_no, ir_status_cd, ir_cstm_idf_no,
+               ir_corp_reg_no, ir_arrv_schd_ymd, ir_bl_awb_no, ir_dclr_curr_cd, ir_invc_amt, ir_cn,
+               ir_dt, ir_acpt_dt, ir_use_yn, ir_regist_dt, ir_pay_mthd_cd,
+               ir_pay_type_cd, ir_instl_pay_cnt, ir_comment, br.broker_nm
+        FROM imp_rqst ir left join broker br on(ir.ir_broker_id = br.broker_id)
+        WHERE ir_no = #{irNo}
+    </select>
+
+    <select id="selectSupp" parameterType="String" resultType="kr.or.tacs.dto.owner.OwnerImportRequestDTO">
+        SELECT sr_no, sr_ref_biz_cd, sr_ref_no, sender_id, sender_ty_cd, receiver_id,
+               receiver_ty_cd, sr_status_cd, sr_req_dt, sr_submit_dt, sr_appr_dt, sr_req_cn, sr_submit_cn
+        FROM supp_rqst
+        WHERE sr_ref_no = #{irNo}
+    </select>
+
+    <update id="updateImp"
+            parameterType="kr.or.tacs.dto.owner.OwnerImportRequestDTO">
+        UPDATE imp_rqst
+        SET ir_arrv_port_cd = #{irArrvPortCd},
+            ir_arrv_schd_ymd = #{irArrvSchdYmd},
+            ir_bl_awb_no = #{irBlAwbNo},
+            ir_dclr_curr_cd = #{irDclrCurrCd},
+            ir_invc_amt = #{irInvcAmt},
+            ir_pay_mthd_cd = #{irPayMthdCd},
+            ir_pay_type_cd = #{irPayTypeCd},
+            ir_instl_pay_cnt =
+                CASE
+                    WHEN #{irPayTypeCd} = 'INSTL' THEN #{irInstlPayCnt}
+                    ELSE NULL
+                    END,
+            ir_comment = #{irComment}
+        WHERE ir_no = #{irNo}
+          AND ir_owr_id = #{irOwrId}
+          AND ir_status_cd IN ('CSTM_REQ', 'CSTM_SUPP')
+    </update>
+
+    <update id="updateImpSupp" parameterType="kr.or.tacs.dto.owner.OwnerImportRequestDTO">
+        UPDATE supp_rqst
+        SET sr_status_cd = #{srStatusCd},
+            sr_submit_dt = SYSDATE,
+            sr_submit_cn = #{srSubmitCn}
+        WHERE sr_ref_biz_cd = #{srRefBizCd}
+          AND sr_ref_no = #{irNo}
+          AND receiver_id = #{irOwrId}
+          AND sr_status_cd = #{beforeSrStatusCd}
+    </update>
+
+    <update id="updateImpStatus" parameterType="kr.or.tacs.dto.owner.OwnerImportRequestDTO">
+        UPDATE imp_rqst
+        SET ir_status_cd = #{irStatusCd}
+        WHERE ir_no = #{irNo}
+          AND ir_owr_id = #{irOwrId}
+          AND ir_status_cd = #{beforeIrStatusCd}
+    </update>
+</mapper>

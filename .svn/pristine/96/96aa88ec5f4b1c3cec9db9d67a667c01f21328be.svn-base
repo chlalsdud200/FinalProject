@@ -1,0 +1,87 @@
+package kr.or.tacs.owner.transport.service;
+
+import kr.or.tacs.cmmenums.ServiceResult;
+import kr.or.tacs.cmmenums.TacsBizCd;
+import kr.or.tacs.cmmenums.TacsTrSt;
+import kr.or.tacs.cmmenums.TacsUserType;
+import kr.or.tacs.common.file.service.IFileService;
+import kr.or.tacs.dto.owner.OwnerTranRequestDTO;
+import kr.or.tacs.owner.transport.mapper.ITransportContractMapper;
+import kr.or.tacs.vo.OwnerVO;
+import kr.or.tacs.vo.transport.TransportManagerVO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+@Service
+public class TransportContractServiceImpl implements ITransportContractService{
+
+    @Autowired
+    private ITransportContractMapper contractMapper;
+
+    @Autowired
+    private IFileService fileService;
+
+    @Override
+    @Transactional
+    public ServiceResult registTranReq(OwnerTranRequestDTO tranDTO) throws Exception {
+
+        Long seq = contractMapper.selectTrcSeq();
+
+        String trcSeCd = tranDTO.getTrcSeCd();
+
+        String trcType;
+        if ("IMPORT".equalsIgnoreCase(trcSeCd)) {
+            trcType = "IMP";
+            tranDTO.setTrcSeCd(TacsBizCd.IMPORT.getCode());
+        } else if ("EXPORT".equalsIgnoreCase(trcSeCd)) {
+            trcType = "EXP";
+            tranDTO.setTrcSeCd(TacsBizCd.EXPORT.getCode());
+        } else {
+            throw new IllegalArgumentException("잘못된 운송 구분입니다.");
+        }
+
+        String today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        String trcNo = String.format("TRC-%s-%s-%05d", trcType, today, seq);
+
+        tranDTO.setTrcNo(trcNo);
+
+        OwnerVO ownerInfo = contractMapper.selectOwnerInfo(tranDTO.getTrcOwrId());
+
+        tranDTO.setOwrNm(ownerInfo.getOwrNm());
+        tranDTO.setOwrTelno(ownerInfo.getOwrTelno());
+        tranDTO.setOwrEmail(ownerInfo.getOwrEmail());
+
+        // 파일 업로드
+        Long tfgNo = fileService.uploadFiles(
+                TacsTrSt.TRC_WAIT.getCode(),
+                tranDTO.getDocFiles(),
+                tranDTO.getTrcOwrId(),
+                TacsUserType.OWNER.getCode()
+        );
+
+        // 파일 그룹번호 세팅
+        tranDTO.setTrcTfgNo(tfgNo);
+        // 상태값 세팅
+        tranDTO.setTrcStatusCd(TacsTrSt.TRC_WAIT.getCode());
+
+        int result = contractMapper.insertTranReq(tranDTO);
+
+        if(result > 0){
+            return ServiceResult.OK;
+        }
+
+        return ServiceResult.FAILED;
+    }
+
+    @Override
+    public List<TransportManagerVO> retriveTranManagerList() {
+
+        return contractMapper.selectTranManagerList();
+    }
+
+}

@@ -1,0 +1,366 @@
+# [작업 지시] TACS 인앱 알림 기능 - 1차 PR (공통 모듈 + 파일럿)
+
+> 이 문서는 다른 AI에게 그대로 전달할 작업 프롬프트입니다.
+> 작업 범위 외 임의 수정 금지. 명시된 산출물만 만들고 보고하세요.
+
+---
+
+## 0. 배경
+
+TACS 프로젝트(Spring + MyBatis + JSP, Oracle DB)에 관리자 페이지용 인앱 알림 기능을 새로 만든다.
+
+사전 조사 결과:
+- 알림 인프라 전무 (WebSocket/SSE/이벤트 발행 미사용)
+- 상태 변경 지점이 각 서비스에 산포 — 공통 `changeStatus()` 없음. 메서드명 비일관
+- 회원 정보는 뷰 `vw_actor_login`에 통합. 각 액터 테이블의 ID 컬럼이 `login_id`로 통일
+
+7개 상태 변화 후보 중 이번 작업은 **파일럿 1개(통관신고 전송 완료)에만 트리거를 박는 1차**. 나머지 6개 트리거와 관리자 화면, 헤더 벨, 사용자 수신함은 다음 PR에서 진행.
+
+---
+
+## 1. 프로젝트 컨벤션 (필수 준수)
+
+원본 파일: `D:\A_TeachingMaterial\08_Final_Project_I\workspace\TACS\AGENTS.md`
+
+- **Controller 메서드:** `retriveXXX`(단건), `retriveXXXList`(다건), `registXXX`, `modifyXXX`, `deleteXXX`
+- **Service 메서드:** 동일 패턴
+- **Mapper 메서드:** `selectXXX`(조회), `insertXXX`, `updateXXX`, `deleteXXX`
+- **Mapper XML 파일명 = Mapper 인터페이스명** (예: `INotificationMapper.java` → `INotificationMapper.xml`)
+- **SQL 규칙:**
+  - `SELECT *` 금지. 모든 컬럼 명시
+  - **앞 콤마 스타일** (`, col_name`)
+  - 예약어 대문자(SELECT, FROM, WHERE), 테이블/컬럼명 소문자
+- **응답은 한글**
+- **주석은 Why 중심, 한 줄 요점만**
+
+기존 서비스 구조 참고(같은 패턴으로):
+- `kr.or.tacs.broker.declare.service.BrokerDeclareServiceImpl` (`@Service`, `@Autowired`, `@Transactional`)
+- `kr.or.tacs.systemadmin.member.mapper.IAdminMemberMapper` (Mapper 인터페이스 네이밍)
+
+---
+
+## 2. 산출물
+
+### 2.1 DDL — `TACS/sql/notification_ddl.sql` 신규 생성
+
+Oracle 기준. 두 테이블 + 시퀀스 + 인덱스 + 초기 정책 데이터 1건.
+
+#### 테이블 1: `NOTI_POLICY` — 알림 정책 (액터×업무×상태 → ON/OFF + 템플릿)
+
+```sql
+CREATE TABLE noti_policy (
+    np_event_cd            VARCHAR2(40)   NOT NULL  -- 이벤트 코드 (PK, 예: DCLR_SUBMITTED)
+  , np_biz_nm              VARCHAR2(60)   NOT NULL  -- 업무명 (예: "수입신고 전송")
+  , np_receiver_user_type  VARCHAR2(30)   NOT NULL  -- 수신자 액터 (TacsUserType.code)
+  , np_title_tpl           VARCHAR2(200)  NOT NULL  -- 제목 템플릿 (${refKey} 등 치환)
+  , np_body_tpl            VARCHAR2(1000) NOT NULL  -- 본문 템플릿
+  , np_link_tpl            VARCHAR2(300)  NOT NULL  -- 클릭 시 이동 URL 템플릿
+  , np_use_yn              CHAR(1)        DEFAULT 'Y' NOT NULL
+  , np_reg_dt              DATE           DEFAULT SYSDATE NOT NULL
+  , CONSTRAINT pk_noti_policy PRIMARY KEY (np_event_cd)
+);
+```
+
+#### 테이블 2: `NOTIFICATION` — 발송 이력 + 읽음 상태 (+ outbox 확장 컬럼)
+
+```sql
+CREATE TABLE notification (
+    noti_no            NUMBER         NOT NULL          -- PK (SEQ_NOTIFICATION)
+  , noti_event_cd      VARCHAR2(40)   NOT NULL          -- FK to noti_policy
+  , noti_ref_key       VARCHAR2(60)   NOT NULL          -- 업무 식별자 (예: IR_NO). 상세 이동 키
+  , noti_receiver_id   VARCHAR2(50)   NOT NULL          -- 수신자 vw_actor_login.login_id
+  , noti_sender_id     VARCHAR2(50)   NULL              -- 발송 유발자 login_id (없으면 NULL)
+  , noti_title         VARCHAR2(200)  NOT NULL          -- 렌더링된 제목
+  , noti_body          VARCHAR2(1000) NOT NULL          -- 렌더링된 본문
+  , noti_link_url      VARCHAR2(300)  NOT NULL          -- 렌더링된 이동 URL
+  , noti_read_yn       CHAR(1)        DEFAULT 'N' NOT NULL
+  , noti_read_dt       DATE           NULL
+  , noti_send_status   VARCHAR2(20)   DEFAULT 'SENT' NOT NULL   -- PENDING / SENT / FAILED (인앱은 즉시 SENT)
+  , noti_retry_count   NUMBER         DEFAULT 0 NOT NULL        -- outbox 확장용 (1차에선 0 고정)
+  , noti_last_error    VARCHAR2(500)  NULL                       -- outbox 확장용 (1차에선 NULL)
+  , noti_send_dt       DATE           DEFAULT SYSDATE NOT NULL
+  , CONSTRAINT pk_notification PRIMARY KEY (noti_no)
+  , CONSTRAINT fk_notification_policy FOREIGN KEY (noti_event_cd) REFERENCES noti_policy (np_event_cd)
+  , CONSTRAINT uk_notification_dedup UNIQUE (noti_event_cd, noti_ref_key, noti_receiver_id)  -- 중복 발송 방지
+);
+
+CREATE SEQUENCE seq_notification START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE INDEX idx_notification_inbox
+    ON notification (noti_receiver_id, noti_read_yn, noti_send_dt DESC);
+```
+
+> **참고: outbox 확장 컬럼 (`noti_send_status`, `noti_retry_count`, `noti_last_error`) 의도**
+> 인앱은 발송 액션이 없어 INSERT가 곧 SENT다. 향후 이메일/SMS 채널을 추가할 때 PENDING으로 INSERT 후 스케줄러가 재발송 처리하는 outbox 패턴으로 확장하기 위해 컬럼만 미리 박아둔다. 1차에서는 항상 `SENT/0/NULL`로 입력.
+
+#### 초기 정책 데이터 (파일럿 1건)
+
+```sql
+INSERT INTO noti_policy (
+    np_event_cd
+  , np_biz_nm
+  , np_receiver_user_type
+  , np_title_tpl
+  , np_body_tpl
+  , np_link_tpl
+  , np_use_yn
+) VALUES (
+    'DCLR_SUBMITTED'
+  , '수입신고 전송'
+  , 'OWNER'
+  , '수입신고가 전송되었습니다'
+  , '의뢰번호 ${refKey} 신고서가 세관에 접수 대기 상태로 전송되었습니다.'
+  , '/owner/import/detail.do/${refKey}'
+  , 'Y'
+);
+
+COMMIT;
+```
+
+---
+
+### 2.2 공통 모듈 — `kr.or.tacs.common.notification` 신규 패키지
+
+#### 패키지 구조
+
+```
+kr/or/tacs/common/notification/
+  ├─ controller/                          (1차에서는 비워둠. 다음 PR)
+  ├─ mapper/
+  │   └─ INotificationMapper.java
+  └─ service/
+      ├─ INotificationService.java
+      └─ NotificationServiceImpl.java
+
+kr/or/tacs/vo/common/notification/
+  ├─ NotificationVO.java
+  └─ NotificationPolicyVO.java
+
+src/main/resources/mybatis/mapper/common/
+  └─ INotificationMapper.xml
+```
+
+#### VO 필드 (Lombok `@Getter @Setter @ToString` 사용)
+
+**`NotificationPolicyVO`** — `noti_policy` 한 행
+- `npEventCd`, `npBizNm`, `npReceiverUserType`, `npTitleTpl`, `npBodyTpl`, `npLinkTpl`, `npUseYn`, `npRegDt`
+
+**`NotificationVO`** — `notification` 한 행
+- `notiNo`, `notiEventCd`, `notiRefKey`, `notiReceiverId`, `notiSenderId`, `notiTitle`, `notiBody`, `notiLinkUrl`, `notiReadYn`, `notiReadDt`, `notiSendStatus`, `notiRetryCount`, `notiLastError`, `notiSendDt`
+
+#### 서비스 진입점 (단 하나)
+
+```java
+public interface INotificationService {
+    /**
+     * 알림 발송 진입점.
+     * 정책 조회 → 수신자 산출 → 템플릿 렌더링 → 이력 INSERT.
+     * 본 업무 트랜잭션과 같은 트랜잭션(REQUIRED)으로 동작 — 본 업무 ROLLBACK 시 알림도 함께 ROLLBACK.
+     *
+     * @param eventCd  이벤트 코드 (예: "DCLR_SUBMITTED")
+     * @param refKey   업무 식별자 (예: idIrNo). 자동으로 ${refKey}에 바인딩됨
+     * @param senderId 트리거 유발자 login_id (없으면 null)
+     * @param bindings 추가 템플릿 치환 변수 (예: {amount=12345}). 없으면 Collections.emptyMap()
+     */
+    void registNotification(String eventCd, String refKey, String senderId, Map<String, String> bindings);
+}
+```
+
+#### ServiceImpl 내부 로직 (정확히 이 순서)
+
+`@Service`, `@Transactional` (기본 propagation = REQUIRED).
+
+1. **정책 조회**
+   ```java
+   NotificationPolicyVO policy = notificationMapper.selectNotificationPolicy(eventCd);
+   if (policy == null || !"Y".equals(policy.getNpUseYn())) {
+       return;   // 정책 없음 또는 OFF → 조용히 종료
+   }
+   ```
+
+2. **수신자 산출** — 정책의 `npReceiverUserType` 분기.
+   ```java
+   List<String> receivers;
+   switch (policy.getNpReceiverUserType()) {
+       case "OWNER":
+           String ownerId = notificationMapper.selectOwnerIdByIrNo(refKey);
+           if (ownerId == null) return;   // 화주 못 찾으면 조용히 종료
+           receivers = Collections.singletonList(ownerId);
+           break;
+       default:
+           // TODO 다음 PR에서 BROKER / OFFICER / TRANSPORT_MANAGER / WAREHOUSE_MANAGER 케이스 추가
+           throw new IllegalArgumentException(
+               "지원하지 않는 수신자 유형: " + policy.getNpReceiverUserType());
+   }
+   ```
+
+3. **템플릿 렌더링** — `${refKey}`는 자동 바인딩. 추가 bindings 적용.
+   ```java
+   Map<String, String> ctx = new HashMap<>(bindings);
+   ctx.put("refKey", refKey);
+
+   String title    = renderTemplate(policy.getNpTitleTpl(), ctx);
+   String body     = renderTemplate(policy.getNpBodyTpl(),  ctx);
+   String linkUrl  = renderTemplate(policy.getNpLinkTpl(),  ctx);
+   ```
+   `renderTemplate`은 private 메서드로 단순 `${key}` → `ctx.get(key)` 치환. 정규식 `\$\{([a-zA-Z0-9_]+)\}` 사용.
+
+4. **이력 INSERT (수신자별 1건씩)**
+   ```java
+   for (String receiverId : receivers) {
+       NotificationVO vo = new NotificationVO();
+       vo.setNotiEventCd(eventCd);
+       vo.setNotiRefKey(refKey);
+       vo.setNotiReceiverId(receiverId);
+       vo.setNotiSenderId(senderId);
+       vo.setNotiTitle(title);
+       vo.setNotiBody(body);
+       vo.setNotiLinkUrl(linkUrl);
+       vo.setNotiSendStatus("SENT");   // 인앱은 즉시 SENT
+
+       try {
+           notificationMapper.insertNotification(vo);
+       } catch (DuplicateKeyException ignored) {
+           // 유니크 제약(uk_notification_dedup)으로 중복 발송 차단 — 정상 동작이므로 무시
+       }
+   }
+   ```
+
+> **트랜잭션 결정 사유:** 신고 전송이 ROLLBACK 되었는데 알림만 가는 것이 더 부자연스럽다. 인앱 알림은 외부 발송 액션이 없어 INSERT 자체가 곧 "발송 완료". 같은 트랜잭션으로 묶으면 본 업무 커밋 시 알림도 함께 영구 저장되어 서버 다운 시점에도 데이터 유실이 없다.
+
+#### Mapper 인터페이스 & XML
+
+**`INotificationMapper.java`**
+```java
+public interface INotificationMapper {
+    NotificationPolicyVO selectNotificationPolicy(@Param("eventCd") String eventCd);
+    String selectOwnerIdByIrNo(@Param("irNo") String irNo);
+    int insertNotification(NotificationVO vo);
+}
+```
+
+**`INotificationMapper.xml`**
+- namespace = `kr.or.tacs.common.notification.mapper.INotificationMapper`
+- `selectNotificationPolicy`: `noti_policy` 단건 조회 (`WHERE np_event_cd = #{eventCd}`)
+- `selectOwnerIdByIrNo`:
+  ```sql
+  SELECT
+      ir_owr_id
+  FROM imp_rqst
+  WHERE ir_no      = #{irNo}
+    AND ir_use_yn  = 'Y'
+  ```
+- `insertNotification`: 시퀀스 `seq_notification.NEXTVAL`로 PK 채번. resultMap 또는 컬럼-속성 매핑은 프로젝트 컨벤션 따라 명시.
+
+---
+
+### 2.3 파일럿 트리거 — `BrokerDeclareServiceImpl` 수정
+
+**파일:** `kr/or/tacs/broker/declare/service/BrokerDeclareServiceImpl.java`
+**메서드:** `sendImp(ImpDclrVO vo, String brokerId)` (현재 219~237행)
+
+**수정 전 (235행 부근):**
+```java
+brokerDeclareMapper.updateImpDclrItemsToItemDclr(idIrNo);
+return idIrNo;
+```
+
+**수정 후:**
+```java
+brokerDeclareMapper.updateImpDclrItemsToItemDclr(idIrNo);
+
+notificationService.registNotification(
+    "DCLR_SUBMITTED",
+    idIrNo,
+    brokerId,
+    Collections.emptyMap()
+);
+
+return idIrNo;
+```
+
+**상단 필드 주입 추가** (`@Autowired private IFileService fileService;` 옆):
+```java
+@Autowired
+private kr.or.tacs.common.notification.service.INotificationService notificationService;
+```
+
+**다른 메서드, 다른 파일은 절대 수정 금지.** (나머지 6개 트리거 후보는 다음 PR)
+
+---
+
+### 2.4 검증 SQL — `TACS/sql/notification_verify.sql` 신규 생성
+
+```sql
+SELECT
+    noti_no
+  , noti_event_cd
+  , noti_ref_key
+  , noti_receiver_id
+  , noti_sender_id
+  , noti_title
+  , noti_body
+  , noti_link_url
+  , noti_read_yn
+  , noti_send_status
+  , noti_retry_count
+  , noti_send_dt
+FROM notification
+ORDER BY noti_send_dt DESC
+FETCH FIRST 10 ROWS ONLY;
+```
+
+---
+
+## 3. 검증 기준 (Definition of Done)
+
+1. **DDL 실행 성공** — `notification_ddl.sql` 전체가 Oracle에서 오류 없이 실행 (테이블 2개 + 시퀀스 + 인덱스 + 정책 INSERT 1건).
+2. **파일럿 발송 동작** — 관세사 계정으로 임시저장된 수입신고를 **전송**하면 `notification`에 1행 INSERT 됨.
+   - `noti_event_cd = 'DCLR_SUBMITTED'`
+   - `noti_ref_key` = 해당 IR_NO
+   - `noti_receiver_id` = IMP_RQST.ir_owr_id (화주의 login_id)
+   - `noti_sender_id` = 관세사의 login_id (brokerId)
+   - `noti_title = '수입신고가 전송되었습니다'`
+   - `noti_body`에 IR_NO 값이 치환되어 들어감 (예: "의뢰번호 IR20260101001 신고서가...")
+   - `noti_link_url`이 `/owner/import/detail.do/{IR_NO}` 형태로 렌더링됨
+   - `noti_send_status = 'SENT'`, `noti_retry_count = 0`, `noti_last_error IS NULL`
+3. **중복 방지 동작** — 동일 IR_NO에 두 번째 전송 시도 시 (유니크 제약 위반을 `DuplicateKeyException`으로 흡수), **본 업무 트랜잭션은 ROLLBACK 되지 않고**, 알림 테이블은 여전히 1건만 유지.
+4. **트랜잭션 정합성** — 강제로 `notificationService.registNotification`을 예외 발생시키면 본 업무(`sendImp`)도 함께 ROLLBACK 되어 신고 상태가 변경되지 않음(같은 트랜잭션 확인).
+5. **컨벤션 준수** — Mapper 메서드명, SQL 앞 콤마, 컬럼 명시 등 §1의 규칙 위반 없음.
+
+---
+
+## 4. 명시적 비범위 (이번 작업에서 절대 하지 말 것)
+
+- 나머지 6개 트리거 (보완요청/보완제출/수리/운송/입고/통관의뢰 처리중 전환)
+- 관리자 정책 관리 화면
+- 알림 발송 이력 조회 화면
+- 헤더 벨 아이콘 / 미읽음 카운트 API / 폴링
+- 사용자별 수신함 화면 (mypage 탭 등)
+- 이메일/SMS/푸시 채널 발송 코드
+- AOP / `ApplicationEventPublisher` / `@EventListener` 기반 발송으로의 전환
+- 스케줄러(`@Scheduled`) — outbox 컬럼만 미리 두고 스케줄러는 만들지 않음
+- `BrokerDeclareServiceImpl` 외 다른 서비스 수정
+
+---
+
+## 5. 작업 완료 후 보고할 항목
+
+1. **신규 생성 파일 목록** (절대 경로)
+2. **수정한 기존 파일 + 변경 라인 범위**
+3. **Oracle DDL 실행 결과** (성공/실패, 실패 시 오류 메시지)
+4. **검증 SQL 실행 결과** — 첫 행 한 줄 텍스트로 보고 (`noti_no`부터 `noti_send_dt`까지)
+5. **검증 기준 §3의 1~5번 각각에 대해 PASS / FAIL** 명시
+
+---
+
+## 6. 컨벤션 위반 검토 셀프 체크 (작업 후 직접 점검)
+
+- [ ] Service 메서드명이 `registXXX` 패턴인가?
+- [ ] Mapper 메서드명이 `selectXXX`, `insertXXX` 패턴인가?
+- [ ] XML 파일명이 인터페이스명과 일치하는가? (`INotificationMapper.xml`)
+- [ ] SQL에서 `SELECT *` 안 썼는가?
+- [ ] SQL 컬럼이 앞 콤마 스타일인가?
+- [ ] 예약어 대문자, 컬럼 소문자인가?
+- [ ] 한글 응답인가?
+- [ ] `BrokerDeclareServiceImpl` 외 다른 파일을 건드리지 않았는가?

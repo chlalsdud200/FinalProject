@@ -1,0 +1,875 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ include file="/WEB-INF/views/fieldofficer/common/taglibs.jsp" %>
+
+
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="activeMenu" value="cert" />
+<c:set var="activeSub" value="" />
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <%@ include file="/WEB-INF/views/fieldofficer/header/head.jsp" %>
+    <link rel="stylesheet" href="${ctx}/resources/css/fieldofficer/certs.css">
+</head>
+
+<body>
+<div class="app" id="app">
+
+    <%@ include file="/WEB-INF/views/fieldofficer/header/sidebar.jsp" %>
+
+    <div class="main-wrap">
+
+        <%@ include file="/WEB-INF/views/fieldofficer/header/header.jsp" %>
+
+        <div class="content">
+
+            <div class="page active" id="pg-cert">
+
+                <!-- 상세 발급 화면 -->
+                <div class="sub-page" id="cert-detail-view">
+                
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                        <h2 style="margin-bottom:0">
+                            <span class="material-symbols-outlined">description</span>
+                            검역 합격 증명서 상세 발급
+                        </h2>
+
+                    </div>
+                    
+                    <c:set var="canFinalJudge"
+					       value="${empty suppRqst or suppRqst.srStatusCd eq 'APR'}" />
+					
+					<c:set var="isSupplementWaiting"
+					       value="${not empty suppRqst and (suppRqst.srStatusCd eq 'REQ' or suppRqst.srStatusCd eq 'SUB')}" />
+					       
+					<c:set var="initialJudgeResult" value="${certsDetail.iirResultCd}" />
+
+					<c:if test="${not empty suppRqst and suppRqst.srStatusCd eq 'APR' and certsDetail.iirResultCd eq '보완요청'}">
+					    <c:set var="initialJudgeResult" value="합격" />
+					</c:if>
+                    
+                    
+                    <form id="finalJudgeForm" method="post" action="${ctx}/fieldofficer/certs/issue.do">
+
+				    <!-- Spring Security CSRF 토큰 -->
+				    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+				
+				    <!-- 저장/발급/보완요청 공통 필수값 -->
+				    <input type="hidden" name="reqNo" value="${certsDetail.reqNo}" />
+				    <input type="hidden" name="iirNo" value="${certsDetail.iirNo}" />
+				    <input type="hidden" name="iilNo" value="${certsDetail.iilNo }"/>
+				
+				    <!-- 품목 radio 또는 최종판정 radio 선택 결과가 들어가는 값 -->
+				    <input type="hidden" name="judgeResult" id="certJudgeResult" value="${initialJudgeResult}" />
+				
+				    <!-- 보완요청 수신자 정보 -->
+				    <input type="hidden" name="receiverId" value="OWNER_TEST" />
+				    <input type="hidden" name="receiverTyCd" value="OWNER" />
+
+                    <div class="food-doc-form" id="food-doc-cert">
+
+                        <!-- 기본 발급 정보 -->
+                        <h4 style="font-size:12px;font-weight:700;color:#4d6172;margin-bottom:10px;border-left:3px solid #565e74;padding-left:8px">
+                            기본 발급 정보
+                        </h4>
+
+                        <div class="form-grid" style="grid-template-columns:repeat(4,1fr);">
+                            <div class="form-item">
+                                <label>요청번호</label>
+                                <input id="certReqNo" value="${certsDetail.reqNo}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>증명서 번호</label>
+                                <input id="certIssueNo" name="certIssueNo" value="${certsDetail.certIssueNo}" />
+                            </div>
+
+                            <div class="form-item">
+                                <label>발급상태</label>
+                                <input id="certProcessStatus" value="${certsDetail.certIssueStatus}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>발급일자</label>
+                                <input id="certIssueDate" value="${certsDetail.iirResultDt}" readonly/>
+                            </div>
+                            
+                            <div class="form-item">
+							    <label>발급 담당자</label>
+							    <input id="certOfficer" value="${certsDetail.iirRsltOfficerId}" readonly />
+							</div>
+                            
+                            <div class="form-item">
+							    <label>검역결과번호</label>
+							    <input id="certResultNo" value="${certsDetail.iirNo}" readonly />
+							</div>
+							
+							<div class="form-item">
+							    <label>수입통관의뢰번호</label>
+							    <input id="certAplyNo" value="${certsDetail.aplyNo}" readonly />
+							</div>
+							
+							<div class="form-item">
+							    <label>문서유형</label>
+							    <input id="certDocTypeNm" value="${certsDetail.docTypeNm}" readonly />
+							</div>
+							
+							<div class="form-item">
+							    <label>검역요청 상태</label>
+							    <input id="certReqStatusCd" value="${certsDetail.reqStatusCd}" readonly />
+							</div>
+							
+							<div class="form-item">
+							    <label>회신기한</label>
+							    <input id="certRplyDdlineDt" value="${certsDetail.rplyDdlineDt}" readonly />
+							</div>
+							
+							<div class="form-item">
+							    <label>완료일시</label>
+							    <input id="certCmplDt" value="${empty certsDetail.cmplDt ? '검역 완료 전' : certsDetail.cmplDt}" readonly />
+							</div>
+
+                        </div>
+
+                        <!-- 신청인 / 수입자 정보 -->
+                        <h4 style="font-size:12px;font-weight:700;color:#4d6172;margin:18px 0 10px;border-left:3px solid #565e74;padding-left:8px">
+                            신청인 / 수입자 정보
+                        </h4>
+
+                        <div class="form-grid" style="grid-template-columns:repeat(4,1fr);">
+                            <div class="form-item">
+							    <label>수입화주명</label>
+							    <input id="certImporterName" value="${certsDetail.bizNm}" readonly />
+							</div>
+							
+							<div class="form-item">
+							    <label>사업자등록번호</label>
+							    <input id="certBizNo" value="${certsDetail.bizNo}" readonly />
+							</div>
+							
+							<div class="form-item">
+							    <label>전화번호</label>
+							    <input id="certTel" value="${certsDetail.applicantTel}" readonly />
+							</div>
+
+                            <div class="form-item">
+                                <label>우편번호</label>
+                                <input id="certZip" value="${certsDetail.taxpayerZip}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>주소</label>
+                                <input id="certAddr" value="${certsDetail.taxpayerAddr} ${certsDetail.taxpayerDtlAddr}" readonly />
+                            </div>
+
+                            <div class="form-item">
+							    <label>검역신청인 성명</label>
+							    <input id="certApplicantName" value="${certsDetail.applicantName}" readonly />
+							</div>
+							
+							<div class="form-item">
+							    <label>검역신청인 연락처</label>
+							    <input id="certApplicantTel" value="${certsDetail.applicantTel}" readonly />
+							</div>
+							
+							<div class="form-item">
+							    <label>신청인 상호</label>
+							    <input id="certApplicantBiz" value="${certsDetail.bizNm}" readonly />
+							</div>
+                        </div>
+
+                        <!-- 화물 / 식품 정보 -->
+                        <h4 style="font-size:12px;font-weight:700;color:#4d6172;margin:18px 0 10px;border-left:3px solid #565e74;padding-left:8px">
+                            화물 / 식품 정보
+                        </h4>
+
+                        <div class="form-grid" style="grid-template-columns:repeat(4,1fr);">
+                            <div class="form-item">
+                                <label>화물관리번호</label>
+                                <input id="certCargoNo" value="${certsDetail.cargoNo}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>B/L 번호</label>
+                                <input id="certBlNo" value="${certsDetail.blNo}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>입항일자</label>
+                                <input id="certArrivalDate" value="${certsDetail.arrivalDate}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>보세장치장명</label>
+                                <input id="certWarehouse" value="${certsDetail.locNm}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>수출국가명</label>
+                                <input id="certExportCountry" value="${certsDetail.exportCountryCd}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>해외제조업소명</label>
+                                <input id="certMaker" value="${certsDetail.overseasNm}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>품목명</label>
+                                <input id="certItemName" value="${certsDetail.itemNm}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>식품 유형</label>
+                                <input id="certFoodType" value="" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>HS Code</label>
+                                <input id="certHsCode" value="${certsDetail.hsCode}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>원산지</label>
+                                <input id="certOrigin" value="" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>수량</label>
+                                <input id="certQty" value="${certsDetail.totalPkgCnt}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>수량 단위</label>
+                                <input id="certQtyUnit" value="PKG" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>중량</label>
+                                <input id="certWeight" value="${certsDetail.totalWeight}" readonly />
+                            </div>
+
+                            <div class="form-item">
+                                <label>중량 단위</label>
+                                <input id="certWeightUnit" value="KG" readonly />
+                            </div>
+                        </div>
+                        
+                        <!-- 검역 위치 정보 -->
+						<h4 style="font-size:12px;font-weight:700;color:#4d6172;margin:18px 0 10px;border-left:3px solid #565e74;padding-left:8px">
+						    검역 위치 정보
+						</h4>
+						
+						<div class="form-grid" style="grid-template-columns:repeat(3,1fr);">
+						    <div class="form-item">
+						        <label>검역위치번호</label>
+						        <input id="certLocNo" value="${certsDetail.iilNo}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>검역요청번호</label>
+						        <input id="certLocReqNo" value="${certsDetail.locReqNo}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>검역장소유형</label>
+						        <input id="certLocTyCd" value="${certsDetail.locTyCd}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>검역장소명</label>
+						        <input id="certLocNm" value="${certsDetail.locNm}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>검역예정일시</label>
+						        <input id="certLocPlanDt" value="${certsDetail.locPlanDt}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>우편번호</label>
+						        <input id="certLocZip" value="${certsDetail.locZip}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>기본주소</label>
+						        <input id="certLocAdres" value="${certsDetail.locAdres}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>상세주소</label>
+						        <input id="certLocDetailAdres" value="${certsDetail.locDetailAdres}" readonly />
+						    </div>
+						</div>
+                        
+                        <!-- 품목 상세 내역 -->
+						<h4 style="font-size:12px;font-weight:700;color:#4d6172;margin:18px 0 10px;border-left:3px solid #565e74;padding-left:8px">
+						    품목 상세 내역
+						</h4>
+						
+						<table class="data-table cert-item-detail-table">
+						    <thead>
+						        <tr>
+						            <th style="width:60px">번호</th>
+						            <th>품목명</th>
+						            <th>HS CODE</th>
+						            <th>수량</th>
+						            <th>순중량</th>
+						            <th>원산지</th>
+						            <th style="width:180px">품목 판정</th>
+						        </tr>
+						    </thead>
+						
+						    <tbody>
+						        <c:choose>
+						            <c:when test="${not empty certsItemList}">
+						                <c:forEach var="item" items="${certsItemList}" varStatus="st">
+						                    <tr>
+						                        <td>${st.count}</td>
+						                        <td>${item.itemNm}</td>
+						                        <td>${item.hsCode}</td>
+						                        <td>${item.itemQty} ${item.itemQtyUnitCd}</td>
+						                        <td>${item.itemNetWt}</td>
+						                        <td>${item.itemOriginCd}</td>
+						                        <td>
+						                            <label style="margin-right:10px">
+						                                <input type="radio"
+						                                       name="itemJudge_${st.index}"
+						                                       value="합격"
+						                                       class="item-judge-radio"
+						                                       onchange="recalcFinalJudgeByItems()"
+						                                       checked />
+						                                합격
+						                            </label>
+						
+						                            <label>
+						                                <input type="radio"
+						                                       name="itemJudge_${st.index}"
+						                                       value="불합격"
+						                                       class="item-judge-radio"
+						                                       onchange="recalcFinalJudgeByItems()" />
+						                                불합격
+						                            </label>
+						                        </td>
+						                    </tr>
+						                </c:forEach>
+						            </c:when>
+						
+						            <c:otherwise>
+						                <tr>
+						                    <td colspan="7" style="text-align:center;color:#64748b;padding:14px">
+						                        등록된 품목 상세 내역이 없습니다.
+						                    </td>
+						                </tr>
+						            </c:otherwise>
+						        </c:choose>
+						    </tbody>
+						</table>
+
+                        <h4 style="font-size:12px;font-weight:700;color:#4d6172;margin:18px 0 10px;border-left:3px solid #565e74;padding-left:8px">
+						    검사 / 판정 정보
+						</h4>
+						
+						<div class="form-grid" style="grid-template-columns:repeat(4,1fr);">
+						
+						    <div class="form-item">
+						        <label>검사 완료일</label>
+						        <input id="certInspectDate" value="${certsDetail.iirResultDt}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>결과 처리상태</label>
+						        <input id="certResultStatusCd" value="${certsDetail.iirResultStatusCd}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>결과 등록 공무원</label>
+						        <input id="certResultOfficerId" value="${certsDetail.iirRsltOfficerId}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>판정결과</label>
+						        <input id="certJudgeResultText" value="${certsDetail.iirResultCd}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>후속조치</label>
+						        <input id="certFollowupCd" value="${certsDetail.iirResultFollowupCd}" readonly />
+						    </div>
+						
+						    <div class="form-item">
+						        <label>첨부서류</label>
+						        <input id="certAttachDocs" value="Invoice / Packing List / Health Certificate" readonly  />
+						    </div>
+						
+						    <div class="form-item full">
+						        <label>판정 사유</label>
+						        <textarea id="certJudgeReason" name="iirResultCn" rows="4">${certsDetail.iirResultCn}</textarea>
+						    </div>
+						
+						</div>
+					
+					</div>
+					<!-- food-doc-form 끝 -->
+					<c:if test="${canFinalJudge}">
+						<!-- 최종 판정 및 발급 적격성 확인 -->
+					    <div class="cert-final-decision-box" id="certFinalDecisionBox">
+					
+					        <div class="cert-final-head">
+					            <div>
+					                <div class="cert-final-title">최종 판정 및 발급 적격성 확인</div>
+					            </div>
+					
+					            <div class="cert-final-status" id="certFinalStatusText">
+					                판정 대기
+					            </div>
+					        </div>
+					
+					        <div class="cert-final-options">
+					
+					            <!-- 합격 -->
+					            <label class="cert-final-option pass" id="judgePassCard">
+					                <input type="radio" name="judgeResultRadio" value="합격" onchange="selectFinalJudge('합격')"
+					                       <c:if test="${initialJudgeResult eq '합격' or initialJudgeResult eq '적합'}">checked</c:if> />
+					
+					                <div class="option-top">
+					                    <span class="material-symbols-outlined">verified</span>
+					                    <strong>합격</strong>
+					                </div>
+					
+					            </label>
+					
+					            <!-- 불합격 -->
+					            <label class="cert-final-option fail" id="judgeFailCard">
+					                <input type="radio" name="judgeResultRadio" value="불합격" onchange="selectFinalJudge('불합격')"
+									       <c:if test="${initialJudgeResult eq '불합격' or initialJudgeResult eq '부적합'}">checked</c:if> />
+					
+					                <div class="option-top">
+					                    <span class="material-symbols-outlined">dangerous</span>
+					                    <strong>불합격</strong>
+					                </div>
+					
+					            </label>
+					
+					            <!-- 보완요청 -->
+					            <label class="cert-final-option supplement" id="judgeSupplementCard">
+					                <input type="radio" name="judgeResultRadio" value="보완요청" onchange="selectFinalJudge('보완요청')"
+									       <c:if test="${initialJudgeResult eq '보완요청'}">checked</c:if> />
+					
+					                <div class="option-top">
+					                    <span class="material-symbols-outlined">assignment_late</span>
+					                    <strong>보완요청</strong>
+					                </div>
+					
+					            </label>
+					
+					        </div>
+					        
+					        <div class="cert-final-result-line" id="certFinalResultLine">
+							    최종 판정 결과를 선택하세요.
+							</div>
+					
+					
+					        <!-- 보완요청 내용 -->
+					        <div class="supplement-request-box" id="supplementRequestBox" style="display:none;">
+					            <h4>보완요청 내용</h4>
+					
+					            <div class="form-grid" style="grid-template-columns:repeat(2,1fr);">
+					
+					                <div class="form-item">
+									    <label>요청 대상 업무</label>
+									
+									    <!-- 화면에는 사용자가 이해할 수 있는 업무명을 표시 -->
+									    <input type="text" id="refBizNm" value="수입검역요청" readonly />
+									
+									    <!-- 서버/DB에는 업무 코드값을 전송 -->
+									    <input type="hidden" id="refBizCd" name="refBizCd" value="IMP_INS_REQ" />
+									</div>
+					
+					                <div class="form-item full">
+					                    <label>보완 요청 사유</label>
+					                    <textarea name="suppReqCn"
+					                              id="suppReqCn"
+					                              rows="5"
+					                              placeholder="예) 성분표 누락, 원산지증명서 미첨부, 품목 정보 불일치 등 보완이 필요한 내용을 입력하세요."></textarea>
+					                </div>
+					            </div>
+					        </div>
+					    </div>
+				    </c:if> 
+				</form>
+					<c:if test="${isSupplementWaiting}">
+					    <div class="cert-final-decision-box">
+					        <div class="cert-final-head">
+					            <div>
+					                <div class="cert-final-title">최종 판정 대기</div>
+					                <div style="font-size:12px;color:#64748b;margin-top:4px;">
+					                    보완요청이 진행 중입니다. 보완 제출내용 확인 완료 후 최종 판정을 다시 진행할 수 있습니다.
+					                </div>
+					            </div>
+					        </div>
+					    </div>
+					</c:if>
+					
+						<!-- =========================================================
+						     보완요청 진행 현황
+						     - SUPP_RQST 단일 테이블 기준
+						     - REQ : 요청만 표시
+						     - SUB : 제출 내역 표시
+						     - APR : 확인 완료 상태 표시
+						     ========================================================= -->
+						<c:if test="${not empty suppRqst}">
+						    <div class="supp-progress-card">
+						    
+						    <form id="suppApproveForm"
+							      method="post"
+							      action="${ctx}/fieldofficer/certs/supplement/approve.do"
+							      style="display:none;">
+							
+							    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+							    <input type="hidden" name="srNo" value="${suppRqst.srNo}" />
+							    <input type="hidden" name="reqNo" value="${certsDetail.reqNo}" />
+							</form>
+													
+						        <div class="supp-progress-head">
+						            <div>
+						                <h3>보완요청 진행 현황</h3>
+						                <p>보완요청 상태와 제출 여부를 확인합니다.</p>
+						            </div>
+						
+						            <c:choose>
+						                <c:when test="${suppRqst.srStatusCd eq 'REQ'}">
+						                    <span class="supp-status-badge wait">제출 대기</span>
+						                </c:when>
+						                <c:when test="${suppRqst.srStatusCd eq 'SUB'}">
+						                    <span class="supp-status-badge submit">제출 완료</span>
+						                </c:when>
+						                <c:when test="${suppRqst.srStatusCd eq 'APR'}">
+						                    <span class="supp-status-badge done">확인 완료</span>
+						                </c:when>
+						                <c:otherwise>
+						                    <span class="supp-status-badge wait">${suppRqst.srStatusCd}</span>
+						                </c:otherwise>
+						            </c:choose>
+						        </div>
+						
+						        <fmt:formatDate var="srReqDtText"
+						                        value="${suppRqst.srReqDt}"
+						                        pattern="yyyy-MM-dd HH:mm" />
+						
+						        <fmt:formatDate var="srSubmitDtText"
+						                        value="${suppRqst.srSubmitDt}"
+						                        pattern="yyyy-MM-dd HH:mm" />
+						
+						        <fmt:formatDate var="srApprDtText"
+						                        value="${suppRqst.srApprDt}"
+						                        pattern="yyyy-MM-dd HH:mm" />
+						
+						        <!-- 요청 정보 -->
+						        <div class="supp-block">
+						            <div class="supp-block-title">
+						                <span class="material-symbols-outlined">assignment_late</span>
+						                보완요청 정보
+						            </div>
+						
+						            <div class="supp-info-grid">
+						                <div class="supp-info-item">
+						                    <span>보완요청번호</span>
+						                    <strong>${suppRqst.srNo}</strong>
+						                </div>
+						
+						                <div class="supp-info-item">
+						                    <span>업무번호</span>
+						                    <strong>${suppRqst.srRefNo}</strong>
+						                </div>
+						
+						                <div class="supp-info-item">
+						                    <span>요청일시</span>
+						                    <strong>${srReqDtText}</strong>
+						                </div>
+						            </div>
+						
+						            <div class="supp-content-box">
+						                <div class="supp-content-label">보완요청내용</div>
+						                <div class="supp-content-text">
+						                    ${suppRqst.srReqCn}
+						                </div>
+						            </div>
+						        </div>
+						
+						        <!-- 제출 전 안내 -->
+						        <c:if test="${suppRqst.srStatusCd eq 'REQ'}">
+						            <div class="supp-empty-submit">
+						                <span class="material-symbols-outlined">hourglass_empty</span>
+						                <div>
+						                    <strong>보완 제출 대기 상태입니다.</strong>
+											<p>수신자가 보완 제출내용을 등록하면 제출일시와 제출내용이 표시됩니다.</p>
+						                </div>
+						            </div>
+						        </c:if>
+						
+						        <!-- 제출 정보: SUB 또는 APR일 때만 표시 -->
+						        <c:if test="${suppRqst.srStatusCd eq 'SUB' or suppRqst.srStatusCd eq 'APR'}">
+						            <div class="supp-block submit-block">
+						                <div class="supp-block-title">
+						                    <span class="material-symbols-outlined">task_alt</span>
+						                    보완제출 정보
+						                </div>
+						
+						                <div class="supp-info-grid">
+						                    <div class="supp-info-item">
+						                        <span>제출일시</span>
+						                        <strong>${srSubmitDtText}</strong>
+						                    </div>
+						
+						                    <div class="supp-info-item">
+						                        <span>확인일시</span>
+						                        <strong>
+						                            <c:choose>
+						                                <c:when test="${not empty srApprDtText}">
+						                                    ${srApprDtText}
+						                                </c:when>
+						                                <c:otherwise>
+						                                    확인 전
+						                                </c:otherwise>
+						                            </c:choose>
+						                        </strong>
+						                    </div>
+						                </div>
+						
+						                <div class="supp-content-box">
+						                    <div class="supp-content-label">보완제출내용</div>
+						                    <div class="supp-content-text">
+						                        ${suppRqst.srSubmitCn}
+						                    </div>
+						                </div>
+						
+						                <c:if test="${suppRqst.srStatusCd eq 'SUB'}">
+						                    <div class="supp-action-row">
+						                        <button type="submit" class="btn btn-primary" id="btnSuppApprove" form="suppApproveForm"
+												        onclick="return confirm('보완 제출내용을 확인 완료 처리하시겠습니까?');">
+												    <span class="material-symbols-outlined" style="font-size:14px">check_circle</span>
+												    보완자료 확인완료
+												</button>
+						                    </div>
+						                </c:if>
+						            </div>
+						        </c:if>
+						    </div>
+						</c:if>
+									
+
+                    <!-- 하단 버튼 -->
+                    <div style="margin-top:20px;padding-top:16px;border-top:2px solid #e2e8f0;display:flex;justify-content:space-between">
+
+                        <div class="btn-row">
+                            <button class="btn btn-outline"
+                                    type="button"
+                                    onclick="location.href='${ctx}/fieldofficer/certs.do'">
+                                <span class="material-symbols-outlined" style="font-size:14px">arrow_back</span>
+                                목록
+                            </button>
+                        </div>
+
+                        <div class="btn-row">
+                            <button class="btn btn-secondary" type="button" onclick="openCertPreviewModal()">
+							    <span class="material-symbols-outlined" style="font-size:14px">preview</span>
+							    미리보기
+							</button>
+							
+							<c:if test="${canFinalJudge}">
+							    <button class="btn btn-primary" type="submit" id="saveCertBtn" form="finalJudgeForm" formaction="${ctx}/fieldofficer/certs/save.do">
+							        <span class="material-symbols-outlined" style="font-size:14px">save</span>
+							        발급정보 저장
+							    </button>
+							</c:if>
+							
+							<c:if test="${canFinalJudge and certsDetail.iirResultCd eq '합격'}">
+							    <form id="issuePdfForm" action="${ctx}/fieldofficer/certs/issue/pdf.do" method="post" style="display:inline;">
+							          
+							        <input type="hidden" name="reqNo" value="${certsDetail.reqNo}" />
+							
+							        <c:if test="${not empty _csrf}">
+							            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+							        </c:if>
+							
+							        <button type="submit" class="btn btn-primary" id="issueCertBtn">
+							            <span class="material-symbols-outlined" style="font-size:14px">download</span>
+							            검역 합격 증명서 발급
+							        </button>
+							    </form>
+							</c:if>
+							
+							<button class="btn btn-danger" type="submit" form="finalJudgeForm" formaction="${ctx}/fieldofficer/certs/supplement.do"
+							        id="supplementSubmitBtn" style="display: none">
+							    <span class="material-symbols-outlined" style="font-size: 14px">assignment_late</span>
+							
+							    <c:choose>
+							        <c:when test="${empty suppRqst}">
+							            보완요청 등록
+							        </c:when>
+							        <c:otherwise>
+							            재보완요청 등록
+							        </c:otherwise>
+							    </c:choose>
+							</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+        <%@ include file="/WEB-INF/views/fieldofficer/footer/footer.jsp" %>
+    </div>
+</div>
+
+<!-- 검역 합격 증명서 미리보기 모달 -->
+<div id="certPreviewModal" class="cert-preview-modal">
+
+		<div class="cert-preview-modal-panel">
+
+        <!-- 모달 상단 -->
+        <div class="cert-preview-modal-header">
+		    <div class="cert-preview-modal-title">
+		        <span class="material-symbols-outlined" style="font-size:18px">workspace_premium</span>
+		        검역 합격 증명서 미리보기
+		    </div>
+		
+		    <button type="button"
+		            class="cert-preview-modal-close"
+		            onclick="closeCertPreviewModal()">
+		        ×
+		    </button>
+		</div>
+
+        <!-- 증명서 본문 -->
+        <div id="certPreviewPrintArea" class="cert-preview-print-area">
+
+            <div style="text-align:center;border-bottom:2px solid #0f172a;padding-bottom:20px;margin-bottom:24px">
+                <div style="font-size:24px;font-weight:900;letter-spacing:2px;margin-bottom:8px">
+                    검역 합격 증명서
+                </div>
+                <div style="font-size:12px;color:#64748b">
+                    Quarantine Pass Certificate
+                </div>
+            </div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:22px">
+                <tr>
+                    <th style="width:24%;text-align:left;background:#ecf4ff;border:1px solid #cbd5e1;padding:10px">문서번호</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalCertIssueNo"></td>
+                    <th style="width:24%;text-align:left;background:#ecf4ff;border:1px solid #cbd5e1;padding:10px">요청번호</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalCertReqNo"></td>
+                </tr>
+                <tr>
+                    <th style="text-align:left;background:#ecf4ff;border:1px solid #cbd5e1;padding:10px">발급일자</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalCertIssueDate"></td>
+                    <th style="text-align:left;background:#ecf4ff;border:1px solid #cbd5e1;padding:10px">발급 담당자</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalCertOfficer"></td>
+                </tr>
+            </table>
+
+            <h4 style="font-size:13px;font-weight:800;margin:20px 0 8px;border-left:3px solid #565e74;padding-left:8px">
+                신청인 / 수입자 정보
+            </h4>
+
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:22px">
+                <tr>
+                    <th style="width:24%;text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">신청인 성명</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalApplicantName"></td>
+                    <th style="width:24%;text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">신청인 상호</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalApplicantBiz"></td>
+                </tr>
+                <tr>
+                    <th style="text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">사업자등록번호</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalBizNo"></td>
+                    <th style="text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">전화번호</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalTel"></td>
+                </tr>
+                <tr>
+                    <th style="text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">주소</th>
+                    <td colspan="3" style="border:1px solid #cbd5e1;padding:10px" id="modalAddr"></td>
+                </tr>
+            </table>
+
+            <h4 style="font-size:13px;font-weight:800;margin:20px 0 8px;border-left:3px solid #565e74;padding-left:8px">
+                화물 / 식품 정보
+            </h4>
+
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:22px">
+                <tr>
+                    <th style="width:24%;text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">화물관리번호</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalCargoNo"></td>
+                    <th style="width:24%;text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">B/L 번호</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalBlNo"></td>
+                </tr>
+                <tr>
+                    <th style="text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">보세장치장명</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalWarehouse"></td>
+                    <th style="text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">수출국가명</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalExportCountry"></td>
+                </tr>
+                <tr>
+                    <th style="text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">품목명</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalItemName"></td>
+                    <th style="text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">HS Code</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalHsCode"></td>
+                </tr>
+                <tr>
+                    <th style="text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">수량</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalQty"></td>
+                    <th style="text-align:left;background:#f8fbff;border:1px solid #cbd5e1;padding:10px">중량</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalWeight"></td>
+                </tr>
+            </table>
+
+            <h4 style="font-size:13px;font-weight:800;margin:20px 0 8px;border-left:3px solid #565e74;padding-left:8px">
+                검사 / 판정 정보
+            </h4>
+
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px">
+                <tr>
+                    <th style="width:24%;text-align:left;background:#ecf4ff;border:1px solid #cbd5e1;padding:10px">검사 완료일</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px" id="modalInspectDate"></td>
+                    <th style="width:24%;text-align:left;background:#ecf4ff;border:1px solid #cbd5e1;padding:10px">판정 결과</th>
+                    <td style="border:1px solid #cbd5e1;padding:10px;font-weight:800;color:#1d6b4f" id="modalJudgeResult"></td>
+                </tr>
+                <tr>
+                    <th style="text-align:left;background:#ecf4ff;border:1px solid #cbd5e1;padding:10px">검사 결과 요약</th>
+                    <td colspan="3" style="border:1px solid #cbd5e1;padding:10px;line-height:1.7" id="modalResultSummary"></td>
+                </tr>
+                <tr>
+                    <th style="text-align:left;background:#ecf4ff;border:1px solid #cbd5e1;padding:10px">판정 사유</th>
+                    <td colspan="3" style="border:1px solid #cbd5e1;padding:10px;line-height:1.7" id="modalJudgeReason"></td>
+                </tr>
+            </table>
+
+            <div style="font-size:13px;line-height:1.9;margin-top:28px">
+                위 물품은 검역 검사 결과 관련 기준에 적합하므로 검역 합격 증명서 발급 대상으로 확인합니다.
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;margin-top:44px">
+                <div style="text-align:center">
+                    <div style="font-size:13px;margin-bottom:12px">발급기관</div>
+                    <div style="font-size:20px;font-weight:900;color:#203444">TACS 검역기관</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 모달 하단 버튼 -->
+        <div class="cert-preview-modal-footer" style="display: flex; justify-content: flex-end; align-items: center;">
+            <div class="btn-row" style="justify-content: flex-end;">
+                <button type="button" class="btn btn-success" onclick="closeCertPreviewModal()">
+                    확인
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%@ include file="/WEB-INF/views/fieldofficer/footer/modals.jsp" %>
+<%@ include file="/WEB-INF/views/fieldofficer/footer/scripts.jsp" %>
+<script src="${ctx}/resources/js/fieldofficer/certs.js"></script>
+</body>
+</html>

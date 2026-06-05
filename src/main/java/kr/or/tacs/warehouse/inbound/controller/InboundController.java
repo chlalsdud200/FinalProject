@@ -1,0 +1,314 @@
+package kr.or.tacs.warehouse.inbound.controller;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import kr.or.tacs.vo.common.CustomUser;
+import kr.or.tacs.dto.warehouse.WarehouseGoodsDTO;
+import kr.or.tacs.dto.warehouse.WarehouseWhInRptDTO;
+import kr.or.tacs.dto.warehouse.WarehouseZoneDTO;
+import kr.or.tacs.warehouse.inbound.service.IInboundService;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Controller
+@RequestMapping("/warehouse")
+public class InboundController {
+	
+	@Autowired
+	private IInboundService inboundService;
+	
+	private String getLoginId() {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		CustomUser user = (CustomUser) auth.getPrincipal();
+		return user.getLoginId();
+	}
+
+	@GetMapping("/inbound.do")
+	public String inboundForm(Model model) {
+		
+		String wmId = getLoginId();
+		
+		List<WarehouseWhInRptDTO> inboundList = inboundService.selectInbound(wmId);
+		model.addAttribute("inboundList", inboundList); 
+		
+		log.info("입고 목록 조회 wmId : {}, list 데이터 확인 : {}", wmId, inboundList);
+		
+		return "warehouse/inbound";
+	}
+	
+	@GetMapping("/inbound/goodsList")
+	@ResponseBody
+	public List<WarehouseGoodsDTO> inboundGoodsList(@RequestParam("wirNo") String wirNo) {
+		
+		String wmId = getLoginId();
+		
+		log.info("입고 물품 상세 조회 wirNo : {}, wmId : {}", wirNo, wmId);
+		
+		return inboundService.selectInboundGoodsList(wirNo, wmId);
+	}
+	
+	@GetMapping("/inbound/search.do")
+	@ResponseBody
+	public Map<String, Object> searchInbound(
+	        @RequestParam(required = false, defaultValue = "1") int page,
+	        @RequestParam(required = false) String startDate,
+	        @RequestParam(required = false) String endDate,
+	        @RequestParam(required = false) String type,
+	        @RequestParam(required = false) String status,
+	        @RequestParam(required = false) String searchWord
+	) {
+	    String wmId = getLoginId();
+
+	    /*
+	     * WarehouseWhInRptDTO가 PageDTO를 상속했기 때문에
+	     * 검색조건 + 페이징 조건을 searchDTO 하나에 담는다.
+	     */
+	    WarehouseWhInRptDTO searchDTO = new WarehouseWhInRptDTO();
+
+	    /*
+	     * PageDTO 기준 현재 페이지 세팅
+	     * setCurrentPage가 아니라 setPage를 사용해야 한다.
+	     */
+	    searchDTO.setPage(page);
+
+	    /*
+	     * 검색 기간
+	     */
+	    searchDTO.setStartDate(startDate);
+	    searchDTO.setEndDate(endDate);
+
+	    /*
+	     * 수입/수출 조건
+	     * 화면에서 넘어온 type 값을 WIR_IO_SE_CD 검색조건으로 사용한다.
+	     */
+	    searchDTO.setWirIoSeCd(type);
+
+	    /*
+	     * 상태 조건
+	     * 화면 상태 셀렉트에서 넘어온 값:
+	     * WAIT / REQ_FIX / REQ_SENT / IN_DONE / REJECT
+	     */
+	    searchDTO.setWirStatusCd(status);
+
+	    /*
+	     * 검색어
+	     * 검색구분 셀렉트박스는 제거했으므로 keyword만 사용한다.
+	     */
+	    searchDTO.setKeyword(searchWord);
+
+	    /*
+	     * 전체 건수 조회 후 PageDTO에 세팅
+	     * setTotalRecord가 아니라 setTotalCount를 사용한다.
+	     */
+	    int totalCount = inboundService.selectInboundCount(searchDTO, wmId);
+	    searchDTO.setTotalCount(totalCount);
+
+	    /*
+	     * 현재 페이지 목록 조회
+	     */
+	    List<WarehouseWhInRptDTO> dataList = inboundService.selectInboundList(searchDTO, wmId);
+
+	    /*
+	     * 기존 inbound.js가 data.dataList, data.currentPage, data.totalPage를 보고 있어서
+	     * 화면 JS를 아직 안 바꾸려면 JSON 응답 키를 기존 이름에 맞춰서 내려준다.
+	     */
+	    Map<String, Object> resultMap = new HashMap<>();
+
+	    resultMap.put("dataList", dataList);
+
+	    resultMap.put("currentPage", searchDTO.getPage());
+	    resultMap.put("startPage", searchDTO.getStartPage());
+	    resultMap.put("endPage", searchDTO.getEndPage());
+	    resultMap.put("totalPage", searchDTO.getTotalPage());
+	    resultMap.put("totalCount", searchDTO.getTotalCount());
+
+	    return resultMap;
+	}
+	
+	@GetMapping("/inbound/zones.do")
+	@ResponseBody
+	public List<WarehouseZoneDTO> selectMyWarehouseZone() {
+		
+		String wmId = getLoginId();
+		
+		log.info("로그인 창고관리자 구역 조회 wmId : {}", wmId);
+		
+		return inboundService.selectMyWarehouseZones(wmId);
+	}
+	
+	@GetMapping("/inbound/emptyLocations.do")
+	@ResponseBody
+	public List<Map<String, Object>> selectEmptyLocations(@RequestParam("zone") String zone) {
+		
+		String wmId = getLoginId();
+		
+		return inboundService.selectEmptyLocations(zone, wmId);
+	}
+	
+	@PostMapping("/approveInbound.do")
+	@ResponseBody
+	public Map<String, Object> approveInbound(@RequestBody WarehouseWhInRptDTO whInRptDTO) {
+		Map<String, Object> resultMap = new HashMap<>();
+		
+		try {
+			String wmId = getLoginId();
+			
+			log.info("입고 승인/반려 요청 데이터 : {}, wmId : {}", whInRptDTO, wmId);
+			
+			if (whInRptDTO.getWirNo() == null || whInRptDTO.getWirNo().isBlank()) {
+				resultMap.put("result", "fail");
+				resultMap.put("message", "입고의뢰번호가 없습니다");
+				return resultMap;
+			}
+			
+			if (whInRptDTO.getWirStatusCd() == null || whInRptDTO.getWirStatusCd().isBlank()) {
+				resultMap.put("result", "fail");
+				resultMap.put("message", "처리 상태값이 없습니다");
+				return resultMap;
+			}
+			
+			if ("APPROVE".equals(whInRptDTO.getWirStatusCd())) {
+				if (whInRptDTO.getGoodsList() == null || whInRptDTO.getGoodsList().isEmpty()) {
+					resultMap.put("result", "fail");
+					resultMap.put("message", "물품별 창고 배정 정보가 없습니다.");
+					return resultMap;
+				}
+				
+				for (WarehouseGoodsDTO goods : whInRptDTO.getGoodsList()) {
+					if (goods.getCgNo() == null || goods.getCgNo().isBlank()) {
+						resultMap.put("result", "fail");
+						resultMap.put("message", "물품번호가 없는 항목이 있습니다.");
+						return resultMap;
+					}
+					
+					if (goods.getWzNo() == null || goods.getWzNo().isBlank()) {
+						resultMap.put("result", "fail");
+						resultMap.put("message", goods.getGoodsName() + "의 창고구역을 선택하세요.");
+						return resultMap;
+					}
+					
+					if (goods.getLocationCode() == null || goods.getLocationCode().isBlank()) {
+						resultMap.put("result", "fail");
+						resultMap.put("message", goods.getGoodsName() + "의 창고 위치를 선택하세요.");
+						return resultMap;
+					}
+				}
+			}
+			
+			int result = inboundService.approveInbound(whInRptDTO, wmId);
+			
+			if (result > 0) {
+				resultMap.put("result", "success");
+				resultMap.put("message", "처리가 완료되었습니다");
+			} else {
+				resultMap.put("result", "fail");
+				resultMap.put("message", "처리된 데이터가 없습니다");
+			}
+			
+		} catch (Exception e) {
+			log.error("입고 승인/반려 처리 중 오류 발생. wirNo={}", whInRptDTO.getWirNo(), e);
+			
+			resultMap.put("result", "error");
+			resultMap.put("message", "서버 처리 중 오류가 발생했습니다");
+		}
+		
+		return resultMap;
+	}
+	
+	/**
+	 * 입고 보완요청 등록
+	 *
+	 * 창고관리자가 입고요청 건에 대해 운송업체에게 보완요청을 등록한다.
+	 *
+	 * 화면에서 받는 값:
+	 * - wirNo   : 입고의뢰번호
+	 * - reason  : 보완요청 사유
+	 * - sriTyCd : 보완유형 코드
+	 *            DATA = 데이터수정
+	 *            FILE = 파일재제출
+	 *
+	 * receiverId는 여기서 받지 않는다.
+	 * 실제 수신 운송업체 ID는 Service/Mapper에서
+	 * wirNo 기준으로 TRAN_RCP → TRANSPORT_MANAGER를 조회해서 가져온다.
+	 */
+	@PostMapping("/inbound/supplement.do")
+	@ResponseBody
+	public Map<String, Object> insertSupplementRequest(
+	        @RequestParam("wirNo") String wirNo,
+	        @RequestParam("reason") String reason,
+	        @RequestParam("sriTyCd") String sriTyCd) {
+
+	    Map<String, Object> resultMap = new HashMap<>();
+
+	    try {
+	        String wmId = getLoginId();
+
+	        log.info("입고 보완요청 등록 요청 wirNo: {}, wmId: {}, sriTyCd: {}, reason: {}",
+	                wirNo, wmId, sriTyCd, reason);
+
+	        if (wirNo == null || wirNo.isBlank()) {
+	            resultMap.put("result", "fail");
+	            resultMap.put("message", "입고의뢰번호가 없습니다.");
+	            return resultMap;
+	        }
+
+	        if (reason == null || reason.isBlank()) {
+	            resultMap.put("result", "fail");
+	            resultMap.put("message", "보완요청 사유를 입력하세요.");
+	            return resultMap;
+	        }
+
+	        if (sriTyCd == null || sriTyCd.isBlank()) {
+	            resultMap.put("result", "fail");
+	            resultMap.put("message", "보완유형을 선택하세요.");
+	            return resultMap;
+	        }
+
+	        /*
+	         * 보완유형은 SUPP_RQST_ITEM.SRI_TY_CD에 들어간다.
+	         * 현재 허용 값:
+	         * - DATA: 데이터수정
+	         * - FILE: 파일재제출
+	         */
+	        if (!"DATA".equals(sriTyCd) && !"FILE".equals(sriTyCd)) {
+	            resultMap.put("result", "fail");
+	            resultMap.put("message", "올바르지 않은 보완유형입니다.");
+	            return resultMap;
+	        }
+
+	        int result = inboundService.insertSupplementRequest(wirNo, reason, wmId, sriTyCd);
+
+	        if (result > 0) {
+	            resultMap.put("result", "success");
+	            resultMap.put("message", "보완요청이 등록되었습니다.");
+	        } else {
+	            resultMap.put("result", "fail");
+	            resultMap.put("message", "보완요청 등록에 실패했습니다.");
+	        }
+
+	    } catch (Exception e) {
+	        log.error("입고 보완요청 등록 중 오류 발생. wirNo={}", wirNo, e);
+
+	        resultMap.put("result", "error");
+	        resultMap.put("message", "서버 처리 중 오류가 발생했습니다.");
+	    }
+
+	    return resultMap;
+	}
+	
+	
+}

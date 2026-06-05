@@ -1,0 +1,334 @@
+/* Inbound specific styles */
+.inbound-form {
+  background: #fff;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.inbound-form h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.inbound-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.inbound-item:last-child {
+  border-bottom: none;
+}
+
+.inbound-item label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.inbound-item input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
+}
+
+/* 필터 영역 정렬 */
+.filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.filter-bar .form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-bar input,
+.filter-bar select {
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.filter-bar .search-wrap {
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.filter-bar .btn {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 테이블 공통 - 선 최소화 */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  padding: 12px 16px;
+  text-align: center;
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.data-table td {
+  font-size: 13px;
+  color: #1e293b;
+  padding: 14px 16px;
+  text-align: center;
+  border: none;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.data-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.data-table .td-id {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* 상태 / 유형 뱃지 */
+.badge {
+  display: inline-block;
+  padding: 5px 11px;
+  font-size: 11px;
+  border-radius: 999px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-urgent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-wait {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+/* 입고 상세 모달 */
+#inboundModal .modal-box {
+  width: 860px !important;
+  border: none !important;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#inboundModal .modal-head {
+  background: #0f172a !important;
+  padding: 20px 28px !important;
+  flex-shrink: 0;
+}
+
+#inboundModal form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+#inboundModal form > div[style*="overflow-y"] {
+  flex: 1;
+  min-height: 0;
+  max-height: none !important;
+  overflow-y: auto !important;
+}
+
+#inboundModal .modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+}
+
+#inboundModal .modal-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.3px;
+}
+
+#inboundModal .modal-close-btn {
+  color: #cbd5e1;
+}
+
+#inboundModal h4 {
+  margin-top: 8px;
+  margin-bottom: 14px !important;
+  font-size: 15px !important;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+#inboundModal .label {
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+#inboundModal .value {
+  padding: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+#inboundModal input,
+#inboundModal select,
+#inboundModal textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+#inboundModal input[readonly],
+#inboundModal textarea[readonly] {
+  background: #f8fafc;
+  color: #334155;
+}
+
+#inboundModal textarea {
+  resize: vertical;
+}
+
+/* 모달 안 테이블도 같은 라인형 스타일 */
+#inboundModal .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: none;
+  margin-bottom: 20px;
+}
+
+#inboundModal .data-table th {
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 12px 16px;
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+#inboundModal .data-table td {
+  padding: 12px 16px;
+  border: none;
+  border-bottom: 1px solid #eef2f7;
+  text-align: center;
+  font-size: 13px;
+  color: #334155;
+}
+
+#goodsTableBody td {
+  padding: 12px 16px;
+  font-size: 13px;
+  border: none;
+  border-bottom: 1px solid #eef2f7;
+}
+
+#inboundModal .modal-footer {
+  padding: 14px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+
+  flex-shrink: 0;
+}
+
+#inboundModal .modal-footer button {
+  border: none;
+  border-radius: 4px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#inboundModal .modal-footer button:first-child {
+  background: #e5e7eb;
+  color: #334155;
+}
+
+.readonly-location-box {
+    min-width: 165px;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    border-radius: 6px;
+    line-height: 1.3;
+    box-sizing: border-box;
+}
+
+.readonly-location-main {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+}
+
+.readonly-location-sub {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.readonly-location-box.current {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.readonly-location-box.current .readonly-location-sub {
+    color: #15803d;
+}
+
+.readonly-location-box.released {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+}
+
+.readonly-location-box.released .readonly-location-sub {
+    color: #64748b;
+}
+
+.readonly-location-box.empty {
+    border-color: #fed7aa;
+    background: #fff7ed;
+}
+
+.readonly-location-box.empty .readonly-location-sub {
+    color: #c2410c;
+}

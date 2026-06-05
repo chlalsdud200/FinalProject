@@ -1,0 +1,48 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%
+    request.setAttribute("docsRole", "WAREHOUSE_MANAGER");
+%>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="ctx-path" content="${pageContext.request.contextPath}">
+  <meta name="_csrf" content="${_csrf.token}">
+  <meta name="_csrf_header" content="${_csrf.headerName}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>&#47928;&#49436;&#54632; - TACS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet"/>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/warehouse/base.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/warehouse/sidebar.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/warehouse/topbar.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/common/docs.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>window.contextPath = '${pageContext.request.contextPath}';</script>
+</head>
+<body>
+<div class="app" id="app">
+    <jsp:include page="/WEB-INF/views/warehouse/common/sidebar.jsp" />
+    <div class="main-wrap">
+        <jsp:include page="/WEB-INF/views/warehouse/common/header.jsp" />
+        <div class="content">
+            <c:choose>
+                <c:when test="${activeSub eq 'trash'}">
+                    <jsp:include page="/WEB-INF/views/common/trashContent.jsp" />
+                </c:when>
+                <c:otherwise>
+                    <jsp:include page="/WEB-INF/views/common/docsContent.jsp" />
+                </c:otherwise>
+            </c:choose>
+        </div>
+        <jsp:include page="/WEB-INF/views/warehouse/common/footer.jsp" />
+    </div>
+</div>
+<script src="${pageContext.request.contextPath}/resources/js/warehouse/common.js"></script>
+<script src="${pageContext.request.contextPath}/resources/js/warehouse/navigation.js"></script>
+<script src="${pageContext.request.contextPath}/resources/js/common/docs.js"></script>
+</body>
+</html>

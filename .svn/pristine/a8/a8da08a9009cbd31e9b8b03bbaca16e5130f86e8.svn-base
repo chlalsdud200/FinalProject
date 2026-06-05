@@ -1,0 +1,12 @@
+package kr.or.tacs.owner.dashboard.mapper;
+
+import kr.or.tacs.dto.owner.OwnerDashboardDTO;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
+
+@Mapper
+public interface IDashboardMapper {
+
+    public List<OwnerDashboardDTO> list();
+}

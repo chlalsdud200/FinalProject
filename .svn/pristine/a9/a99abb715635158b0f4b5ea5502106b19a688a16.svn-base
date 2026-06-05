@@ -1,0 +1,269 @@
+// reportReceiptList.js - 신고접수목록 전용
+(function () {
+  function $(selector) {
+    return document.querySelector(selector);
+  }
+
+  function $all(selector) {
+    return document.querySelectorAll(selector);
+  }
+
+  function setTodayRange(days) {
+    var end = new Date();
+    var start = new Date();
+    start.setDate(end.getDate() - days);
+
+    var startInput = $('input[name="startDate"]');
+    var endInput = $('input[name="endDate"]');
+
+    if (startInput) startInput.value = formatDate(start);
+    if (endInput) endInput.value = formatDate(end);
+  }
+
+  function formatDate(date) {
+    var y = date.getFullYear();
+    var m = String(date.getMonth() + 1).padStart(2, '0');
+    var d = String(date.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+
+  function toggleAllRows() {
+    var checkAll = $('#checkAll');
+    var rows = $all('.row-check:not(:disabled)');
+
+    rows.forEach(function (cb) {
+      cb.checked = checkAll.checked;
+    });
+  }
+
+  function moveDetail(reqNo) {
+    if (!reqNo) return;
+    location.href = (window.contextPath || '') + '/officer/basicScreenDetail.do?reqNo=' + encodeURIComponent(reqNo);
+  }
+
+  function openRejectModal(reqNo, declareType) {
+    var modal = $('#rejectModal');
+    var reqInput = $('#rejectReqNo');
+    var reason = $('#rejectReason');
+	var typeInput = $('#rejectDeclareType');
+
+	if (typeInput) typeInput.value = declareType || '';
+    if (reqInput) reqInput.value = reqNo;
+    if (reason) reason.value = '';
+    if (modal) modal.classList.add('open');
+  }
+
+  function closeRejectModal() {
+    var modal = $('#rejectModal');
+    if (modal) modal.classList.remove('open');
+  }
+
+  /*
+  function submitReject() {
+    var reqNo = $('#rejectReqNo') ? $('#rejectReqNo').value : '';
+    var reason = $('#rejectReason') ? $('#rejectReason').value.trim() : '';
+
+    if (!reason) {
+      alert('반려사유를 입력하세요.');
+      return;
+    }
+
+    alert(reqNo + ' 반려 처리되었습니다.');
+    closeRejectModal();
+
+    // 실제 연동 시 controller로 변경
+    // location.href = (window.contextPath || '') + '/officer/receiptReject.do?reqNo=' + encodeURIComponent(reqNo)
+    //               + '&reason=' + encodeURIComponent(reason);
+  }
+  
+  		*/
+
+  function openRejectReasonModal(reqNo, reason, date, type) {
+    var modal = $('#rejectReasonModal');
+    var reqInput = $('#rejectReasonReqNo');
+    var dateInput = $('#rejectReasonDate');
+    var typeInput = $('#rejectReasonType');
+    var reasonView = $('#rejectReasonView');
+
+    if (reqInput) reqInput.value = reqNo || '';
+    if (dateInput) dateInput.value = date || '-';
+    if (typeInput) typeInput.value = type || '-';
+    if (reasonView) reasonView.value = reason || '등록된 반려사유가 없습니다.';
+    if (modal) modal.classList.add('open');
+  }
+
+  function closeRejectReasonModal() {
+    var modal = $('#rejectReasonModal');
+    if (modal) modal.classList.remove('open');
+  }
+
+  function receiveOne(reqNo) {
+    if (!confirm(reqNo + ' 신고를 접수 처리하시겠습니까?')) return;
+
+    alert(reqNo + ' 접수 처리되었습니다.');
+
+    // 실제 연동 시 controller로 변경
+    // location.href = (window.contextPath || '') + '/officer/receiptAccept.do?reqNo=' + encodeURIComponent(reqNo);
+  }
+
+  function receiveBatch() {
+    var checkedList = document.querySelectorAll(".row-check:checked");
+
+    if (checkedList.length === 0) {
+      alert("접수 처리할 신고건을 선택하세요.");
+      return;
+    }
+
+    if (!confirm(checkedList.length + "건을 일괄 접수 처리하시겠습니까?")) {
+      return;
+    }
+
+    var form = document.getElementById("batchAcceptForm");
+
+    checkedList.forEach(function (check) {
+      var reqInput = document.createElement("input");
+      reqInput.type = "hidden";
+      reqInput.name = "reqNoList";
+      reqInput.value = check.value;
+      form.appendChild(reqInput);
+
+      var typeInput = document.createElement("input");
+      typeInput.type = "hidden";
+      typeInput.name = "declareTypeList";
+      typeInput.value = check.dataset.declareType;
+      form.appendChild(typeInput);
+    });
+
+    form.submit();
+  }
+
+  function resetForm() {
+    var form = $('#receiptSearchForm');
+    if (form) form.reset();
+  }
+
+  function bindEvents() {
+    var checkAll = $('#checkAll');
+    if (checkAll) checkAll.addEventListener('change', toggleAllRows);
+
+    var resetBtn = $('#btnReset');
+    if (resetBtn) resetBtn.addEventListener('click', resetForm);
+
+    var batchBtn = $('#btnBatchReceive');
+    if (batchBtn) batchBtn.addEventListener('click', receiveBatch);
+
+    $all('.btn-quick').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var range = Number(btn.dataset.range || 7);
+        setTodayRange(range);
+      });
+    });
+
+    $all('.clickable-row').forEach(function (row) {
+      row.addEventListener('click', function () {
+        moveDetail(row.dataset.reqNo);
+      });
+    });
+
+    $all('.btn-receive').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        receiveOne(btn.dataset.reqNo);
+      });
+    });
+
+	$all('.btn-reject').forEach(function (btn) {
+	  btn.addEventListener('click', function (e) {
+	    e.stopPropagation();
+
+	    openRejectModal(
+	      btn.dataset.reqNo,
+	      btn.dataset.declareType
+	    );
+	  });
+	});
+
+    $all('.btn-detail').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        moveDetail(btn.dataset.reqNo);
+      });
+    });
+
+    $all('.btn-reject-reason').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openRejectReasonModal(
+          btn.dataset.reqNo,
+          btn.dataset.reason,
+          btn.dataset.date,
+          btn.dataset.type
+        );
+      });
+    });
+
+    var closeBtn = $('#btnRejectClose');
+    var cancelBtn = $('#btnRejectCancel');
+   
+    if (cancelBtn) cancelBtn.addEventListener('click', closeRejectModal);
+
+    var reasonCloseBtn = $('#btnRejectReasonClose');
+    var reasonCancelBtn = $('#btnRejectReasonCancel');
+
+    if (reasonCloseBtn) reasonCloseBtn.addEventListener('click', closeRejectReasonModal);
+    if (reasonCancelBtn) reasonCancelBtn.addEventListener('click', closeRejectReasonModal);
+  }
+
+  document.addEventListener('DOMContentLoaded', bindEvents);
+})();
+/* ===== 기본접수목록 모달 함수 ===== */
+
+function openRejectModal(reqNo, declareType) {
+    document.getElementById("rejectReqNo").value = reqNo;
+    document.getElementById("rejectDeclareType").value = declareType;
+    document.getElementById("rejectReason").value = "";
+
+    const modal = document.getElementById("rejectModal");
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+}
+
+function closeRejectModal() {
+    const modal = document.getElementById("rejectModal");
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function openRejectReason(reqNo) {
+    document.getElementById("reasonText").innerText =
+        "반려사유 컬럼 연결 전입니다. 신고번호: " + reqNo;
+
+    const modal = document.getElementById("reasonModal");
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+}
+
+function closeReasonModal() {
+    const modal = document.getElementById("reasonModal");
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const btnRejectClose = document.getElementById("btnRejectClose");
+    const btnRejectCancel = document.getElementById("btnRejectCancel");
+    const btnReasonClose = document.getElementById("btnReasonClose");
+
+    if (btnRejectClose) {
+        btnRejectClose.addEventListener("click", closeRejectModal);
+    }
+
+    if (btnRejectCancel) {
+        btnRejectCancel.addEventListener("click", closeRejectModal);
+    }
+
+    if (btnReasonClose) {
+        btnReasonClose.addEventListener("click", closeReasonModal);
+    }
+});

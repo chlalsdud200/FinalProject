@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.owner.transport.mapper.ITransportContractMapper">
+
+    <select id="selectTrcSeq">
+        SELECT SEQ_TRAN_RCP_TRC_NO.NEXTVAL
+        FROM DUAL
+    </select>
+
+    <select id="selectOwnerInfo" parameterType="String" resultType="kr.or.tacs.vo.OwnerVO">
+        SELECT
+            owr_id,
+            owr_password,
+            owr_ty_cd,
+            owr_nm,
+            owr_bizrno,
+            owr_ident_no,
+            owr_cstm_idf_no,
+            owr_email,
+            owr_telno,
+            owr_zip,
+            owr_adres,
+            owr_detail_adres,
+            owr_use_yn,
+            owr_regist_dt,
+            owr_updt_dt,
+            privacy_agree_yn,
+            owr_corp_reg_no
+        FROM owner
+        WHERE owr_id = #{owrId}
+    </select>
+
+    <insert id="insertTranReq" parameterType="kr.or.tacs.dto.owner.OwnerTranRequestDTO">
+        INSERT INTO TRAN_RCP (
+                   trc_no
+                 , trc_tm_no
+                 , trc_owr_id
+                 , trc_tfg_no
+                 , trc_se_cd
+                 , trc_rqst_cn
+                 , trc_status_cd
+                 , trc_rqst_dt
+        ) VALUES (
+                   #{trcNo}
+                 , #{trcTmNo}
+                 , #{trcOwrId}
+                 , #{trcTfgNo}
+                 , #{trcSeCd}
+                 , #{trcRqstCn}
+                 , #{trcStatusCd}
+                 , SYSDATE
+                 )
+    </insert>
+
+    <select id="selectTranManagerList">
+        SELECT tm_no,
+            tm_id,
+            tm_password,
+            tm_cp_nm,
+            tm_cp_telno,
+            tm_mn_cd,
+            tm_name,
+            tm_use_yn
+        FROM transport_manager
+    </select>
+
+</mapper>

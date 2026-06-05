@@ -1,0 +1,162 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="mp" value="${requestScope.menuPermissions}" />
+<c:if test="${menuPermissionEnabled eq true}">
+<style>
+<c:if test="${mp['/broker/dashboard.do'].readYn ne 'Y'}">.aside a[href$="/broker/dashboard.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/clients.do'].readYn ne 'Y'}">.aside a[href$="/broker/clients.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/declare/imp.do'].readYn ne 'Y'}">.aside a[href$="/broker/declare/imp.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/declare/exp.do'].readYn ne 'Y'}">.aside a[href$="/broker/declare/exp.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/declare/imp.do'].readYn ne 'Y' and mp['/broker/declare/exp.do'].readYn ne 'Y'}">.aside .nav-acc-wrap:has(a[href$="/broker/declare/imp.do"]){display:none!important;}</c:if>
+<c:if test="${mp['/broker/status/search.do'].readYn ne 'Y'}">.aside a[href$="/broker/status/search.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/status/tax.do'].readYn ne 'Y'}">.aside a[href$="/broker/status/tax.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/status/cert.do'].readYn ne 'Y'}">.aside a[href$="/broker/status/cert.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/status/search.do'].readYn ne 'Y' and mp['/broker/status/tax.do'].readYn ne 'Y' and mp['/broker/status/cert.do'].readYn ne 'Y'}">.aside .nav-acc-wrap:has(a[href$="/broker/status/search.do"]){display:none!important;}</c:if>
+<c:if test="${mp['/broker/info/customs-code.do'].readYn ne 'Y'}">.aside a[href$="/broker/info/customs-code.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/info/standard-name.do'].readYn ne 'Y'}">.aside a[href$="/broker/info/standard-name.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/info/tariff-rate.do'].readYn ne 'Y'}">.aside a[href$="/broker/info/tariff-rate.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/info/item-class.do'].readYn ne 'Y'}">.aside a[href$="/broker/info/item-class.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/info/customs-code.do'].readYn ne 'Y' and mp['/broker/info/standard-name.do'].readYn ne 'Y' and mp['/broker/info/tariff-rate.do'].readYn ne 'Y' and mp['/broker/info/item-class.do'].readYn ne 'Y'}">.aside .nav-acc-wrap:has(a[href$="/broker/info/customs-code.do"]){display:none!important;}</c:if>
+<c:if test="${mp['/broker/quarantine/result.do'].readYn ne 'Y'}">.aside a[href$="/broker/quarantine/result.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/quarantine/import.do'].readYn ne 'Y'}">.aside a[href$="/broker/quarantine/import.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/quarantine/export.do'].readYn ne 'Y'}">.aside a[href$="/broker/quarantine/export.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/quarantine/result.do'].readYn ne 'Y' and mp['/broker/quarantine/import.do'].readYn ne 'Y' and mp['/broker/quarantine/export.do'].readYn ne 'Y'}">.aside .nav-acc-wrap:has(a[href$="/broker/quarantine/result.do"]){display:none!important;}</c:if>
+<c:if test="${mp['/broker/docs.do'].readYn ne 'Y'}">.aside a[href$="/broker/docs.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/docs/trash.do'].readYn ne 'Y'}">.aside a[href$="/broker/docs/trash.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/docs.do'].readYn ne 'Y' and mp['/broker/docs/trash.do'].readYn ne 'Y'}">.aside .nav-acc-wrap:has(a[href$="/broker/docs.do"]){display:none!important;}</c:if>
+<c:if test="${mp['/broker/mypage.do?tab=profile'].readYn ne 'Y'}">.aside a[href*="/broker/mypage.do?tab=profile"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/mypage.do?tab=alarm'].readYn ne 'Y'}">.aside a[href*="/broker/mypage.do?tab=alarm"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/mypage.do?tab=profile'].readYn ne 'Y' and mp['/broker/mypage.do?tab=alarm'].readYn ne 'Y'}">.aside .nav-acc-wrap:has(a[href*="/broker/mypage.do?tab=profile"]){display:none!important;}</c:if>
+<c:if test="${mp['/broker/community/notice.do'].readYn ne 'Y'}">.aside a[href$="/broker/community/notice.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/community/download.do'].readYn ne 'Y'}">.aside a[href$="/broker/community/download.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/community/cs.do'].readYn ne 'Y'}">.aside a[href$="/broker/community/cs.do"]{display:none!important;}</c:if>
+<c:if test="${mp['/broker/community/notice.do'].readYn ne 'Y' and mp['/broker/community/download.do'].readYn ne 'Y' and mp['/broker/community/cs.do'].readYn ne 'Y'}">.aside .nav-acc-wrap:has(a[href$="/broker/community/notice.do"]){display:none!important;}</c:if>
+</style>
+</c:if>
+<aside class="aside">
+  <div class="logo-area">
+    <div class="logo-row">
+      <div class="logo-icon"><span class="material-symbols-outlined">account_balance</span></div>
+      <div class="logo-text">
+        <h1>관세사</h1>
+        <p>행정관리 시스템</p>
+      </div>
+    </div>
+  </div>
+
+  <nav>
+    <a class="nav-link ${activeMenu eq 'dash' ? 'active' : ''}" href="${ctx}/broker/dashboard.do" style="text-decoration: none;">
+      <span class="material-symbols-outlined">dashboard</span>대시보드
+    </a>
+
+    <a class="nav-link ${activeMenu eq 'clients' ? 'active' : ''}" href="${ctx}/broker/clients.do" style="text-decoration: none;">
+      <span class="material-symbols-outlined">group</span>화주 관리
+    </a>
+
+   <%-- 신고서 작성 --%>
+	<div class="nav-acc-wrap ${activeMenu eq 'declare' ? 'open' : ''}">
+	  <button type="button" class="nav-acc-head" onclick="toggleAcc(this)" data-acc="/brokerdeclare" >
+	    <span class="material-symbols-outlined">edit_note</span>
+	    <span class="nav-acc-title">신고서 작성</span>
+	    <span class="material-symbols-outlined nav-acc-arrow">expand_more</span>
+	  </button>
+	  <div class="nav-acc-body">
+	    <a class="nav-sub ${activeMenu eq 'declare' && activeSub eq 'imp' ? 'active' : ''}" href="${ctx}/broker/declare/imp.do" style="text-decoration: none;">수입신고서</a>
+	    <a class="nav-sub ${activeMenu eq 'declare' && activeSub eq 'exp' ? 'active' : ''}" href="${ctx}/broker/declare/exp.do" style="text-decoration: none;">수출신고서</a>
+	  </div>
+	</div>
+
+    <%-- 처리현황 --%>
+    <div class="nav-acc-wrap ${activeMenu eq 'status' ? 'open' : ''}">
+      <button type="button" class="nav-acc-head" onclick="toggleAcc(this)" data-acc="status">
+        <span class="material-symbols-outlined">fact_check</span>
+        <span class="nav-acc-title">처리현황</span>
+        <span class="material-symbols-outlined nav-acc-arrow">expand_more</span>
+      </button>
+      <div class="nav-acc-body">
+        <a class="nav-sub ${activeMenu eq 'status' && activeSub eq 'search' ? 'active' : ''}" href="${ctx}/broker/status/search.do" style="text-decoration: none;">통합조회</a>
+        <a class="nav-sub ${activeMenu eq 'status' && activeSub eq 'tax' ? 'active' : ''}" href="${ctx}/broker/status/tax.do" style="text-decoration: none;">세금납부관리</a>
+        <a class="nav-sub ${activeMenu eq 'status' && activeSub eq 'cert' ? 'active' : ''}" href="${ctx}/broker/status/cert.do" style="text-decoration: none;">신고필증 관리</a>
+      </div>
+    </div>
+
+    <%-- 정보조회 --%>
+    <div class="nav-acc-wrap ${activeMenu eq 'info' ? 'open' : ''}">
+      <button type="button" class="nav-acc-head" onclick="toggleAcc(this)" data-acc="info">
+        <span class="material-symbols-outlined">search</span>
+        <span class="nav-acc-title">정보조회</span>
+        <span class="material-symbols-outlined nav-acc-arrow">expand_more</span>
+      </button>
+      <div class="nav-acc-body">
+	  <a class="nav-sub ${activeMenu eq 'info' && activeSub eq 'customs-code' ? 'active' : ''}" href="${ctx}/broker/info/customs-code.do" style="text-decoration: none;">통관고유부호</a>
+	  <a class="nav-sub ${activeMenu eq 'info' && activeSub eq 'standard-name' ? 'active' : ''}" href="${ctx}/broker/info/standard-name.do" style="text-decoration: none;">표준품명규격코드</a>
+	  <a class="nav-sub ${activeMenu eq 'info' && activeSub eq 'tariff-rate' ? 'active' : ''}" href="${ctx}/broker/info/tariff-rate.do" style="text-decoration: none;">세율세번조회</a>
+	  <a class="nav-sub ${activeMenu eq 'info' && activeSub eq 'item-class' ? 'active' : ''}" href="${ctx}/broker/info/item-class.do" style="text-decoration: none;">품목분류</a>
+	</div>
+    </div>
+
+    <%-- 검역 관리 --%>
+    <div class="nav-acc-wrap ${activeMenu eq 'quarantine' ? 'open' : ''}">
+      <button type="button" class="nav-acc-head" onclick="toggleAcc(this)" data-acc="quarantine">
+        <span class="material-symbols-outlined">health_and_safety</span>
+        <span class="nav-acc-title">검역 관리</span>
+        <span class="material-symbols-outlined nav-acc-arrow">expand_more</span>
+      </button>
+      <div class="nav-acc-body">
+        <a class="nav-sub ${activeMenu eq 'quarantine' && activeSub eq 'result' ? 'active' : ''}" href="${ctx}/broker/quarantine/result.do" style="text-decoration: none;">검역결과조회</a>
+        <a class="nav-sub ${activeMenu eq 'quarantine' && activeSub eq 'import' ? 'active' : ''}" href="${ctx}/broker/quarantine/import.do" style="text-decoration: none;">수입검역신청</a>
+        <a class="nav-sub ${activeMenu eq 'quarantine' && activeSub eq 'export' ? 'active' : ''}" href="${ctx}/broker/quarantine/export.do" style="text-decoration: none;">수출검역신청</a>
+      </div>
+    </div>
+
+    <%-- 문서함 --%>
+    <div class="nav-acc-wrap ${activeMenu eq 'docs' ? 'open' : ''}">
+      <button type="button" class="nav-acc-head" onclick="location.href='${ctx}/broker/docs.do'" data-acc="docs">
+        <span class="material-symbols-outlined">folder</span>
+        <span class="nav-acc-title">문서함</span>
+        <span class="material-symbols-outlined nav-acc-arrow">expand_more</span>
+      </button>
+      <div class="nav-acc-body">
+        <a class="nav-sub ${activeMenu eq 'docs' && (activeSub eq 'myDocs' || empty activeSub) ? 'active' : ''}" href="${ctx}/broker/docs.do" style="text-decoration: none;">내문서</a>
+        <a class="nav-sub ${activeMenu eq 'docs' && activeSub eq 'trash' ? 'active' : ''}" href="${ctx}/broker/docs/trash.do" style="text-decoration: none;">휴지통</a>
+      </div>
+    </div>
+  </nav>
+
+  <%-- 마이페이지 --%>
+  <div class="nav-acc-wrap ${activeMenu eq 'mypage' ? 'open' : ''}">
+    <button type="button" class="nav-acc-head" onclick="toggleAcc(this)" data-acc="mypage">
+      <span class="material-symbols-outlined">person</span>
+      <span class="nav-acc-title">마이페이지</span>
+      <span class="material-symbols-outlined nav-acc-arrow">expand_more</span>
+    </button>
+    <div class="nav-acc-body">
+      <a class="nav-sub ${activeMenu eq 'mypage' && activeSub eq 'profile' ? 'active' : ''}" href="${ctx}/broker/mypage.do?tab=profile" style="text-decoration: none;">회원정보 수정</a>
+      <a class="nav-sub ${activeMenu eq 'mypage' && activeSub eq 'alarm' ? 'active' : ''}" href="${ctx}/broker/mypage.do?tab=alarm" style="text-decoration: none;">알림 수신 설정</a>
+    </div>
+  </div>
+
+  <%-- 커뮤니티 --%>
+  <div class="nav-acc-wrap ${activeMenu eq 'community' ? 'open' : ''}">
+    <button type="button" class="nav-acc-head" onclick="toggleAcc(this)" data-acc="community">
+      <span class="material-symbols-outlined">forum</span>
+      <span class="nav-acc-title">커뮤니티</span>
+      <span class="material-symbols-outlined nav-acc-arrow">expand_more</span>
+    </button>
+    <div class="nav-acc-body">
+      <a class="nav-sub ${activeMenu eq 'community' && activeSub eq 'notice' ? 'active' : ''}" data-community-tab="notice" href="${ctx}/broker/community/notice.do" onclick="event.preventDefault(); if (typeof switchBrokerCommunityTab === 'function') switchBrokerCommunityTab('notice'); else location.href=this.href;" style="text-decoration: none;">공지사항</a>
+      <a class="nav-sub ${activeMenu eq 'community' && activeSub eq 'download' ? 'active' : ''}" data-community-tab="download" href="${ctx}/broker/community/download.do" onclick="event.preventDefault(); if (typeof switchBrokerCommunityTab === 'function') switchBrokerCommunityTab('download'); else location.href=this.href;" style="text-decoration: none;">자료실</a>
+      <a class="nav-sub ${activeMenu eq 'community' && activeSub eq 'cs' ? 'active' : ''}" data-community-tab="cs" href="${ctx}/broker/community/cs.do" onclick="event.preventDefault(); if (typeof switchBrokerCommunityTab === 'function') switchBrokerCommunityTab('cs'); else location.href=this.href;" style="text-decoration: none;">고객센터</a>
+    </div>
+  </div>
+
+  <div class="nav-bottom">
+    <form action="${ctx}/logout" method="post" id="logoutForm" style="display:none;">
+        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+    </form>
+    <a class="nav-link" href="javascript:void(0)" onclick="document.getElementById('logoutForm').submit();" style="text-decoration: none;">
+      <span class="material-symbols-outlined">logout</span>로그아웃
+    </a>
+  </div>
+</aside>

@@ -1,0 +1,195 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%
+    request.setAttribute("activeMenu", "transport");
+    request.setAttribute("activeGroup", "transport");
+    request.setAttribute("activeSub", "freight");
+%>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="ctx-path" content="${pageContext.request.contextPath}">
+    <title>TACS 운임 정산 상세</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet">
+
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/owner.css">
+</head>
+<body>
+<div class="app" id="app">
+    <%@ include file="/WEB-INF/views/owner/sidebar.jsp" %>
+
+    <div class="main-wrap">
+        <%@ include file="/WEB-INF/views/common/header.jsp" %>
+
+        <main class="content">
+            <div class="page active" id="pg-transport">
+                <div class="page-title-row">
+                    <h2>운송</h2>
+                </div>
+
+                <%@ include file="/WEB-INF/views/owner/transport/fragments/transportTabs.jsp" %>
+
+                <div id="trans-freight-detail">
+
+                    <div class="freight-detail-head">
+                        <a class="btn btn-secondary freight-back-btn"
+                           href="${pageContext.request.contextPath}/owner/transport/freight/list.do">
+                            <span class="material-symbols-outlined freight-back-icon">arrow_back</span>
+                            목록
+                        </a>
+
+                        <div>
+                            <div class="freight-detail-title">운임 정산 상세</div>
+                            <div class="freight-detail-sub">청구 내역과 납부 상태를 확인합니다.</div>
+                        </div>
+                    </div>
+
+                    <div class="card-section freight-detail-card">
+                        <div class="freight-detail-top">
+                            <div>
+                                <div class="freight-detail-label">정산번호</div>
+                                <div class="freight-detail-no">${freight.tcsNo}</div>
+                                <div class="freight-detail-desc">
+                                    운송의뢰번호 ${freight.tcsTrcNo}
+                                </div>
+                            </div>
+
+                            <div class="freight-detail-status">
+                                <c:choose>
+                                    <c:when test="${freight.tcsStlStatusCd eq 'TRC_STL_PAID'}">
+                                        <span class="doc-status ok">납부완료</span>
+                                    </c:when>
+                                    <c:when test="${freight.tcsStlStatusCd eq 'TRC_STL_REQ'}">
+                                        <span class="doc-status wait">확인 대기</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="doc-status none">청구서 검토</span>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </div>
+
+                        <div class="freight-summary-grid">
+                            <div class="freight-summary-item">
+                                <div class="freight-summary-label">화주 ID</div>
+                                <div class="freight-summary-value">${freight.tcsOwrId}</div>
+                            </div>
+
+                            <div class="freight-summary-item">
+                                <div class="freight-summary-label">물품그룹번호</div>
+                                <div class="freight-summary-value">${freight.tcsGgNo}</div>
+                            </div>
+
+                            <div class="freight-summary-item">
+                                <div class="freight-summary-label">M B/L 번호</div>
+                                <div class="freight-summary-value">
+                                    <c:choose>
+                                        <c:when test="${not empty freight.tcsMblNo}">
+                                            ${freight.tcsMblNo}
+                                        </c:when>
+                                        <c:otherwise>-</c:otherwise>
+                                    </c:choose>
+                                </div>
+                            </div>
+
+                            <div class="freight-summary-item">
+                                <div class="freight-summary-label">H B/L 번호</div>
+                                <div class="freight-summary-value">
+                                    <c:choose>
+                                        <c:when test="${not empty freight.tcsHblNo}">
+                                            ${freight.tcsHblNo}
+                                        </c:when>
+                                        <c:otherwise>-</c:otherwise>
+                                    </c:choose>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section freight-detail-card">
+                        <div class="freight-section-title">청구 금액 상세</div>
+
+                        <div class="freight-bill-grid">
+                            <div class="freight-bill-row">
+                                <div class="freight-bill-label">운임 금액</div>
+                                <div class="freight-bill-value">
+                                    <fmt:formatNumber value="${freight.tcsFrgtAmt}" pattern="#,##0"/>
+                                </div>
+                            </div>
+
+                            <div class="freight-bill-row">
+                                <div class="freight-bill-label">창고 금액</div>
+                                <div class="freight-bill-value">
+                                    <fmt:formatNumber value="${freight.tcsWhAmt}" pattern="#,##0"/>
+                                </div>
+                            </div>
+
+                            <div class="freight-bill-row total">
+                                <div class="freight-bill-label">총 청구금액</div>
+                                <div class="freight-bill-value">
+                                    <fmt:formatNumber value="${freight.tcsTotBillAmt}" pattern="#,##0"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section freight-detail-card">
+                        <div class="freight-section-title">정산 설명</div>
+
+                        <div class="freight-explain-box">
+                            <c:choose>
+                                <c:when test="${not empty freight.tcsStlExpln}">
+                                    ${freight.tcsStlExpln}
+                                </c:when>
+                                <c:otherwise>
+                                    등록된 정산 설명이 없습니다.
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
+                    </div>
+
+                    <div class="freight-action-row">
+                        <c:choose>
+                            <c:when test="${freight.tcsStlStatusCd eq 'TRC_STL_PAID'}">
+                                <a class="btn btn-dark"
+                                   href="${pageContext.request.contextPath}/owner/transport/freight/receipt.do/${freight.tcsNo}">
+                                    영수증 보기
+                                </a>
+                            </c:when>
+
+                            <c:when test="${freight.tcsStlStatusCd eq 'TRC_STL_REQ'}">
+                                <button type="button"
+                                        class="btn btn-dark btn-toss-pay"
+                                        data-tcs-no="${freight.tcsNo}">
+                                    결제하기
+                                </button>
+                            </c:when>
+
+                            <c:when test="${freight.tcsStlStatusCd eq 'TRC_STL_UNPAID'}">
+                                <%-- 미결제 상태는 액션 버튼 없음 --%>
+                            </c:when>
+                        </c:choose>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+
+        <%@ include file="/WEB-INF/views/common/ownerModals.jsp" %>
+        <%@ include file="/WEB-INF/views/common/footer.jsp" %>
+    </div>
+</div>
+
+<%@ include file="/WEB-INF/views/common/ownerScripts.jsp" %>
+<script src="https://js.tosspayments.com/v2/standard"></script>
+<script src="${pageContext.request.contextPath}/resources/js/owner/payment.js"></script>
+
+</body>
+</html>

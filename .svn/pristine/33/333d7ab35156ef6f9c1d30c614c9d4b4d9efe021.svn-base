@@ -1,0 +1,593 @@
+@charset "UTF-8";
+
+.pagination a.page-btn {
+  text-decoration: none;
+}
+
+.pagination span.page-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #fff;
+  color: #4d6172;
+  border: 1px solid #cbd5e1;
+}
+
+.page-info {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #697d8f;
+}
+.pagination a.page-btn {
+  text-decoration: none;
+}
+
+.pagination span.page-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #fff;
+  color: #4d6172;
+  border: 1px solid #cbd5e1;
+}
+
+.page-info {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #697d8f;
+}
+
+/* ===== 통합조회 상세: 란사항 상태 badge ===== */
+.item-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.item-dclr {
+  background: #eef2ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+}
+
+.item-review {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.item-supp-req {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
+
+.item-supp-sub {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.item-acpt {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.item-rej {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.item-unknown {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+/* ===== 통합조회 상세: 처리 칸 ===== */
+.action-muted {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+}
+
+.action-reject {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.item-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: #565e74;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
+.item-action-btn:hover {
+  background: #424a5f;
+  transform: translateY(-1px);
+}
+
+.status-field {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+}
+
+/* ===== 통합조회 페이지네이션 보정 ===== */
+.pagination a.page-btn {
+  text-decoration: none;
+}
+
+.pagination span.page-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #fff;
+  color: #4d6172;
+  border: 1px solid #cbd5e1;
+}
+
+.page-info {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #697d8f;
+}
+
+/* ===== 통합조회 상세: 란사항 상태 badge ===== */
+.item-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.item-dclr {
+  background: #eef2ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+}
+
+.item-review {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.item-supp-req {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
+
+.item-supp-sub {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.item-acpt {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.item-rej {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.item-unknown {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+/* ===== 통합조회 상세: 처리 칸 ===== */
+.action-muted {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+}
+
+.action-reject {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.item-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: #565e74;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
+.item-action-btn:hover {
+  background: #424a5f;
+  transform: translateY(-1px);
+}
+
+.status-field {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+}
+
+/* ===== 통합조회 페이지네이션 보정 ===== */
+.pagination a.page-btn {
+  text-decoration: none;
+}
+
+.pagination span.page-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #fff;
+  color: #4d6172;
+  border: 1px solid #cbd5e1;
+}
+
+.page-info {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #697d8f;
+}
+/* ===== 보완수정: 모델/규격 테이블 input 정리 ===== */
+#supp-mdlspec-table input {
+  width: 100%;
+  height: 32px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #203444;
+  font-size: 12px;
+  font-weight: 500;
+  box-sizing: border-box;
+  outline: none;
+}
+
+#supp-mdlspec-table input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+#supp-mdlspec-table input:focus {
+  border-color: #7b8da8;
+  box-shadow: 0 0 0 2px rgba(86, 94, 116, 0.12);
+}
+
+#supp-mdlspec-table td {
+  vertical-align: middle;
+  padding: 8px 10px;
+}
+
+#supp-mdlspec-table .mini-reject {
+  border: 0;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+#supp-mdlspec-table .mini-reject:hover {
+  background: #fecaca;
+}
+/* ===== 보완수정: a 태그 버튼 밑줄 제거 ===== */
+a.btn,
+a.btn-secondary,
+a.btn-outline,
+a.item-action-btn,
+a.mini {
+  text-decoration: none;
+}
+
+a.btn:hover,
+a.btn-secondary:hover,
+a.btn-outline:hover,
+a.item-action-btn:hover,
+a.mini:hover {
+  text-decoration: none;
+}
+#st-supp-form .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 4px;
+  border: 1px solid #9fb3ca;
+  background: #eef4fb;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+#st-supp-form .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 4px;
+  border: 1px solid #565e74;
+  background: #565e74;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+/* ===== 세금납부 · 화주청구 수수료 계산 상세 모달 ===== */
+#modal-charge-calc.modal-bg {
+  position: fixed;
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+}
+
+#modal-charge-calc .charge-calc-modal {
+  width: 720px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #fff;
+  padding: 0;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
+}
+
+#modal-charge-calc .charge-calc-modal h3 {
+  padding: 18px 22px;
+  border-bottom: 1px solid #e5edf5;
+  margin-bottom: 0;
+}
+
+#modal-charge-calc .charge-calc-body {
+  padding: 20px 22px;
+}
+
+#modal-charge-calc .charge-calc-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #dbe7f1;
+  margin-bottom: 18px;
+}
+
+#modal-charge-calc .calc-label {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+#modal-charge-calc .charge-calc-section {
+  margin-top: 16px;
+}
+
+#modal-charge-calc .charge-calc-section h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #16283a;
+}
+
+#modal-charge-calc .calc-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 1px solid #dbe7f1;
+}
+
+#modal-charge-calc .calc-table th {
+  width: 180px;
+  background: #f5f8fb;
+  color: #334155;
+  text-align: left;
+  font-size: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #dbe7f1;
+}
+
+#modal-charge-calc .calc-table td {
+  font-size: 12px;
+  color: #16283a;
+  padding: 10px 12px;
+  border-bottom: 1px solid #dbe7f1;
+}
+
+#modal-charge-calc .calc-table.result .total-row th,
+#modal-charge-calc .calc-table.result .total-row td {
+  font-size: 14px;
+  font-weight: 900;
+  color: #9f403d;
+  background: #fff7f7;
+}
+
+#modal-charge-calc .charge-calc-formula {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f8fafc;
+  border-left: 4px solid #565e74;
+  font-size: 12px;
+  color: #334155;
+}
+
+#modal-charge-calc .charge-calc-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 22px;
+  border-top: 1px solid #e5edf5;
+}
+/* ===== 신고필증 목록 상태 뱃지 ===== */
+.cert-state-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cert-state-paid {
+  background: #e8f7ef;
+  color: #167348;
+  border: 1px solid #bfe9d0;
+}
+
+.cert-state-unpaid {
+  background: #fff1f2;
+  color: #b42318;
+  border: 1px solid #fecdd3;
+}
+
+.cert-state-partial {
+  background: #fff7ed;
+  color: #b45309;
+  border: 1px solid #fed7aa;
+}
+
+.cert-state-check {
+  background: #eef4ff;
+  color: #365e9d;
+  border: 1px solid #c7d7fe;
+}
+
+.cert-state-issued {
+  background: #eef8ff;
+  color: #245b89;
+  border: 1px solid #bfdbfe;
+}
+
+.cert-state-cancel {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+
+/* ===== 세금납부 · 화주청구상태 pill ===== */
+.charge-state-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 68px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.charge-state-pill .material-symbols-outlined {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.charge-state-unbilled {
+  background: #fff7ed;
+  color: #b45309;
+  border-color: #fed7aa;
+}
+
+.charge-state-billed {
+  background: #eef4ff;
+  color: #365e9d;
+  border-color: #c7d7fe;
+}
+
+.charge-state-paid {
+  background: #ecfdf5;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.charge-state-done {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.charge-state-fail {
+  background: #fef2f2;
+  color: #b42318;
+  border-color: #fecaca;
+}
+
+.charge-state-cancel {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e1;
+}
+
+
+

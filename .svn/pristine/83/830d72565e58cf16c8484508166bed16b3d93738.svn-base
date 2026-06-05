@@ -1,0 +1,761 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.warehouse.inbound.mapper.IInboundMapper">
+
+    <select id="selectInbound"
+        resultType="kr.or.tacs.dto.warehouse.WarehouseWhInRptDTO">
+
+        SELECT
+            A.WIR_NO,
+            WIR_GG_NO,
+            WIR_OWR_ID,
+            WIR_WM_ID,
+            WIR_WZ_NO,
+
+            /*
+                입고일시 표시용
+                기존에는 YYYY-MM-DD라서 일자만 보였음.
+                이제 운송업체가 요청 등록한 일시까지 보이도록 분까지 표시한다.
+            */
+            TO_CHAR(A.WIR_IN_PLAN_DT, 'YYYY-MM-DD HH24:MI') AS WIR_IN_PLAN_DT,
+
+            WIR_STATUS_CD,
+            WIR_WH_REPLY_STATUS_CD,
+            WIR_INVOICE_NO,
+            WIR_INVOICE_YMD,
+            WIR_CARGO_MGMT_NO,
+            WIR_INCO_TERMS_CD,
+            WIR_TRDR_NO,
+            WIR_RQST_CN,
+            WIR_OWR_NM,
+            WIR_IO_SE_CD,
+            TM.TM_ID,
+			TM.TM_CP_NM,
+			TM.TM_NAME,
+			TM.TM_CP_TELNO,
+            (
+                SELECT MAX(WIL.WIL_NO)
+                FROM WAREHOUSE_ITEM WI
+                JOIN WAREHOUSE_ITEM_LOCATION WIL
+                    ON WI.WIL_CL_NO = WIL.WIL_NO
+                WHERE WI.WI_GG_NO = A.WIR_GG_NO
+            ) AS locationCode,
+
+           C.CC_NM AS wirStatusNm,
+		
+
+            (
+                SELECT MIN(GD.GOODS_NAME)
+                FROM CUSTOMS_GOODS CG
+                JOIN GOODS GD ON CG.GOODS_NO = GD.GOODS_NO
+                WHERE CG.GG_NO = A.WIR_GG_NO
+            ) AS firstItemName,
+
+            (
+                SELECT COUNT(*)
+                FROM CUSTOMS_GOODS CG
+                WHERE CG.GG_NO = A.WIR_GG_NO
+            ) AS itemCnt,
+
+            (
+                SELECT SUM(CG.CG_WEIGHT)
+                FROM CUSTOMS_GOODS CG
+                WHERE CG.GG_NO = A.WIR_GG_NO
+            ) AS wirWeight,
+
+            (
+                SELECT SUM(CG.CG_QTY)
+                FROM CUSTOMS_GOODS CG
+                WHERE CG.GG_NO = A.WIR_GG_NO
+            ) AS wirPkgQty
+
+        FROM WH_IN_RPT A
+
+        	LEFT JOIN COM_CODE C
+			    ON A.WIR_STATUS_CD = C.CC_CD
+			   AND C.CC_CCG_ID = 'WH_IN_STATUS'
+			
+			LEFT JOIN TRAN_RCP T
+			    ON (
+			           T.TRC_SE_CD = A.WIR_IO_SE_CD
+			        OR (T.TRC_SE_CD = 'IMPORT' AND A.WIR_IO_SE_CD = 'IMP')
+			        OR (T.TRC_SE_CD = 'EXPORT' AND A.WIR_IO_SE_CD = 'EXP')
+			        OR (T.TRC_SE_CD = 'IMP' AND A.WIR_IO_SE_CD = 'IMPORT')
+			        OR (T.TRC_SE_CD = 'EXP' AND A.WIR_IO_SE_CD = 'EXPORT')
+			    )
+			   AND (
+			          T.TRC_NO = A.WIR_NO
+			       OR T.TRC_TFG_NO = A.WIR_GG_NO
+			   )
+			
+			LEFT JOIN TRANSPORT_MANAGER TM
+			    ON TM.TM_NO = T.TRC_TM_NO
+			
+			WHERE A.WIR_WM_ID = #{wmId}
+
+        ORDER BY A.WIR_IN_PLAN_DT DESC, A.WIR_NO DESC
+
+    </select>
+
+
+    <select id="selectInboundCount" resultType="int">
+
+        SELECT COUNT(*)
+        FROM WH_IN_RPT A
+
+        WHERE 1=1
+          AND A.WIR_WM_ID = #{wmId}
+
+        <!-- 시작일 검색 -->
+        <if test="searchDTO.startDate != null and searchDTO.startDate != ''">
+            AND TRUNC(A.WIR_IN_PLAN_DT) &gt;= TO_DATE(#{searchDTO.startDate}, 'YYYY-MM-DD')
+        </if>
+
+        <!-- 종료일 검색 -->
+        <if test="searchDTO.endDate != null and searchDTO.endDate != ''">
+            AND TRUNC(A.WIR_IN_PLAN_DT) &lt;= TO_DATE(#{searchDTO.endDate}, 'YYYY-MM-DD')
+        </if>
+
+        <!-- 수입/수출 검색 -->
+        <if test="searchDTO.wirIoSeCd != null and searchDTO.wirIoSeCd != ''">
+            AND (
+                   A.WIR_IO_SE_CD = #{searchDTO.wirIoSeCd}
+                OR (#{searchDTO.wirIoSeCd} = 'IMPORT' AND A.WIR_IO_SE_CD = 'IMP')
+                OR (#{searchDTO.wirIoSeCd} = 'EXPORT' AND A.WIR_IO_SE_CD = 'EXP')
+            )
+        </if>
+        
+        <if test="searchDTO.wirStatusCd != null and searchDTO.wirStatusCd != ''">
+            AND A.WIR_STATUS_CD = #{searchDTO.wirStatusCd}
+        </if>
+
+        <!-- 검색어 검색 -->
+        <if test="searchDTO.keyword != null and searchDTO.keyword != ''">
+            <choose>
+                <when test="searchDTO.searchType == 'owrNm'">
+                    AND A.WIR_OWR_NM LIKE '%' || #{searchDTO.keyword} || '%'
+                </when>
+                <when test="searchDTO.searchType == 'invoiceNo'">
+                    AND A.WIR_INVOICE_NO LIKE '%' || #{searchDTO.keyword} || '%'
+                </when>
+                <when test="searchDTO.searchType == 'cargoNo'">
+                    AND A.WIR_CARGO_MGMT_NO LIKE '%' || #{searchDTO.keyword} || '%'
+                </when>
+                <otherwise>
+				    AND (
+				        A.WIR_NO LIKE '%' || #{searchDTO.keyword} || '%'
+				        OR A.WIR_OWR_NM LIKE '%' || #{searchDTO.keyword} || '%'
+				        OR A.WIR_INVOICE_NO LIKE '%' || #{searchDTO.keyword} || '%'
+				        OR A.WIR_CARGO_MGMT_NO LIKE '%' || #{searchDTO.keyword} || '%'
+				    )
+				</otherwise>
+            </choose>
+        </if>
+
+    </select>
+
+
+    <select id="selectInboundList"
+        resultType="kr.or.tacs.dto.warehouse.WarehouseWhInRptDTO">
+
+        SELECT *
+        FROM (
+            SELECT ROWNUM AS rnum, B.*
+            FROM (
+                SELECT
+                    A.WIR_NO,
+                    WIR_GG_NO,
+                    WIR_OWR_ID,
+                    WIR_WM_ID,
+                    WIR_WZ_NO,
+
+                    /*
+                        입고일시 표시용
+                        목록에서도 일자만 아니라 일시까지 보여준다.
+                    */
+                    TO_CHAR(A.WIR_IN_PLAN_DT, 'YYYY-MM-DD HH24:MI') AS WIR_IN_PLAN_DT,
+
+                    WIR_STATUS_CD,
+                    WIR_WH_REPLY_STATUS_CD,
+                    WIR_INVOICE_NO,
+                    WIR_INVOICE_YMD,
+                    WIR_CARGO_MGMT_NO,
+                    WIR_INCO_TERMS_CD,
+                    WIR_TRDR_NO,
+                    WIR_RQST_CN,
+                    WIR_OWR_NM,
+                    WIR_IO_SE_CD,
+                    TM.TM_ID,
+					TM.TM_CP_NM,
+					TM.TM_NAME,
+					TM.TM_CP_TELNO,
+                    (
+                        SELECT MAX(WIL.WIL_NO)
+                        FROM WAREHOUSE_ITEM WI
+                        JOIN WAREHOUSE_ITEM_LOCATION WIL
+                            ON WI.WIL_CL_NO = WIL.WIL_NO
+                        WHERE WI.WI_GG_NO = A.WIR_GG_NO
+                    ) AS locationCode,
+
+                   C.CC_NM AS wirStatusNm,
+
+                    (
+                        SELECT MIN(GD.GOODS_NAME)
+                        FROM CUSTOMS_GOODS CG
+                        JOIN GOODS GD ON CG.GOODS_NO = GD.GOODS_NO
+                        WHERE CG.GG_NO = A.WIR_GG_NO
+                    ) AS firstItemName,
+
+                    (
+                        SELECT COUNT(*)
+                        FROM CUSTOMS_GOODS CG
+                        WHERE CG.GG_NO = A.WIR_GG_NO
+                    ) AS itemCnt,
+
+                    (
+                        SELECT SUM(CG.CG_WEIGHT)
+                        FROM CUSTOMS_GOODS CG
+                        WHERE CG.GG_NO = A.WIR_GG_NO
+                    ) AS wirWeight,
+
+                    (
+                        SELECT SUM(CG.CG_QTY)
+                        FROM CUSTOMS_GOODS CG
+                        WHERE CG.GG_NO = A.WIR_GG_NO
+                    ) AS wirPkgQty
+
+                FROM WH_IN_RPT A
+
+                LEFT JOIN COM_CODE C
+				    ON A.WIR_STATUS_CD = C.CC_CD
+				   AND C.CC_CCG_ID = 'WH_IN_STATUS'
+				
+				LEFT JOIN TRAN_RCP T
+				    ON (
+				           T.TRC_SE_CD = A.WIR_IO_SE_CD
+				        OR (T.TRC_SE_CD = 'IMPORT' AND A.WIR_IO_SE_CD = 'IMP')
+				        OR (T.TRC_SE_CD = 'EXPORT' AND A.WIR_IO_SE_CD = 'EXP')
+				        OR (T.TRC_SE_CD = 'IMP' AND A.WIR_IO_SE_CD = 'IMPORT')
+				        OR (T.TRC_SE_CD = 'EXP' AND A.WIR_IO_SE_CD = 'EXPORT')
+				    )
+				   AND (
+				          T.TRC_NO = A.WIR_NO
+				       OR T.TRC_TFG_NO = A.WIR_GG_NO
+				   )
+				
+				LEFT JOIN TRANSPORT_MANAGER TM
+				    ON TM.TM_NO = T.TRC_TM_NO
+				
+				WHERE 1=1
+				  AND A.WIR_WM_ID = #{wmId}
+
+                <!-- 시작일 검색 -->
+                <if test="searchDTO.startDate != null and searchDTO.startDate != ''">
+                    AND TRUNC(A.WIR_IN_PLAN_DT) &gt;= TO_DATE(#{searchDTO.startDate}, 'YYYY-MM-DD')
+                </if>
+
+                <!-- 종료일 검색 -->
+                <if test="searchDTO.endDate != null and searchDTO.endDate != ''">
+                    AND TRUNC(A.WIR_IN_PLAN_DT) &lt;= TO_DATE(#{searchDTO.endDate}, 'YYYY-MM-DD')
+                </if>
+
+                <!-- 수입/수출 검색 -->
+                <if test="searchDTO.wirIoSeCd != null and searchDTO.wirIoSeCd != ''">
+                    AND (
+                           A.WIR_IO_SE_CD = #{searchDTO.wirIoSeCd}
+                        OR (#{searchDTO.wirIoSeCd} = 'IMPORT' AND A.WIR_IO_SE_CD = 'IMP')
+                        OR (#{searchDTO.wirIoSeCd} = 'EXPORT' AND A.WIR_IO_SE_CD = 'EXP')
+                    )
+                </if>
+                <if test="searchDTO.wirStatusCd != null and searchDTO.wirStatusCd != ''">
+		            AND A.WIR_STATUS_CD = #{searchDTO.wirStatusCd}
+		        </if>
+
+                <!-- 검색어 검색 -->
+                <if test="searchDTO.keyword != null and searchDTO.keyword != ''">
+                    <choose>
+                        <when test="searchDTO.searchType == 'owrNm'">
+                            AND A.WIR_OWR_NM LIKE '%' || #{searchDTO.keyword} || '%'
+                        </when>
+                        <when test="searchDTO.searchType == 'invoiceNo'">
+                            AND A.WIR_INVOICE_NO LIKE '%' || #{searchDTO.keyword} || '%'
+                        </when>
+                        <when test="searchDTO.searchType == 'cargoNo'">
+                            AND A.WIR_CARGO_MGMT_NO LIKE '%' || #{searchDTO.keyword} || '%'
+                        </when>
+                        <otherwise>
+						    AND (
+						        A.WIR_NO LIKE '%' || #{searchDTO.keyword} || '%'
+						        OR A.WIR_OWR_NM LIKE '%' || #{searchDTO.keyword} || '%'
+						        OR A.WIR_INVOICE_NO LIKE '%' || #{searchDTO.keyword} || '%'
+						        OR A.WIR_CARGO_MGMT_NO LIKE '%' || #{searchDTO.keyword} || '%'
+						    )
+						</otherwise>
+                    </choose>
+                </if>
+
+                ORDER BY A.WIR_IN_PLAN_DT DESC, A.WIR_NO DESC
+            ) B
+            WHERE ROWNUM &lt;= #{searchDTO.endRow}
+        )
+        WHERE rnum &gt;= #{searchDTO.startRow}
+
+    </select>
+
+
+    <select id="selectInboundGoodsList"
+        resultType="kr.or.tacs.dto.warehouse.WarehouseGoodsDTO">
+
+        SELECT
+            CG.CG_NO AS "cgNo",
+		    CG.GOODS_NO AS "goodsNo",
+		    GD.GOODS_NAME AS "goodsName",
+		    CG.CG_QTY AS "cgQty",
+		    CG.CG_WEIGHT AS "cgWeight",
+		    CG.CG_ORIGIN AS "cgOrigin",
+		    WIL.WIL_WH_ZONE_NO AS "wzNo",
+		    WI.WIL_CL_NO AS "locationCode",
+		
+		    /*
+		     * Y: 현재 보관중
+		     * N: 반출완료
+		     * NULL: 아직 위치 배정 전
+		     */
+		    WI.WI_USE_YN AS "wiUseYn",
+		
+		    CASE
+		        WHEN WI.WI_USE_YN = 'Y' THEN '현재 보관중'
+		        WHEN WI.WI_USE_YN = 'N' THEN '반출완료 위치'
+		        ELSE '위치 미배정'
+		    END AS "locationStatusNm"
+
+        FROM WH_IN_RPT WIR
+
+        JOIN CUSTOMS_GOODS CG
+          ON WIR.WIR_GG_NO = CG.GG_NO
+
+        JOIN GOODS GD
+          ON CG.GOODS_NO = GD.GOODS_NO
+
+	    LEFT JOIN WAREHOUSE_ITEM WI
+		  ON WI.WI_WIR_NO = WIR.WIR_NO
+		 AND WI.WI_GG_NO = CG.GG_NO
+		 AND WI.WI_CG_NO = CG.CG_NO
+		LEFT JOIN WAREHOUSE_ITEM_LOCATION WIL
+		  ON WIL.WIL_NO = WI.WIL_CL_NO
+
+        WHERE WIR.WIR_NO = #{wirNo}
+          AND WIR.WIR_WM_ID = #{wmId}
+
+        ORDER BY CG.CG_NO
+
+    </select>
+
+
+    <select id="selectEmptyLocations" resultType="map">
+
+    SELECT
+        location_code AS "locationCode",
+        display_code AS "displayCode"
+    FROM (
+        SELECT
+            /*
+                location_code = DB에 실제 저장할 전역 유일 위치번호
+
+                형식:
+                WH-016-A-01-01-01
+
+                의미:
+                WH-016 = 창고번호
+                A      = 구역
+                01     = 줄 번호, 앞뒤 방향
+                01     = 칸 번호, 좌우 방향
+                01     = 층 번호, 위아래 방향
+            */
+            WZ.WZ_WH_NO
+            || '-'
+            || CASE
+                   WHEN WZ.WZ_NM LIKE 'A%' THEN 'A'
+                   WHEN WZ.WZ_NM LIKE 'B%' THEN 'B'
+                   WHEN WZ.WZ_NM LIKE 'C%' THEN 'C'
+                   ELSE 'Z'
+               END
+            || '-'
+            || LPAD(r.row_no, 2, '0')
+            || '-'
+            || LPAD(b.bay_no, 2, '0')
+            || '-'
+            || LPAD(l.level_no, 2, '0') AS location_code,
+
+            /*
+                display_code = 화면 드롭다운에 보여줄 위치번호
+
+                지금은 화면에서도 전체 위치번호를 보여주기로 했으니까
+                location_code와 같은 형식으로 만들었다.
+            */
+            WZ.WZ_WH_NO
+            || '-'
+            || CASE
+                   WHEN WZ.WZ_NM LIKE 'A%' THEN 'A'
+                   WHEN WZ.WZ_NM LIKE 'B%' THEN 'B'
+                   WHEN WZ.WZ_NM LIKE 'C%' THEN 'C'
+                   ELSE 'Z'
+               END
+            || '-'
+            || LPAD(r.row_no, 2, '0')
+            || '-'
+            || LPAD(b.bay_no, 2, '0')
+            || '-'
+            || LPAD(l.level_no, 2, '0') AS display_code
+
+        FROM WAREHOUSE_ZONE WZ
+
+        /*
+            row_no = 줄 번호
+
+            일단 최대 범위인 1번 줄부터 7번 줄까지 만든다.
+            실제 사용 가능 범위는 아래 WHERE 조건에서 구역별로 제한한다.
+
+            A구역: 1~7
+            B구역: 1~3
+            C구역: 1~5
+        */
+        CROSS JOIN (
+            SELECT LEVEL AS row_no
+            FROM DUAL
+            CONNECT BY LEVEL &lt;= 7
+        ) r
+
+        /*
+            bay_no = 칸 번호
+
+            일단 최대 범위인 1번 칸부터 16번 칸까지 만든다.
+            실제 사용 가능 범위는 아래 WHERE 조건에서 구역별로 제한한다.
+
+            A구역: 1~16
+            B구역: 1~9
+            C구역: 1~12
+        */
+        CROSS JOIN (
+            SELECT LEVEL AS bay_no
+            FROM DUAL
+            CONNECT BY LEVEL &lt;= 16
+        ) b
+
+        /*
+            level_no = 층 번호
+
+            일단 최대 범위인 1층부터 4층까지 만든다.
+            실제 사용 가능 범위는 아래 WHERE 조건에서 구역별로 제한한다.
+
+            A구역: 1~4
+            B구역: 1~3
+            C구역: 1~4
+        */
+        CROSS JOIN (
+            SELECT LEVEL AS level_no
+            FROM DUAL
+            CONNECT BY LEVEL &lt;= 4
+        ) l
+
+        WHERE WZ.WZ_NO = #{zone}
+          AND WZ.WM_ID = #{wmId}
+
+          /*
+              React 3D 랙 구조 기준으로 구역별 위치 범위를 제한한다.
+
+              A구역: row 1~7, bay 1~16, level 1~4
+              B구역: row 1~3, bay 1~9,  level 1~3
+              C구역: row 1~5, bay 1~12, level 1~4
+
+              이 조건이 없으면 B구역에서도 WH-016-B-01-05-04 같은
+              실제 3D 랙에 없는 위치가 드롭다운 후보로 내려간다.
+          */
+          AND r.row_no &lt;= CASE
+              WHEN WZ.WZ_NM LIKE 'A%' THEN 7
+              WHEN WZ.WZ_NM LIKE 'B%' THEN 3
+              WHEN WZ.WZ_NM LIKE 'C%' THEN 5
+              ELSE 0
+          END
+
+          AND b.bay_no &lt;= CASE
+              WHEN WZ.WZ_NM LIKE 'A%' THEN 16
+              WHEN WZ.WZ_NM LIKE 'B%' THEN 9
+              WHEN WZ.WZ_NM LIKE 'C%' THEN 12
+              ELSE 0
+          END
+
+          AND l.level_no &lt;= CASE
+              WHEN WZ.WZ_NM LIKE 'A%' THEN 4
+              WHEN WZ.WZ_NM LIKE 'B%' THEN 3
+              WHEN WZ.WZ_NM LIKE 'C%' THEN 4
+              ELSE 0
+          END
+    )
+    WHERE location_code NOT IN (
+        SELECT WI.WIL_CL_NO
+        FROM WAREHOUSE_ITEM WI
+        INNER JOIN WAREHOUSE_ITEM_LOCATION WIL
+            ON WIL.WIL_NO = WI.WIL_CL_NO
+        WHERE WIL.WIL_WH_ZONE_NO = #{zone}
+          AND NVL(WI.WI_USE_YN, 'Y') = 'Y'
+          AND WI.WIL_CL_NO IS NOT NULL
+    )
+    ORDER BY location_code
+
+</select>
+
+
+    <update id="updateInboundApproval">
+
+        UPDATE WH_IN_RPT
+        SET
+            WIR_WZ_NO = #{whInRptDTO.wirwzno},
+            WIR_STATUS_CD = #{whInRptDTO.wirStatusCd},
+            WIR_WH_REPLY_STATUS_CD = #{whInRptDTO.wirWhReplyStatusCd}
+        WHERE WIR_NO = #{whInRptDTO.wirNo}
+          AND WIR_WM_ID = #{wmId}
+
+    </update>
+
+
+    <!--
+    창고 위치 정보 등록
+
+    WAREHOUSE_ITEM_LOCATION은 위치코드 자체를 관리한다.
+    예: WH-016-A-01-01-01
+
+    반출 후 같은 위치를 다시 사용할 수 있으므로
+    이미 존재하는 위치코드는 다시 INSERT하지 않는다.
+
+    실제 새 물품 배치는 아래 insertWarehouseItemByGoods에서
+    WAREHOUSE_ITEM에 새 row로 등록된다.
+	-->
+	<insert id="insertWarehouseItemLocationByGoods">
+	
+	    INSERT INTO WAREHOUSE_ITEM_LOCATION (
+	        WIL_NO,
+	        WIL_WH_ZONE_NO,
+	        WIL_IN_DT,
+	        WIL_DESC_CN,
+	        WIL_REGIST_DT
+	    )
+	    SELECT
+	        #{goods.locationCode},
+	        #{goods.wzNo},
+	        SYSDATE,
+	        #{goods.goodsName} || ' 배치 위치',
+	        SYSDATE
+	    FROM DUAL
+	    WHERE NOT EXISTS (
+	        SELECT 1
+	        FROM WAREHOUSE_ITEM_LOCATION
+	        WHERE WIL_NO = #{goods.locationCode}
+	    )
+	
+	</insert>
+
+
+    <insert id="insertWarehouseItemByGoods">
+
+        INSERT INTO WAREHOUSE_ITEM (
+            WI_NO,
+            WI_WIR_NO,
+            WI_GG_NO,
+            WIL_CL_NO,
+            WI_CG_NO,
+            WI_TY_CD,
+            WI_STATUS_CD,
+            WI_SEAL_NO,
+            WI_DESC_CN,
+            WI_USE_YN,
+            WI_REGIST_DT,
+            WI_UPDT_DT
+        )
+        VALUES (
+            SEQ_WAREHOUSE_ITEM.NEXTVAL,
+            #{whInRptDTO.wirNo},
+            #{whInRptDTO.wirGgNo},
+            #{goods.locationCode},
+            #{goods.cgNo},
+            'GENERAL',
+            'IN_DONE',
+            NULL,
+            #{goods.goodsName} || ' / 위치: ' || #{goods.locationCode},
+            'Y',
+            SYSDATE,
+            SYSDATE
+        )
+
+    </insert>
+
+
+    <select id="selectMyWarehouseZones"
+        parameterType="string"
+        resultType="kr.or.tacs.dto.warehouse.WarehouseZoneDTO">
+
+        SELECT
+            WH.WH_NO AS "whNo",
+            WH.WH_NM AS "whNm",
+
+            WZ.WZ_NO AS "wzNo",
+            WZ.WZ_WH_NO AS "wzWhNo",
+            WZ.WM_ID AS "wmId",
+            WZ.WZ_NM AS "wzNm",
+            WZ.WZ_TY_CD AS "wzTyCd",
+            WZ.WZ_STATUS_CD AS "wzStatusCd",
+            WZ.WZ_LOAD_PSBL_YN AS "wzLoadPsblYn",
+            WZ.WZ_TTL_CAPA AS "wzTtlCapa",
+            WZ.WZ_USE_CAPA AS "wzUseCapa",
+            WZ.WZ_USE_RT AS "wzUseRt",
+            WZ.WZ_DESC_CN AS "wzDescCn",
+            WZ.WZ_USE_YN AS "wzUseYn",
+            WZ.WZ_REGIST_DT AS "wzRegistDt",
+            WZ.WZ_UPDT_DT AS "wzUpdtDt"
+
+        FROM WAREHOUSE WH
+        JOIN WAREHOUSE_ZONE WZ
+          ON WH.WH_NO = WZ.WZ_WH_NO
+
+        WHERE WH.WM_ID = #{wmId}
+          AND WZ.WZ_USE_YN = 'Y'
+          AND WZ.WZ_STATUS_CD = 'ACTIVE'
+
+        ORDER BY WZ.WZ_NO
+
+    </select>
+    
+	    <!--
+	    입고의뢰번호 기준 운송업체 ID 조회
+	
+	    연결 흐름:
+	    WH_IN_RPT.WIR_NO / WIR_GG_NO
+	    → TRAN_RCP.TRC_NO 또는 TRC_TFG_NO
+	    → TRAN_RCP.TRC_TM_NO
+	    → TRANSPORT_MANAGER.TM_NO
+	    → TRANSPORT_MANAGER.TM_ID
+	
+	    이 TM_ID가 SUPP_RQST.RECEIVER_ID에 들어간다.
+	-->
+	<select id="selectTransportManagerIdByWirNo"
+	        parameterType="string"
+	        resultType="string">
+	
+	    SELECT MAX(TM.TM_ID)
+	    FROM WH_IN_RPT W
+	    JOIN TRAN_RCP T
+		  ON (
+		         T.TRC_SE_CD = W.WIR_IO_SE_CD
+		      OR (T.TRC_SE_CD = 'IMPORT' AND W.WIR_IO_SE_CD = 'IMP')
+		      OR (T.TRC_SE_CD = 'EXPORT' AND W.WIR_IO_SE_CD = 'EXP')
+		      OR (T.TRC_SE_CD = 'IMP' AND W.WIR_IO_SE_CD = 'IMPORT')
+		      OR (T.TRC_SE_CD = 'EXP' AND W.WIR_IO_SE_CD = 'EXPORT')
+		  )
+		 AND (
+		        T.TRC_NO = W.WIR_NO
+		     OR T.TRC_TFG_NO = W.WIR_GG_NO
+		 )
+	    JOIN TRANSPORT_MANAGER TM
+	      ON TM.TM_NO = T.TRC_TM_NO
+	    WHERE W.WIR_NO = #{wirNo}
+	
+	</select>
+	
+	
+	<!--
+	    입고 보완요청 마스터 등록
+	
+	    SUPP_RQST.SR_NO는 문자열 PK다.
+	    selectKey에서 먼저 SR_NO를 생성해서 paramMap.srNo에 담는다.
+	
+	    생성 형식:
+	    SR-YYYYMMDD-0001
+	-->
+	<insert id="insertSupplementRequestMaster"
+	        parameterType="map">
+	
+	    <selectKey keyProperty="srNo"
+	               resultType="string"
+	               order="BEFORE">
+	        SELECT
+	            'SR-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' ||
+	            LPAD(
+	                NVL(
+	                    MAX(TO_NUMBER(SUBSTR(SR_NO, 13))),
+	                    0
+	                ) + 1,
+	                4,
+	                '0'
+	            )
+	        FROM SUPP_RQST
+	        WHERE SR_NO LIKE 'SR-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-%'
+	    </selectKey>
+	
+	    INSERT INTO SUPP_RQST (
+	        SR_NO,
+	        SR_REF_BIZ_CD,
+	        SR_REF_NO,
+	        SENDER_ID,
+	        SENDER_TY_CD,
+	        RECEIVER_ID,
+	        RECEIVER_TY_CD,
+	        SR_STATUS_CD,
+	        SR_REQ_DT,
+	        SR_REQ_CN
+	    ) VALUES (
+	        #{srNo},
+	        #{srRefBizCd},
+	        #{srRefNo},
+	        #{senderId},
+	        #{senderTyCd},
+	        #{receiverId},
+	        #{receiverTyCd},
+	        'REQ',
+	        SYSDATE,
+	        #{srReqCn}
+	    )
+	
+	</insert>
+	
+	
+	
+	
+	
+	<!--
+    입고의뢰 대표 상태를 보완요청으로 변경
+
+    보완요청 상세 이력은 SUPP_RQST / SUPP_RQST_ITEM에 남기고,
+    WH_IN_RPT에는 목록에서 바로 보이는 대표 상태값만 반영한다.
+
+    WAIT 상태의 입고의뢰만 보완요청 상태로 바꾼다.
+    이미 IN_DONE 또는 REJECT 된 건이 잘못 바뀌지 않게 막기 위해
+    WIR_STATUS_CD = 'WAIT' 조건을 둔다.
+-->
+<update id="updateWhInRptStatusToReqFix"
+        parameterType="map">
+
+    UPDATE WH_IN_RPT
+    SET
+        WIR_STATUS_CD = 'REQ_FIX',
+        WIR_WH_REPLY_STATUS_CD = 'REQ_FIX'
+    WHERE WIR_NO = #{srRefNo}
+      AND WIR_WM_ID = #{senderId}
+      AND WIR_STATUS_CD = 'WAIT'
+
+</update> 
+
+<update id="updateSupplementRequestApprovedByWirNo"
+        parameterType="string">
+
+    UPDATE SUPP_RQST
+    SET
+        SR_STATUS_CD = 'APR',
+        SR_APPR_DT = SYSDATE
+    WHERE SR_REF_BIZ_CD = 'WH_IN_RPT'
+      AND SR_REF_NO = #{wirNo}
+      AND SR_STATUS_CD = 'SUB'
+
+</update>
+
+</mapper>

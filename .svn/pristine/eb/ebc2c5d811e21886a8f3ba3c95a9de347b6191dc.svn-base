@@ -1,0 +1,88 @@
+package kr.or.tacs.dto.officer;
+
+import lombok.Data;
+
+@Data
+public class BasicScreenDetailDTO {
+
+    // ── 신고 기본 ─────────────────────────────────
+    private String reqNo;           // 신고번호
+    private String declareType;     // 신고구분 (수입/수출)
+    private String requestDate;     // 신고일시
+    private String statusCd;        // 현재상태 코드
+
+    // ── 업체 정보 ─────────────────────────────────
+    private String companyName;     // 업체명 (수입자/수출자)
+    private String companyTel;      // 업체 연락처 (DB 미존재 → null)
+    private String corpRegNo;       // 법인등록번호
+    private String customsIdNo;     // 통관고유번호
+    private String brokerName;      // 관세사 사무소명
+
+    // ── 담당 공무원 ───────────────────────────────
+    private String officerId;       // 담당자 ID
+    private String officerName;     // 담당자 이름
+
+    // ── 물류 정보 ─────────────────────────────────
+    private String blNo;            // B/L·AWB 번호 (IR_BL_AWB_NO)
+    private String arrivalPort;     // 입항 항구코드 (IR_ARRV_PORT_CD)
+    private String arrivalDate;     // 입항예정일 (DB 미존재 → null)
+    private String cargoNo;         // 화물관리번호 (DB 미존재 → null)
+
+    // ── 금액 정보 ─────────────────────────────────
+    private String amount;          // 신고금액
+    private String currencyCode;    // 통화코드 (IR_DCLR_CURR_CD)
+    private String payMethod;       // 결제방법 (DB 미존재 → null)
+
+    // ── 품목 기본 정보 (기본정보 탭 대표 품목) ─────
+    private String itemName;        // 신고품명
+    private String hsCode;          // HS 코드
+    private String qty;             // 수량
+    private String origin;          // 원산지
+
+    // ── 심사 정보 ─────────────────────────────────
+    private String reviewMemo;
+    private String reviewMemoUpdtDt;   
+
+    // ── 신고 내용 ─────────────────────────────────
+    private String requestContent;  // 신고 내용 (IR_COMMENT / ER_COMMENT)
+    private String comment;         // 비고
+
+    // ── 품목정보 탭 전용 (itemList 조회 시 사용) ───
+    private int    itemNo;          // 항번 (품목 순번)
+    private String tradeItemName;   // 거래품명 (IDI_TRDNG_GDSNM / EDI_TRDNG_GDS_NM)
+    private String weight;          // 중량
+    private String riskGrade;       // AI 위험도
+    private String reqTarget;       // 요건대상 여부
+    private String taxRate;         // 관세율 (IDI_TAXT_RT)
+    private String taxAmount;       // 세액합계 (과세가격 × 관세율)
+
+    // ── 세금·허가 심사 필수 항목 (추가) ──────────
+    private String customsDutyType; // 관세구분 (일반세율/협정세율/잠정세율 등)
+    private String originCriteria;  // 원산지결정기준 (WO / CTH / RVC 등)
+    private String taxExemption;    // 관세감면구분 (감면없음 / 조건부감면 등)
+    private String taxAmt;          // 관세액 (순수 관세액, 과세가격 × 관세율)
+    private String vatAmount;       // 부가세액
+
+    // ── 란별 처리상태 (품목정보 탭 처리상태 컬럼) ──
+    private String itemStatusCd;    // 처리상태 코드 (ITEM_WAIT / ITEM_CLEAR / ITEM_SUPPLEMENT 등, DB 미구현 → null)
+    private String itemRemark;      // 처리 비고/사유 (DB 미구현 → null)
+    private String itemHistoryDate; // 란사항 처리이력 일시
+
+    private Long tfgNo;
+
+    // ai위험도
+    private Integer riskScore;
+    private String riskGradeCd;
+    private String riskStatusCd;
+    private String riskResultCn;
+    
+    // 보완요청/보완제출 이력 분리 표시용
+    private String suppReqDate;
+    private String suppReqCn;
+    private String suppSubmitDate;
+    private String suppSubmitCn;
+    
+   
+   
+    
+}

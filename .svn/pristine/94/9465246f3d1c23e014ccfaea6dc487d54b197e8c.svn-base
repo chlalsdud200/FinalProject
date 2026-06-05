@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.common.auth.mapper.AuthMapper">
+
+	<sql id="joinOfficerForRole">
+		LEFT JOIN officer o
+		  ON o.officer_id = v.login_id
+		 AND v.actor_table_nm = 'OFFICER'
+	</sql>
+
+	<sql id="normalizedRoleCd">
+		v.role_cd
+	</sql>
+
+	<sql id="normalizedRoleNm">
+		v.role_nm
+	</sql>
+
+	<select id="selectLoginUser" parameterType="string"
+		resultType="kr.or.tacs.vo.common.AuthUserVO">
+		SELECT
+		    v.login_id AS loginId
+		  , v.login_pw AS loginPw
+		  , v.login_nm AS loginNm
+		  , <include refid="normalizedRoleCd"/> AS roleCd
+		  , <include refid="normalizedRoleNm"/> AS roleNm
+		  , <include refid="normalizedRoleCd"/> AS actorTypeCd
+		  , v.actor_table_nm AS actorTableNm
+		  , o.officer_ty_cd AS officerTyCd
+		  , v.org_nm AS orgNm
+		  , v.email AS email
+		  , v.telno AS telno
+		  , v.use_yn AS useYn
+		FROM vw_actor_login v
+		<include refid="joinOfficerForRole"/>
+		WHERE v.login_id = #{loginId}
+		  AND v.use_yn = 'Y'
+	</select>
+
+	<select id="countLoginId" parameterType="string"
+		resultType="int">
+		SELECT COUNT(*)
+		FROM vw_actor_login
+		WHERE login_id = #{loginId}
+	</select>
+
+	<!-- 아이디 찾기: 이름 + 전화번호로 계정 조회 -->
+	<insert id="insertOwner" parameterType="kr.or.tacs.vo.OwnerVO">
+		INSERT INTO owner (
+		    owr_id
+		  , owr_password
+		  , owr_ty_cd
+		  , owr_nm
+		  , owr_bizrno
+		  , owr_ident_no
+		  , owr_email
+		  , owr_telno
+		  , owr_zip
+		  , owr_adres
+		  , owr_detail_adres
+		  , owr_use_yn
+		  , owr_regist_dt
+		  , owr_updt_dt
+		  , privacy_agree_yn
+		  , owr_corp_reg_no
+		) VALUES (
+		    #{owrId}
+		  , #{owrPassword}
+		  , #{owrTyCd}
+		  , #{owrNm}
+		  , #{owrBizrno}
+		  , #{owrIdentNo}
+		  , #{owrEmail}
+		  , #{owrTelno}
+		  , #{owrZip}
+		  , #{owrAdres}
+		  , #{owrDetailAdres}
+		  , 'Y'
+		  , SYSDATE
+		  , SYSDATE
+		  , #{owrPrivacyAgreeYn}
+		  , #{owrCorpRegNo}
+		)
+	</insert>
+
+	<select id="findLoginIdsByNameAndPhone"
+		resultType="kr.or.tacs.vo.common.AuthUserVO">
+		SELECT
+		    v.login_id AS loginId
+		  , v.login_nm AS loginNm
+		  , <include refid="normalizedRoleCd"/> AS roleCd
+		  , v.telno AS telno
+		FROM vw_actor_login v
+		<include refid="joinOfficerForRole"/>
+		WHERE v.login_nm = #{loginNm}
+		  AND v.telno = #{telno}
+		  AND v.use_yn = 'Y'
+	</select>
+
+	<!-- 비밀번호 찾기: 아이디 + 전화번호로 계정 조회 -->
+	<select id="findLoginUserByIdAndPhone"
+		resultType="kr.or.tacs.vo.common.AuthUserVO">
+		SELECT
+		    v.login_id AS loginId
+		  , v.login_nm AS loginNm
+		  , <include refid="normalizedRoleCd"/> AS roleCd
+		  , v.actor_table_nm AS actorTableNm
+		  , v.telno AS telno
+		FROM vw_actor_login v
+		<include refid="joinOfficerForRole"/>
+		WHERE v.login_id = #{loginId}
+		  AND REGEXP_REPLACE(v.telno, '[^0-9]', '') = #{telno}
+		  AND v.use_yn = 'Y'
+	</select>
+
+	<!-- 인증번호 저장 -->
+	<insert id="insertVerification">
+		INSERT INTO auth_verification (
+		av_no,
+		av_purpose_cd,
+		av_target_id,
+		av_target_nm,
+		av_phone_no,
+		av_auth_code,
+		av_expire_dt,
+		av_verified_yn,
+		av_fail_cnt,
+		av_regist_dt
+		) VALUES (
+		seq_auth_verification.NEXTVAL,
+		#{purposeCd},
+		#{targetId},
+		#{targetNm},
+		#{phoneNo},
+		#{authCode},
+		SYSDATE + (5 / 1440),
+		'N',
+		0,
+		SYSDATE
+		)
+	</insert>
+
+	<!-- 인증번호 검증 대상 조회 -->
+	<select id="selectValidVerification"
+		resultType="kr.or.tacs.vo.common.AuthVerificationVO">
+		SELECT
+		    av_no AS avNo
+		  , av_purpose_cd AS purposeCd
+		  , av_target_id AS targetId
+		  , av_target_nm AS targetNm
+		  , av_phone_no AS phoneNo
+		  , av_auth_code AS authCode
+		  , av_expire_dt AS expireDt
+		  , av_verified_yn AS verifiedYn
+		  , av_fail_cnt AS failCnt
+		FROM auth_verification
+		WHERE av_purpose_cd = #{purposeCd}
+		AND av_target_id = #{targetId}
+		AND av_phone_no = #{phoneNo}
+		AND av_verified_yn = 'N'
+		AND av_expire_dt > SYSDATE
+		ORDER BY av_no DESC
+		FETCH FIRST 1 ROW ONLY
+	</select>
+
+	<select id="selectVerifiedVerification"
+		resultType="kr.or.tacs.vo.common.AuthVerificationVO">
+		SELECT
+		    av_no AS avNo
+		  , av_purpose_cd AS purposeCd
+		  , av_target_id AS targetId
+		  , av_target_nm AS targetNm
+		  , av_phone_no AS phoneNo
+		  , av_auth_code AS authCode
+		  , av_expire_dt AS expireDt
+		  , av_verified_yn AS verifiedYn
+		  , av_fail_cnt AS failCnt
+		FROM auth_verification
+		WHERE av_purpose_cd = #{purposeCd}
+		  AND av_target_id = #{targetId}
+		  AND av_phone_no = #{phoneNo}
+		  AND av_auth_code = #{authCode}
+		  AND av_verified_yn = 'Y'
+		  AND av_expire_dt > SYSDATE
+		ORDER BY av_no DESC
+		FETCH FIRST 1 ROW ONLY
+	</select>
+
+	<!-- 인증 성공 처리 -->
+	<update id="updateVerificationSuccess">
+		UPDATE auth_verification
+		SET av_verified_yn = 'Y',
+		av_verified_dt = SYSDATE
+		WHERE av_no = #{avNo}
+	</update>
+
+	<!-- 인증 실패 횟수 증가 -->
+	<update id="increaseVerificationFailCnt">
+		UPDATE auth_verification
+		SET av_fail_cnt = av_fail_cnt + 1
+		WHERE av_no = #{avNo}
+	</update>
+
+	<!-- ============================================== -->
+	<!-- SMS_AUTH 테이블 연동 (새로운 솔라피 인증용)        -->
+	<!-- ============================================== -->
+
+	<!-- 1. 인증번호 저장 (발송 후) -->
+	<insert id="registSmsAuth" parameterType="kr.or.tacs.vo.common.SmsAuthVO">
+		<selectKey keyProperty="saNo" resultType="long" order="BEFORE">
+			SELECT NVL(MAX(sa_no), 0) + 1 FROM sms_auth
+		</selectKey>
+		INSERT INTO sms_auth (
+			sa_no
+		  , sa_auth_prpos_cd
+		  , sa_target_id
+		  , sa_phone_no
+		  , sa_auth_cd
+		  , sa_verify_yn
+		  , sa_fail_cnt
+		  , sa_expr_dt
+		  , sa_regist_dt
+		) VALUES (
+			#{saNo}
+		  , #{saAuthPrposCd}
+		  , #{saTargetId}
+		  , #{saPhoneNo}
+		  , #{saAuthCd}
+		  , 'N'
+		  , 0
+		  , SYSDATE + (3 / 24 / 60) <!-- 3분 후 만료 -->
+		  , SYSDATE
+		)
+	</insert>
+
+	<!-- 2. 최근 유효한 인증번호 조회 -->
+	<select id="selectSmsAuth" resultType="kr.or.tacs.vo.common.SmsAuthVO">
+		SELECT
+			sa_no AS saNo
+		  , sa_auth_prpos_cd AS saAuthPrposCd
+		  , sa_target_id AS saTargetId
+		  , sa_phone_no AS saPhoneNo
+		  , sa_auth_cd AS saAuthCd
+		  , sa_verify_yn AS saVerifyYn
+		  , sa_verify_dt AS saVerifyDt
+		  , sa_fail_cnt AS saFailCnt
+		  , sa_expr_dt AS saExprDt
+		  , sa_regist_dt AS saRegistDt
+		FROM sms_auth
+		WHERE sa_auth_prpos_cd = #{saAuthPrposCd}
+		  AND sa_target_id = #{saTargetId}
+		  AND sa_phone_no = #{saPhoneNo}
+		  AND sa_verify_yn = 'N'
+		  AND sa_expr_dt > SYSDATE
+		ORDER BY sa_no DESC
+		FETCH FIRST 1 ROW ONLY
+	</select>
+
+	<!-- 3. 인증 성공 시 상태 업데이트 -->
+	<update id="modifySmsAuthSuccess">
+		UPDATE sms_auth
+		SET
+			sa_verify_yn = 'Y'
+		  , sa_verify_dt = SYSDATE
+		WHERE sa_no = #{saNo}
+	</update>
+
+	<!-- 4. 인증 실패 시 카운트 증가 -->
+	<update id="modifySmsAuthFailCnt">
+		UPDATE sms_auth
+		SET
+			sa_fail_cnt = sa_fail_cnt + 1
+		WHERE sa_no = #{saNo}
+	</update>
+
+	<!-- 5. 새 비밀번호 설정 (동적 테이블명 활용) -->
+	<!-- 각 사용자 테이블마다 ID/PW 컬럼명이 다르므로, 분기 처리하여 실제 컬럼을 매핑합니다. -->
+	<!-- 5. 새 비밀번호 설정 -->
+	<update id="modifyPassword">
+		<choose>
+			<!-- 화주 -->
+			<when test="actorTableNm != null and actorTableNm.trim() == 'OWNER'">
+				UPDATE owner
+				SET
+				owr_password = #{loginPw}
+				, owr_updt_dt = SYSDATE
+				WHERE owr_id = #{loginId}
+			</when>
+
+			<!-- 관세사 -->
+			<when test="actorTableNm != null and actorTableNm.trim() == 'BROKER'">
+				UPDATE broker
+				SET
+				broker_password = #{loginPw}
+				, broker_updt_dt = SYSDATE
+				WHERE broker_id = #{loginId}
+			</when>
+
+			<!-- 행정공무원 / 현장공무원 -->
+			<when test="actorTableNm != null and actorTableNm.trim() == 'OFFICER'">
+				UPDATE officer
+				SET
+				officer_password = #{loginPw}
+				, officer_updt_dt = SYSDATE
+				WHERE officer_id = #{loginId}
+			</when>
+
+			<!-- 운송담당자 -->
+			<when test="actorTableNm != null and actorTableNm.trim() == 'TRANSPORT_MANAGER'">
+				UPDATE transport_manager
+				SET
+				tm_password = #{loginPw}
+				WHERE tm_id = #{loginId}
+			</when>
+
+			<!-- 창고관리자 -->
+			<when test="actorTableNm != null and actorTableNm.trim() == 'WAREHOUSE_MANAGER'">
+				UPDATE warehouse_manager
+				SET
+				wm_password = #{loginPw}
+				, wm_updt_dt = SYSDATE
+				WHERE wm_id = #{loginId}
+			</when>
+
+			<!-- 시스템관리자 -->
+			<when test="actorTableNm != null and actorTableNm.trim() == 'SYSTEM_ADMIN'">
+				UPDATE system_admin
+				SET
+				sa_password = #{loginPw}
+				, sa_updt_dt = SYSDATE
+				WHERE sa_id = #{loginId}
+			</when>
+		</choose>
+	</update>
+
+</mapper>

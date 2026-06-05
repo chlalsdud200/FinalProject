@@ -1,0 +1,295 @@
+package kr.or.tacs.dto.fieldofficer.certs;
+
+import java.util.Date;
+import java.util.List;
+
+import lombok.Data;
+
+/*
+ * 현장공무원(검역기관) - 검역 합격 증명서 DTO
+ *
+ * 역할:
+ * 1. 목록 검색 조건
+ * 2. 목록 조회 결과
+ * 3. 상세 조회 결과
+ * 4. 발급정보 저장
+ * 5. 최종 발급 처리
+ * 6. 보완요청 등록
+ *
+ * 품목 상세 내역은 여러 건이므로 CertsItemDTO로 분리한다.
+ */
+@Data
+public class CertsDTO {
+
+	// =========================
+    // IMP_INS_RESULT 검역 결과 정보
+    // =========================
+
+    // 검역결과번호
+    private String iirNo;
+
+    // 검역요청번호
+    private String iirImpInsReqNo;
+    
+    // 파일그룹번호
+    private Long tfgNo;
+
+    // 결과 등록 공무원 ID
+    private String iirRsltOfficerId;
+
+    // 수입검역위치 식별번호
+    private String iilNo;
+
+    // 결과 처리 상태 코드
+    private String iirResultStatusCd;
+
+    // 판정 결과 코드
+    private String iirResultCd;
+
+    // 후속조치 코드
+    private String iirResultFollowupCd;
+
+    // 검역 결과 내용
+    private String iirResultCn;
+
+    // 결과 등록 일시
+    private String iirResultDt;
+
+    // 결과 최초 등록일시
+    private String iirResultRegistDt;
+
+    // 결과 수정일시
+    private String iirUpdtDt;
+
+
+    // =========================
+    // IMP_INS_REQ 검역 요청 정보
+    // =========================
+
+    // 검역요청번호
+    private String reqNo;
+
+    // 수입신청번호
+    private String aplyNo;
+
+    // 검역기관 코드
+    private String qrtnInstCd;
+
+    // 검역 요청 상태 코드
+    private String reqStatusCd;
+
+    // 회신기한
+    private String rplyDdlineDt;
+
+
+	 // =========================
+	 // IMP_INS_LOC 검역 위치 정보
+	 // =========================
+	
+	 // 검역요청번호
+	 private String locReqNo;
+	
+	 // 창고 위치 번호
+	 private String locWilNo;
+	
+	 // 검역장소유형
+	 private String locTyCd;
+	
+	 // 검역장소명
+	 private String locNm;
+	
+	 // 검역예정일시
+	 private String locPlanDt;
+	
+	 // 우편번호
+	 private String locZip;
+	
+	 // 기본주소
+	 private String locAdres;
+	
+	 // 상세주소
+	 private String locDetailAdres;
+
+
+    // =========================
+    // 화면 표시용 값
+    // =========================
+
+    // 증명서 번호
+    private String certIssueNo;
+
+    // 발급 상태
+    private String certIssueStatus;
+
+    // 문서 유형
+    private String docTypeNm;
+    
+    // 검역 합격 증명서 PDF 파일그룹번호
+    private Long certTfgNo;
+    
+    // 검역 완료일시
+    private String cmplDt;
+
+
+    // =========================
+    // 증명서 발급 / 보완요청 처리용
+    // =========================
+
+    // 로그인한 현장공무원 ID
+    private String officerId;
+    
+    // 로그인한 현장공무원 이름
+    private String officerNm;
+
+    // 최종 판정 결과: 합격 / 불합격 / 보완요청
+    private String judgeResult;
+
+    // 보완요청번호
+    private String srNo;
+
+    // 보완 요청 내용
+    private String suppReqCn;
+
+    // 보완 요청 대상 업무 코드
+    private String refBizCd;
+
+    // 보완 요청 수신자 ID
+    private String receiverId;
+
+    // 보완 요청 수신자 유형
+    private String receiverTyCd;
+
+
+    // =========================
+    // 목록 화면 표시용 추가 정보
+    // =========================
+
+    // 업체명
+    private String bizNm;
+
+    // 대표 품목명
+    private String itemNm;
+
+    // HS CODE
+    private String hsCode;
+    
+    // 사업자등록번호 또는 납세자 식별번호
+    private String bizNo;
+
+    // 검역신청인 성명
+    private String applicantName;
+
+    // 검역신청인 연락처
+    private String applicantTel;
+    
+    
+    // 납세자 우편번호
+    private String taxpayerZip;
+
+    // 납세자 기본주소
+    private String taxpayerAddr;
+
+    // 납세자 상세주소
+    private String taxpayerDtlAddr;
+
+    // 화물관리번호
+    private String cargoNo;
+
+    // B/L 번호
+    private String blNo;
+
+    // 입항일자
+    private String arrivalDate;
+
+    // 수출국가 코드
+    private String exportCountryCd;
+
+    // 해외거래처명
+    private String overseasNm;
+
+    // 총 포장 개수
+    private String totalPkgCnt;
+
+    // 총 중량
+    private String totalWeight;
+    
+	 // =========================
+	 // 검역 요청 품목 목록
+	 // =========================
+	
+	 // 품목 상세 목록
+	 private List<CertsItemDTO> itemList;
+
+	 public void setItmList(List<CertsItemDTO> itemList2) {
+		 this.itemList = itemList2;
+	 }
+	 
+	 
+	// =========================
+	// SUPP_RQST 보완요청/보완제출 조회용
+	// =========================
+
+	// 관련 업무구분 코드
+	// 예: IMP_INS_REQ
+	private String srRefBizCd;
+
+	// 관련 업무번호
+	// 예: 검역요청번호
+	private String srRefNo;
+
+	// 발신자 ID
+	private String senderId;
+
+	// 발신자 액터유형 코드
+	// 현장공무원도 ACTOR_TYPE 기준으로 OFFICER 사용
+	private String senderTyCd;
+
+	// 보완요청 상태
+	// REQ: 요청, SUB: 제출, APR: 승인
+	private String srStatusCd;
+
+	// 보완요청일시
+	private Date srReqDt;
+
+	// 보완제출일시
+	private Date srSubmitDt;
+
+	// 보완승인일시
+	private Date srApprDt;
+
+	// 보완요청내용
+	private String srReqCn;
+
+	// 보완제출내용
+	private String srSubmitCn;
+	
+	// =========================
+	// 수입의뢰 / 관세사 정보
+	// =========================
+
+	// 수입의뢰 담당 관세사 ID
+	// 보완요청 등록 시 SUPP_RQST.RECEIVER_ID에 들어간다.
+	private String irBrokerId;
+	
+	// =========================
+	// 상세 발급 화면 추가 표시 정보
+	// =========================
+	
+	// 수입화주 / 신청인 분리 표시
+	private String importerNm;
+	private String importerTel;
+	private String applicantBiz;
+
+	// 대표 품목 기준 정보
+	private String originCountryCd;
+	private String itemQty;
+	private String itemQtyUnitCd;
+	
+	// 공통코드 화면 표시명
+	private String reqStatusNm;
+	private String iirResultStatusNm;
+	private String iirResultNm;
+	private String iirResultFollowupNm;
+	private String certIssueStatusNm;
+	
+}

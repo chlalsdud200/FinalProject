@@ -1,0 +1,50 @@
+package kr.or.tacs.common.faq.mapper;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import kr.or.tacs.vo.FaqSearchVO;
+import kr.or.tacs.vo.FaqVO;
+
+@Mapper
+public interface IFaqMapper {
+
+    // 사용자 화면 목록: FAQ_USE_YN = Y 이고, ALL 또는 로그인 사용자 역할 FAQ만 조회
+    List<FaqVO> retrieveFaqList(FaqSearchVO search);
+
+    int selectFaqCount(FaqSearchVO search);
+
+    // 관리자 화면 목록: 사용여부 N도 조회 가능
+    List<FaqVO> retrieveFaqAdminList(FaqSearchVO search);
+
+    int selectFaqAdminCount(FaqSearchVO search);
+
+    // 사용자 상세: 권한 필터 적용
+    FaqVO selectFaq(@Param("faqNo") Long faqNo, @Param("roleCd") String roleCd);
+
+    // 관리자 상세: 권한 필터 없이 조회
+    FaqVO selectFaqForAdmin(@Param("faqNo") Long faqNo);
+
+    List<FaqVO> selectFaqOrderListForUpdate();
+
+    List<String> selectFaqTargetRoleCds(@Param("faqNo") Long faqNo);
+
+    int updateFaqHit(@Param("faqNo") Long faqNo);
+
+    int insertFaq(FaqVO faq);
+
+    int insertFaqAuths(
+            @Param("faqNo") Long faqNo,
+            @Param("targetRoleCds") List<String> targetRoleCds
+    );
+
+    int deleteFaqAuths(@Param("faqNo") Long faqNo);
+
+    int updateFaq(FaqVO faq);
+
+    int updateFaqSortSn(@Param("faqNo") Long faqNo, @Param("faqSortSn") Integer faqSortSn);
+
+    int deleteFaq(@Param("faqNo") Long faqNo);
+}

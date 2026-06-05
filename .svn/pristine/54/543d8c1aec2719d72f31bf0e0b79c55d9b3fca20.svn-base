@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.tacs.transport.importp.mapper.ImportTransportMapper">
+
+    <!-- 입고관리 목록 조회 -->
+    <select id="retriveImpUnloadingInList" resultType="kr.or.tacs.vo.transport.TransportRequestVO">
+        SELECT
+            T.TRC_NO                                        AS trcNo
+          , W.WIR_NO                                        AS wirNo
+          , T.TRC_TFG_NO                                    AS ggNo
+          , T.TRC_OWR_ID                                    AS ownerId
+          , O.OWR_NM                                        AS ownerNm
+          , T.TRC_ITEM_CTGRY_NM                             AS itemCategory
+          , W.WIR_WM_ID                                     AS wmId
+          , WM.WM_NM                                        AS warehouseManagerNm
+          , WH.WH_NM                                        AS warehouseNm
+          , W.WIR_WZ_NO                                     AS wzNo
+          , NVL(WZ.WZ_NM, WM.WM_DETAIL_ADRES)               AS warehouseZoneNm
+          , TO_CHAR(W.WIR_IN_PLAN_DT, 'YYYY-MM-DD HH24:MI') AS inPlanDt
+          , W.WIR_RQST_CN                                   AS requestCn
+          , W.WIR_CARGO_MGMT_NO                             AS cargoMgmtNo
+          /* 도착통지서 데이터 연동 강화: 적하목록 > 직접입력값 > 자동생성값 순서 */
+          , W.WIR_INVOICE_NO                                AS invoiceNo
+          , TO_CHAR(W.WIR_INVOICE_YMD, 'YYYY-MM-DD')         AS invoiceYmd
+          , W.WIR_WH_REPLY_STATUS_CD                        AS warehouseReplyStatusCd
+          , W.WIR_WH_REPLY_STATUS_CD                        AS whReplyStatusCd
+          , W.WIR_STATUS_CD                                 AS warehouseInStatusCd
+          , NVL(W.WIR_INCO_TERMS_CD, T.TRC_INCO_TERMS_CD)   AS incoTermsCd
+          , T.TRC_INCO_TERMS_CD                             AS trcIncoTermsCd
+          , NVL(M.ICM_MBL_NO, BI.BI_MBL_NO)                 AS mblNo
+          , NVL(M.ICM_HBL_NO, BI.BI_HBL_NO)                 AS hblNo
+          , NVL(M.ICM_HBL_NO, BI.BI_HBL_NO)                 AS blNo
+          /* JS 디버깅용 별칭 복구 */
+          , BI.BI_MBL_NO                                    AS BI_MBL_NO
+          , NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD)  AS statusCd
+          , CASE
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'IN_DONE' THEN '입고완료'
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'REQ_FIX' THEN '보완요청'
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'REQ_SENT' THEN '보완제출완료'
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'REJECT' THEN '반려'
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'WAIT' AND W.WIR_NO IS NOT NULL THEN '입고대기'
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'SENT' THEN '입고대기'
+                ELSE '입고대기'
+            END                                             AS statusNm
+          , GOODS_SUM.CG_NO                                 AS cgNo
+          , GOODS_SUM.GOODS_NO                              AS goodsNo
+          , GOODS_SUM.GOODS_NAME                            AS goodsName
+          , GOODS_SUM.GOODS_HS_CODE                         AS goodsHsCode
+          , GOODS_SUM.GOODS_HS_CODE                         AS hsCode
+          , GOODS_SUM.QTY                                   AS qty
+          , GOODS_SUM.QTY                                   AS totalQty
+          , GOODS_SUM.PRICE                                 AS price
+          , GOODS_SUM.GOODS_TOTAL_PRICE                     AS goodsTotalPrice
+          , GOODS_SUM.GOODS_TOTAL_PRICE                     AS summaryTotalPrice
+          , GOODS_SUM.WEIGHT                                AS weight
+          , GOODS_SUM.WEIGHT                                AS totalWeight
+          , GOODS_SUM.ORIGIN                                AS origin
+        FROM TRAN_RCP T
+        LEFT JOIN WH_IN_RPT W ON W.WIR_GG_NO = T.TRC_TFG_NO AND W.WIR_IO_SE_CD IN ('IMP', 'IMPORT')
+        LEFT JOIN OWNER O ON T.TRC_OWR_ID = O.OWR_ID
+        LEFT JOIN WAREHOUSE_MANAGER WM ON WM.WM_ID = W.WIR_WM_ID
+        LEFT JOIN WAREHOUSE_ZONE WZ ON WZ.WZ_NO = W.WIR_WZ_NO
+        LEFT JOIN WAREHOUSE WH ON WH.WH_NO = WZ.WZ_WH_NO
+        /* B/L 정보 조인: 의뢰번호 원본 및 변형 형식을 모두 수용하도록 조인 조건 확장 */
+        LEFT JOIN BL_ISSU BI ON (
+             BI.BI_TRE_ID = T.TRC_NO 
+          OR BI.BI_TRE_ID = REPLACE(T.TRC_NO, 'TRC-', '')
+          OR (T.TRC_TFG_NO IS NOT NULL AND BI.BI_GG_NO = T.TRC_TFG_NO)
+        )
+        /* 적하목록 정보 조인: 도착통지서와 동일한 서브쿼리 구조 사용 */
+        LEFT JOIN (
+            SELECT *
+            FROM (
+                SELECT
+                    M0.*,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY M0.ICM_GG_NO
+                        ORDER BY M0.ICM_SBMSN_DT DESC NULLS LAST, M0.ICM_NO DESC
+                    ) AS RN
+                FROM IMP_CARGO_MANIFEST M0
+            )
+            WHERE RN = 1
+        ) M ON M.ICM_GG_NO = T.TRC_TFG_NO
+        LEFT JOIN (
+            SELECT CG.GG_NO, MIN(CG.CG_NO) AS CG_NO, MIN(CG.GOODS_NO) AS GOODS_NO,
+                   MIN(G.GOODS_NAME) AS GOODS_NAME, MIN(G.GOODS_HS_CODE) AS GOODS_HS_CODE, SUM(CG.CG_QTY) AS QTY,
+                   MAX(CG.CG_PRICE) AS PRICE, SUM(CG.CG_TOTAL_PRICE) AS GOODS_TOTAL_PRICE,
+                   SUM(CG.CG_WEIGHT) AS WEIGHT,
+                   MIN(NVL(NULLIF(REGEXP_REPLACE(TRIM(CG.CG_ORIGIN), '^-+', ''), ''), 'KR')) AS ORIGIN
+            FROM CUSTOMS_GOODS CG
+            LEFT JOIN GOODS G ON G.GOODS_NO = CG.GOODS_NO
+            GROUP BY CG.GG_NO
+        ) GOODS_SUM ON GOODS_SUM.GG_NO = T.TRC_TFG_NO
+        WHERE T.TRC_SE_CD IN ('IMP', 'IMPORT')
+        AND T.TRC_STATUS_CD IN (
+            'TRC_WAIT', 'TRC_DONE', 'TRC_END', 'TRC_COMPLETE',
+            'ARRIVAL_PENDING', 'TRC_ARR_PENDING', 'TRC_ARR_WAIT',
+            'COMPLETE_WAIT', 'DONE_WAIT', 'TRC_COMPLETE_WAIT', 'TRC_DONE_WAIT',
+            'FINAL_DONE', 'TRC_FINAL_DONE', 'TRC_FIN_DONE', 'TRC_END_DONE', 'TRC_ALL_DONE'
+        )
+        AND W.WIR_NO IS NOT NULL
+        GROUP BY
+            T.TRC_NO, W.WIR_NO, T.TRC_TFG_NO, T.TRC_OWR_ID, O.OWR_NM, T.TRC_ITEM_CTGRY_NM,
+            W.WIR_WM_ID, WM.WM_NM, WH.WH_NM, W.WIR_WZ_NO, WZ.WZ_NM, WM.WM_DETAIL_ADRES,
+            W.WIR_IN_PLAN_DT, W.WIR_RQST_CN, W.WIR_CARGO_MGMT_NO, W.WIR_INVOICE_NO, W.WIR_INVOICE_YMD,
+            W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD, W.WIR_INCO_TERMS_CD, T.TRC_INCO_TERMS_CD, BI.BI_MBL_NO, BI.BI_HBL_NO,
+            M.ICM_MBL_NO, M.ICM_HBL_NO,
+            GOODS_SUM.CG_NO, GOODS_SUM.GOODS_NO, GOODS_SUM.GOODS_NAME, GOODS_SUM.GOODS_HS_CODE, GOODS_SUM.QTY,
+            GOODS_SUM.PRICE, GOODS_SUM.GOODS_TOTAL_PRICE, GOODS_SUM.WEIGHT, GOODS_SUM.ORIGIN
+        ORDER BY W.WIR_IN_PLAN_DT DESC NULLS LAST, T.TRC_NO DESC
+    </select>
+
+    <!-- 입고관리 상세 조회 -->
+    <select id="selectImpUnloadingInDetail" resultType="kr.or.tacs.vo.transport.TransportRequestVO">
+        SELECT
+            T.TRC_NO                                        AS trcNo
+          , W.WIR_NO                                        AS wirNo
+          , T.TRC_TFG_NO                                    AS ggNo
+          , T.TRC_OWR_ID                                    AS ownerId
+          , O.OWR_NM                                        AS ownerNm
+          , T.TRC_ITEM_CTGRY_NM                             AS itemCategory
+          , W.WIR_WM_ID                                     AS wmId
+          , WM.WM_NM                                        AS warehouseManagerNm
+          , WH.WH_NM                                        AS warehouseNm
+          , W.WIR_WZ_NO                                     AS wzNo
+          , NVL(WZ.WZ_NM, WM.WM_DETAIL_ADRES)               AS warehouseZoneNm
+          , TO_CHAR(W.WIR_IN_PLAN_DT, 'YYYY-MM-DD HH24:MI') AS inPlanDt
+          , W.WIR_RQST_CN                                   AS requestCn
+          , W.WIR_CARGO_MGMT_NO                             AS cargoMgmtNo
+          , W.WIR_INVOICE_NO                                AS invoiceNo
+          , TO_CHAR(W.WIR_INVOICE_YMD, 'YYYY-MM-DD')         AS invoiceYmd
+          , W.WIR_WH_REPLY_STATUS_CD                        AS warehouseReplyStatusCd
+          , W.WIR_WH_REPLY_STATUS_CD                        AS whReplyStatusCd
+          , W.WIR_STATUS_CD                                 AS warehouseInStatusCd
+          /* 도착통지서 데이터 연동 강화: 적하목록 > 직접입력값 > 자동생성값 순서 */
+          , NVL(W.WIR_INCO_TERMS_CD, T.TRC_INCO_TERMS_CD)   AS incoTermsCd
+          , T.TRC_INCO_TERMS_CD                             AS trcIncoTermsCd
+          , NVL(M.ICM_MBL_NO, BI.BI_MBL_NO)                 AS mblNo
+          , NVL(M.ICM_HBL_NO, BI.BI_HBL_NO)                 AS hblNo
+          , NVL(M.ICM_HBL_NO, BI.BI_HBL_NO)                 AS blNo
+          /* JS 디버깅 및 rawDataInfo 구성을 위해 원본 컬럼 별칭 복구 */
+          , BI.BI_MBL_NO                                    AS BI_MBL_NO
+          , NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD)  AS statusCd
+          , CASE
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'IN_DONE' THEN '입고완료'
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'REQ_FIX' THEN '보완요청'
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'REQ_SENT' THEN '보완제출완료'
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'REJECT' THEN '반려'
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'WAIT' AND W.WIR_NO IS NOT NULL THEN '입고대기'
+                WHEN NVL(W.WIR_WH_REPLY_STATUS_CD, W.WIR_STATUS_CD) = 'SENT' THEN '입고대기'
+                ELSE '입고대기'
+            END                                             AS statusNm
+          , GOODS_SUM.CG_NO                                 AS cgNo
+          , GOODS_SUM.GOODS_NO                              AS goodsNo
+          , GOODS_SUM.GOODS_NAME                            AS goodsName
+          , GOODS_SUM.GOODS_NAME                            AS itemNm
+          , GOODS_SUM.GOODS_HS_CODE                         AS goodsHsCode
+          , GOODS_SUM.GOODS_HS_CODE                         AS hsCode
+          , GOODS_SUM.QTY                                   AS qty
+          , GOODS_SUM.QTY                                   AS totalQty
+          , GOODS_SUM.PRICE                                 AS price
+          , GOODS_SUM.GOODS_TOTAL_PRICE                     AS goodsTotalPrice
+          , GOODS_SUM.GOODS_TOTAL_PRICE                     AS summaryTotalPrice
+          , GOODS_SUM.WEIGHT                                AS weight
+          , GOODS_SUM.WEIGHT                                AS totalWeight
+          , GOODS_SUM.ORIGIN                                AS origin
+        FROM TRAN_RCP T
+        LEFT JOIN WH_IN_RPT W ON W.WIR_GG_NO = T.TRC_TFG_NO AND W.WIR_IO_SE_CD IN ('IMP', 'IMPORT')
+        LEFT JOIN OWNER O ON T.TRC_OWR_ID = O.OWR_ID
+        LEFT JOIN WAREHOUSE_MANAGER WM ON WM.WM_ID = W.WIR_WM_ID
+        LEFT JOIN WAREHOUSE_ZONE WZ ON WZ.WZ_NO = W.WIR_WZ_NO
+        LEFT JOIN WAREHOUSE WH ON WH.WH_NO = WZ.WZ_WH_NO
+        /* B/L 정보 조인: 의뢰번호 원본 및 변형 형식을 모두 수용하도록 조인 조건 확장 */
+        LEFT JOIN BL_ISSU BI ON (
+             BI.BI_TRE_ID = T.TRC_NO 
+          OR BI.BI_TRE_ID = REPLACE(T.TRC_NO, 'TRC-', '')
+          OR (T.TRC_TFG_NO IS NOT NULL AND BI.BI_GG_NO = T.TRC_TFG_NO)
+        )
+        /* 적하목록 정보 조인: 도착통지서와 동일한 서브쿼리 구조 사용 */
+        LEFT JOIN (
+            SELECT *
+            FROM (
+                SELECT
+                    M0.*,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY M0.ICM_GG_NO
+                        ORDER BY M0.ICM_SBMSN_DT DESC NULLS LAST, M0.ICM_NO DESC
+                    ) AS RN
+                FROM IMP_CARGO_MANIFEST M0
+            )
+            WHERE RN = 1
+        ) M ON M.ICM_GG_NO = T.TRC_TFG_NO
+        LEFT JOIN (
+            SELECT CG.GG_NO, MIN(CG.CG_NO) AS CG_NO, MIN(CG.GOODS_NO) AS GOODS_NO,
+                   MIN(G.GOODS_NAME) AS GOODS_NAME, MIN(G.GOODS_HS_CODE) AS GOODS_HS_CODE, SUM(CG.CG_QTY) AS QTY,
+                   MAX(CG.CG_PRICE) AS PRICE, SUM(CG.CG_TOTAL_PRICE) AS GOODS_TOTAL_PRICE,
+                   SUM(CG.CG_WEIGHT) AS WEIGHT,
+                   MIN(NVL(NULLIF(REGEXP_REPLACE(TRIM(CG.CG_ORIGIN), '^-+', ''), ''), 'KR')) AS ORIGIN
+            FROM CUSTOMS_GOODS CG
+            LEFT JOIN GOODS G ON G.GOODS_NO = CG.GOODS_NO
+            GROUP BY CG.GG_NO
+        ) GOODS_SUM ON GOODS_SUM.GG_NO = T.TRC_TFG_NO
+        WHERE (W.WIR_NO = #{wirNo} OR T.TRC_NO = #{wirNo} OR T.TRC_NO = 'TRC-' || #{wirNo})
+          AND T.TRC_SE_CD IN ('IMP', 'IMPORT')
+          AND ROWNUM = 1
+    </select>
+
+    <select id="retriveImpUnloadingInGoodsList" resultType="kr.or.tacs.vo.transport.TransportRequestVO">
+        SELECT
+            C.CG_NO                                         AS cgNo
+          , C.GOODS_NO                                      AS goodsNo
+          , G.GOODS_NAME                                    AS goodsName
+          , G.GOODS_HS_CODE                                 AS goodsHsCode
+          , G.GOODS_HS_CODE                                 AS hsCode
+          , C.GG_NO                                         AS ggNo
+          , C.CG_QTY                                        AS qty
+          , C.CG_PRICE                                      AS price
+          , C.CG_TOTAL_PRICE                                AS goodsTotalPrice
+          , C.CG_WEIGHT                                     AS weight
+          , NVL(NULLIF(REGEXP_REPLACE(TRIM(C.CG_ORIGIN), '^-+', ''), ''), 'KR') AS origin
+        FROM CUSTOMS_GOODS C
+        LEFT JOIN GOODS G ON C.GOODS_NO = G.GOODS_NO
+        WHERE C.GG_NO = #{ggNo}
+        ORDER BY C.CG_NO
+    </select>
+
+    <select id="selectImpUnloadingInWirNoByTrcNo" parameterType="string" resultType="string">
+        SELECT W.WIR_NO
+        FROM WH_IN_RPT W
+        WHERE W.WIR_GG_NO = (
+            SELECT T.TRC_TFG_NO
+            FROM TRAN_RCP T
+            WHERE T.TRC_NO = #{trcNo}
+              AND T.TRC_SE_CD IN ('IMP', 'IMPORT')
+              AND ROWNUM = 1
+        )
+          AND W.WIR_IO_SE_CD IN ('IMP', 'IMPORT')
+        ORDER BY W.WIR_NO DESC
+        FETCH FIRST 1 ROW ONLY
+    </select>
+
+    <select id="selectNextImpGoodsNo" resultType="int">
+        SELECT NVL(MAX(GOODS_NO), 0) + 1
+        FROM GOODS
+    </select>
+
+    <select id="selectExistingImpGoodsNo" parameterType="kr.or.tacs.vo.transport.TransportRequestVO" resultType="int">
+        SELECT GOODS_NO
+        FROM (
+            SELECT G.GOODS_NO
+            FROM GOODS G
+            WHERE TRIM(G.GOODS_NAME) = COALESCE(NULLIF(TRIM(#{goodsName}), ''), NULLIF(TRIM(#{itemNm}), ''), '품목미상')
+              AND G.GOODS_HS_CODE = CASE
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM HS_CODE H
+                        WHERE H.HS_CODE = COALESCE(NULLIF(TRIM(#{goodsHsCode}), ''), NULLIF(TRIM(#{hsCode}), ''), '0101211000')
+                    ) THEN COALESCE(NULLIF(TRIM(#{goodsHsCode}), ''), NULLIF(TRIM(#{hsCode}), ''), '0101211000')
+                    ELSE '0101211000'
+                  END
+            ORDER BY G.GOODS_NO
+        )
+        WHERE ROWNUM = 1
+    </select>
+
+    <select id="selectNextImpCustomsGoodsNo" resultType="int">
+        SELECT NVL(MAX(CG_NO), 0) + 1
+        FROM CUSTOMS_GOODS
+    </select>
+
+    <insert id="insertImpGoodsMaster" parameterType="kr.or.tacs.vo.transport.TransportRequestVO">
+        INSERT INTO GOODS (
+            GOODS_NO,
+            GOODS_HS_CODE,
+            GOODS_NAME
+        ) VALUES (
+            #{goodsNo},
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM HS_CODE H
+                    WHERE H.HS_CODE = COALESCE(NULLIF(TRIM(#{goodsHsCode}), ''), NULLIF(TRIM(#{hsCode}), ''), '0101211000')
+                ) THEN COALESCE(NULLIF(TRIM(#{goodsHsCode}), ''), NULLIF(TRIM(#{hsCode}), ''), '0101211000')
+                ELSE '0101211000'
+            END,
+            COALESCE(NULLIF(TRIM(#{goodsName}), ''), NULLIF(TRIM(#{itemNm}), ''), '품목미상')
+        )
+    </insert>
+
+
+
+    <!-- 입고 보완요청 건 수정 저장: 보완제출 전에 화면에서 수정한 입고정보를 WH_IN_RPT에 반영한다. -->
+    <update id="updateImpUnloadingInSupplementData">
+        UPDATE WH_IN_RPT W
+           SET W.WIR_WM_ID = NVL(#{wmId}, W.WIR_WM_ID)
+             , W.WIR_WZ_NO = NVL(#{wzNo}, W.WIR_WZ_NO)
+             , W.WIR_IN_PLAN_DT = CASE
+                                      WHEN TRIM(#{inPlanDt}) IS NULL THEN W.WIR_IN_PLAN_DT
+                                      WHEN LENGTH(TRIM(#{inPlanDt})) &gt;= 16 THEN TO_DATE(SUBSTR(TRIM(#{inPlanDt}), 1, 16), 'YYYY-MM-DD HH24:MI')
+                                      ELSE TO_DATE(SUBSTR(TRIM(#{inPlanDt}), 1, 10), 'YYYY-MM-DD')
+                                  END
+             , W.WIR_CARGO_MGMT_NO = NVL(#{cargoMgmtNo}, W.WIR_CARGO_MGMT_NO)
+             , W.WIR_INVOICE_NO = NVL(#{invoiceNo}, W.WIR_INVOICE_NO)
+             , W.WIR_INCO_TERMS_CD = NVL(#{incoTermsCd}, W.WIR_INCO_TERMS_CD)
+             , W.WIR_RQST_CN = NVL(#{remark}, W.WIR_RQST_CN)
+         WHERE W.WIR_NO = #{wirNo}
+            OR (#{wirNo} IS NULL AND W.WIR_TRC_NO = #{trcNo})
+    </update>
+
+    <!-- 입고 보완제출 완료 처리: 창고관리자가 보완요청한 건을 운송담당자가 다시 제출한다. -->
+    <update id="updateImpUnloadingInSupplementSubmitted">
+        UPDATE WH_IN_RPT W
+           SET W.WIR_STATUS_CD = 'REQ_SENT'
+             , W.WIR_WH_REPLY_STATUS_CD = 'REQ_SENT'
+         WHERE W.WIR_NO = #{wirNo}
+            OR (#{wirNo} IS NULL AND W.WIR_TRC_NO = #{trcNo})
+    </update>
+
+    <insert id="insertImpUnloadingInGoods">
+        DECLARE
+            V_GG_NO          CUSTOMS_GOODS.GG_NO%TYPE;
+            V_ORIGIN         CUSTOMS_GOODS.CG_ORIGIN%TYPE;
+            V_TOTAL_PRICE    CUSTOMS_GOODS.CG_TOTAL_PRICE%TYPE;
+        BEGIN
+            SELECT W.WIR_GG_NO
+              INTO V_GG_NO
+              FROM WH_IN_RPT W
+             WHERE W.WIR_NO = #{wirNo}
+               AND ROWNUM = 1;
+
+            V_ORIGIN := NVL(NULLIF(REGEXP_REPLACE(TRIM(#{goods.origin}), '^-+', ''), ''), 'KR');
+            V_TOTAL_PRICE := NVL(#{goods.goodsTotalPrice}, NVL(#{goods.qty}, 0) * NVL(#{goods.price}, 0));
+
+            INSERT INTO CUSTOMS_GOODS (
+                CG_NO,
+                GOODS_NO,
+                GG_NO,
+                CG_QTY,
+                CG_PRICE,
+                CG_TOTAL_PRICE,
+                CG_WEIGHT,
+                CG_ORIGIN
+            ) VALUES (
+                #{goods.cgNo},
+                #{goods.goodsNo},
+                V_GG_NO,
+                NVL(#{goods.qty}, 0),
+                NVL(#{goods.price}, 0),
+                V_TOTAL_PRICE,
+                NVL(#{goods.weight}, 0),
+                V_ORIGIN
+            );
+        END;
+    </insert>
+
+    <delete id="deleteImpUnloadingInGoodsByWirNo">
+        DELETE FROM CUSTOMS_GOODS CG
+         WHERE CG.GG_NO = (
+               SELECT W.WIR_GG_NO
+                 FROM WH_IN_RPT W
+                WHERE W.WIR_NO = #{wirNo}
+                  AND ROWNUM = 1
+         )
+    </delete>
+
+    <update id="updateImpUnloadingInSupplementGoods" parameterType="kr.or.tacs.vo.transport.TransportRequestVO">
+        UPDATE CUSTOMS_GOODS
+        SET CG_QTY = NVL(#{qty}, CG_QTY),
+            CG_PRICE = NVL(#{price}, CG_PRICE),
+            CG_TOTAL_PRICE = NVL(#{goodsTotalPrice}, NVL(#{qty}, CG_QTY) * NVL(#{price}, CG_PRICE)),
+            CG_WEIGHT = NVL(#{weight}, CG_WEIGHT),
+            CG_ORIGIN = NVL(NULLIF(REGEXP_REPLACE(TRIM(#{origin}), '^-+', ''), ''), CG_ORIGIN)
+        WHERE CG_NO = #{cgNo}
+    </update>
+
+    <update id="updateImpUnloadingInSupplementGoodsName" parameterType="kr.or.tacs.vo.transport.TransportRequestVO">
+        UPDATE GOODS
+        SET GOODS_NAME = COALESCE(NULLIF(TRIM(#{goodsName}), ''), NULLIF(TRIM(#{itemNm}), ''), GOODS_NAME),
+            GOODS_HS_CODE = CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM HS_CODE H
+                    WHERE H.HS_CODE = COALESCE(NULLIF(TRIM(#{goodsHsCode}), ''), NULLIF(TRIM(#{hsCode}), ''), GOODS_HS_CODE)
+                ) THEN COALESCE(NULLIF(TRIM(#{goodsHsCode}), ''), NULLIF(TRIM(#{hsCode}), ''), GOODS_HS_CODE)
+                ELSE GOODS_HS_CODE
+            END
+        WHERE GOODS_NO = #{goodsNo}
+    </update>
+
+    <select id="retriveImportWarehouseManagerList" resultType="kr.or.tacs.vo.transport.TransportRequestVO">
+        SELECT
+            WH.WH_NO                                        AS whNo
+          , WH.WH_NO                                        AS warehouseNo
+          , WH.WH_NM                                        AS whNm
+          , WH.WH_NM                                        AS warehouseNm
+          , WZ.WZ_NO                                        AS wzNo
+          , WZ.WZ_NM                                        AS warehouseZoneNm
+          , WM.WM_ID                                        AS wmId
+          , WM.WM_NM                                        AS warehouseManagerNm
+        FROM WAREHOUSE WH
+        LEFT JOIN WAREHOUSE_ZONE WZ
+          ON WZ.WZ_WH_NO = WH.WH_NO
+         AND NVL(WZ.WZ_USE_YN, 'Y') = 'Y'
+         AND NVL(WZ.WZ_STATUS_CD, 'ACTIVE') = 'ACTIVE'
+        LEFT JOIN WAREHOUSE_MANAGER WM
+          ON WM.WM_ID = WZ.WM_ID
+         AND NVL(WM.WM_USE_YN, 'Y') = 'Y'
+        ORDER BY WH.WH_NM, WZ.WZ_NM, WM.WM_NM
+    </select>
+
+    <update id="updateImpUnloadingInDelivered">
+        DECLARE
+            V_WIR_NO      WH_IN_RPT.WIR_NO%TYPE;
+            V_GG_NO       TRAN_RCP.TRC_TFG_NO%TYPE;
+            V_OWNER_ID    TRAN_RCP.TRC_OWR_ID%TYPE;
+            V_OWNER_NM    OWNER.OWR_NM%TYPE;
+            V_IN_PLAN_DT  DATE;
+        BEGIN
+            /*
+             * 최초 입고요청 발송 시 화면에서 wirNo가 비어 있어도 정상 INSERT 되도록
+             * TRAN_RCP 기준으로 WIR_GG_NO / WIR_OWR_ID를 직접 조회한다.
+             * 주의: MyBatis는 SQL 주석 안의 샵 중괄호도 파라미터로 해석하므로
+             * 이 주석에는 파라미터 표기법을 쓰지 않는다.
+             */
+            SELECT T.TRC_TFG_NO,
+                   T.TRC_OWR_ID,
+                   O.OWR_NM
+              INTO V_GG_NO,
+                   V_OWNER_ID,
+                   V_OWNER_NM
+              FROM TRAN_RCP T
+              LEFT JOIN OWNER O
+                ON O.OWR_ID = T.TRC_OWR_ID
+             WHERE T.TRC_NO = #{trcNo}
+               AND T.TRC_SE_CD IN ('IMP', 'IMPORT')
+               AND ROWNUM = 1;
+
+            V_WIR_NO := NULLIF(TRIM(#{wirNo}), '');
+            IF V_WIR_NO IN ('-', 'null', 'NULL') THEN
+                V_WIR_NO := NULL;
+            END IF;
+
+            IF V_WIR_NO IS NULL THEN
+                BEGIN
+                    SELECT W.WIR_NO
+                      INTO V_WIR_NO
+                      FROM WH_IN_RPT W
+                     WHERE W.WIR_GG_NO = V_GG_NO
+                       AND W.WIR_IO_SE_CD IN ('IMP', 'IMPORT')
+                       AND ROWNUM = 1;
+                EXCEPTION
+                    WHEN NO_DATA_FOUND THEN
+                        V_WIR_NO := NULL;
+                END;
+            END IF;
+
+            IF V_WIR_NO IS NULL THEN
+                SELECT 'TRC-IMP-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' ||
+                       LPAD(NVL(MAX(TO_NUMBER(REGEXP_SUBSTR(W.WIR_NO, '[0-9]+$'))), 9000) + 1, 4, '0')
+                  INTO V_WIR_NO
+                  FROM WH_IN_RPT W
+                 WHERE W.WIR_NO LIKE 'TRC-IMP-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-%';
+            END IF;
+
+            IF #{inPlanDt} IS NULL OR TRIM(#{inPlanDt}) IS NULL THEN
+                V_IN_PLAN_DT := SYSDATE;
+            ELSIF LENGTH(TRIM(#{inPlanDt})) &gt;= 16 THEN
+                V_IN_PLAN_DT := TO_DATE(SUBSTR(TRIM(#{inPlanDt}), 1, 16), 'YYYY-MM-DD HH24:MI');
+            ELSE
+                V_IN_PLAN_DT := TO_DATE(SUBSTR(TRIM(#{inPlanDt}), 1, 10), 'YYYY-MM-DD');
+            END IF;
+
+            UPDATE WH_IN_RPT W
+               SET W.WIR_WM_ID = #{wmId},
+                   W.WIR_WZ_NO = #{wzNo},
+                   W.WIR_IN_PLAN_DT = NVL(W.WIR_IN_PLAN_DT, SYSDATE),
+                   W.WIR_STATUS_CD = 'WAIT',
+                   W.WIR_WH_REPLY_STATUS_CD = 'WAIT',
+                   W.WIR_RQST_CN = #{remark},
+                   W.WIR_CARGO_MGMT_NO = #{cargoMgmtNo},
+                   W.WIR_INVOICE_NO = #{invoiceNo},
+                   W.WIR_INCO_TERMS_CD = #{incoTermsCd},
+                   W.WIR_OWR_NM = NVL(V_OWNER_NM, W.WIR_OWR_NM)
+             WHERE W.WIR_NO = V_WIR_NO;
+
+            IF SQL%ROWCOUNT = 0 THEN
+                INSERT INTO WH_IN_RPT (
+                    WIR_NO,
+                    WIR_GG_NO,
+                    WIR_OWR_ID,
+                    WIR_WM_ID,
+                    WIR_WZ_NO,
+                    WIR_STATUS_CD,
+                    WIR_WH_REPLY_STATUS_CD,
+                    WIR_IO_SE_CD,
+                    WIR_RQST_CN,
+                    WIR_CARGO_MGMT_NO,
+                    WIR_INVOICE_NO,
+                    WIR_INCO_TERMS_CD,
+                    WIR_OWR_NM,
+                    WIR_IN_PLAN_DT
+                )
+                VALUES (
+                    V_WIR_NO,
+                    V_GG_NO,
+                    V_OWNER_ID,
+                    #{wmId},
+                    #{wzNo},
+                    'WAIT',
+                    'WAIT',
+                    'IMPORT',
+                    #{remark},
+                    #{cargoMgmtNo},
+                    #{invoiceNo},
+                    #{incoTermsCd},
+                    V_OWNER_NM,
+                    SYSDATE
+                );
+            END IF;
+        END;
+    </update>
+
+</mapper>

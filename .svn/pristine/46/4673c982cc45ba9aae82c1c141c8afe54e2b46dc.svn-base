@@ -1,0 +1,668 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.tacs.transport.importp.mapper.ImportTransportMapper">
+  <!-- ============================================================ -->
+  <!-- 정산 / D/O 발급 및 전달 / 첨부파일 -->
+  <!-- namespace는 기존 ImportTransportMapper와 동일하게 유지한다. -->
+  <!-- 발표 전 안전 분리를 위해 Java Mapper/Service/Controller는 변경하지 않는다. -->
+  <!-- ============================================================ -->
+  <select id="retriveImpDoList" resultType="kr.or.tacs.vo.transport.TransportRequestVO">
+        <!--
+        D/O 화면 조회 기준:
+        - 운임비/창고비/총청구금액은 TRAN_COST_STL 기준으로 항상 보여준다.
+        - 입고완료(IN_DONE)는 정산처리/D/O 발급 가능 조건이지 금액 조회 조건이 아니다.
+        - 입고완료 전에는 기존 DO_ISSUANCE 더미가 있어도 D/O 번호/발급상태를 화면에 노출하지 않는다.
+        -->
+        SELECT
+        T.TRC_NO                                  AS trcNo
+        , T.TRC_OWR_ID                            AS ownerId
+        , NVL(O.OWR_NM, T.TRC_OWR_ID)             AS ownerNm
+
+        , W.WIR_NO                                AS wirNo
+        , W.WIR_STATUS_CD                         AS warehouseInStatusCd
+        , W.WIR_WH_REPLY_STATUS_CD                AS warehouseReplyStatusCd
+        , CASE
+        WHEN W.WIR_STATUS_CD = 'IN_DONE' AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE' THEN '입고완료'
+        WHEN W.WIR_STATUS_CD = 'REQ_FIX' OR W.WIR_WH_REPLY_STATUS_CD = 'REQ_FIX' THEN '보완요청'
+        WHEN W.WIR_STATUS_CD = 'REQ_SENT' OR W.WIR_WH_REPLY_STATUS_CD = 'REQ_SENT' THEN '보완제출완료'
+        WHEN W.WIR_STATUS_CD IN ('REJECT', 'REJECTED') OR W.WIR_WH_REPLY_STATUS_CD IN ('REJECT', 'REJECTED') THEN '반려'
+        WHEN W.WIR_STATUS_CD = 'WAIT' OR W.WIR_WH_REPLY_STATUS_CD = 'WAIT' THEN '입고요청'
+        WHEN W.WIR_STATUS_CD IS NULL AND W.WIR_WH_REPLY_STATUS_CD IS NULL THEN NULL
+        ELSE '입고대기'
+        END                                      AS warehouseInStatusNm
+        , CASE
+        WHEN W.WIR_STATUS_CD = 'IN_DONE' AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE' THEN 'Y'
+        ELSE 'N'
+        END                                      AS warehouseInDoneYn
+
+        /*
+        * D/O 번호/상태는 DB에 실제로 존재하고, 입고완료+정산완료 조건을 만족한 경우에만 노출한다.
+        * WAIT_IN_DONE, WAIT_SETTLEMENT 같은 화면 전용 가짜 상태값은 만들지 않는다.
+        */
+        , CASE
+        WHEN W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        AND DI.DI_STATUS_CD IN ('TRC_DO_ISSUED', 'TRC_DO_REQ')
+        THEN DI.DI_DO_NO
+        ELSE NULL
+        END                                      AS doNo
+
+        , CASE
+        WHEN W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        THEN NVL(DI.DI_STATUS_CD, 'TRC_DO_READY')
+        ELSE NULL
+        END                                      AS doStatusCd
+
+        , CASE
+        WHEN W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        THEN NVL(DO_CODE.CC_NM, CASE NVL(DI.DI_STATUS_CD, 'TRC_DO_READY')
+        WHEN 'TRC_DO_READY' THEN 'D/O발급대기'
+        WHEN 'TRC_DO_ISSUED' THEN 'D/O발급완료'
+        WHEN 'TRC_DO_REQ' THEN 'D/O전달완료'
+        ELSE DI.DI_STATUS_CD
+        END)
+        ELSE NULL
+        END                                      AS doStatusNm
+
+        , DI.DI_HBL_PRESENT_YN                    AS hblPresentYn
+        , DI.DI_DO_FEE                            AS doFee
+        , TO_CHAR(DI.DI_REQ_DT, 'YYYY-MM-DD')     AS doReqDt
+        , TO_CHAR(DI.DI_RECEIVE_DT, 'YYYY-MM-DD') AS doReceiveDt
+        , NVL(DI.DI_DLVRY_OWR_NM, NVL(O.OWR_NM, T.TRC_OWR_ID)) AS deliveryTargetNm
+        , TO_CHAR(DI.DI_DLVRY_DT, 'YYYY-MM-DD')   AS deliveryDt
+        , DI.DI_DLVRY_MTHD_CD                     AS deliveryMethodCd
+        , DI.DI_ISSUER_NM                         AS doIssuerNm
+        , NVL(DI.DI_ISSU_OWR_NM, NVL(WM.WM_NM, W.WIR_WM_ID)) AS issueTargetNm
+        , DI.DI_TFG_NO                            AS doTfgNo
+        , DI.DI_TFG_NO                            AS doCertTfgNo
+        , DO_PDF_FILE.DFI_FILE_NO                 AS doPdfFileNo
+        , DO_PDF_FILE.DFI_ORG_NM                  AS doPdfFile
+        , DO_CERT_FILE.DFI_FILE_NO                AS doCertFileNo
+        , DO_CERT_FILE.DFI_ORG_NM                 AS doCertFile
+
+        , TCS.TCS_NO                              AS tcsNo
+        , COALESCE(M.ICM_MBL_NO, BI.BI_MBL_NO, TCS.TCS_MBL_NO, (SELECT MAX(IR.IR_BL_AWB_NO)
+           FROM IMP_RQST IR
+          WHERE (IR.IR_NO = T.TRC_NO OR IR.IR_NO = REPLACE(T.TRC_NO, 'TRC-', '') OR IR.IR_OWR_ID = T.TRC_OWR_ID)
+            AND IR.IR_BL_AWB_NO IS NOT NULL)) AS mblNo
+        , COALESCE(M.ICM_HBL_NO, BI.BI_HBL_NO, TCS.TCS_HBL_NO) AS hblNo
+
+        /* 정산/금액은 오직 TRAN_COST_STL 기준 */
+        , NVL(TCS.TCS_FRGT_AMT, 0)                AS freightAmt
+        , NVL(TCS.TCS_WH_AMT, 0)                  AS warehouseAmt
+        , NVL(TCS.TCS_TOT_BILL_AMT, 0)            AS totalBillAmt
+        , NVL(TCS.TCS_FRGT_AMT, 0)                AS tcsFrgtAmt
+        , NVL(TCS.TCS_WH_AMT, 0)                  AS tcsWhAmt
+        , NVL(TCS.TCS_TOT_BILL_AMT, 0)            AS tcsTotBillAmt
+        , NVL(TCS.TCS_STL_STATUS_CD, 'TRC_STL_UNPAID')    AS settlementStatusCd
+        , NVL(TCS.TCS_STL_STATUS_CD, 'TRC_STL_UNPAID')    AS tcsStlStatusCd
+        , CASE NVL(TCS.TCS_STL_STATUS_CD, 'TRC_STL_UNPAID')
+        WHEN 'TRC_STL_UNPAID' THEN '미정산'
+        WHEN 'UNPAID'         THEN '미정산'
+        WHEN 'TRC_STL_REQ'    THEN '정산요청'
+        WHEN 'REQUEST'        THEN '정산요청'
+        WHEN 'REQUESTED'      THEN '정산요청'
+        WHEN 'TRC_STL_PAID'   THEN '정산완료'
+        WHEN 'PAID'           THEN '정산완료'
+        ELSE TCS.TCS_STL_STATUS_CD
+        END                                      AS settlementStatusNm
+        , CASE NVL(TCS.TCS_STL_STATUS_CD, 'TRC_STL_UNPAID')
+        WHEN 'TRC_STL_UNPAID' THEN '미정산'
+        WHEN 'UNPAID'         THEN '미정산'
+        WHEN 'TRC_STL_REQ'    THEN '정산요청'
+        WHEN 'REQUEST'        THEN '정산요청'
+        WHEN 'REQUESTED'      THEN '정산요청'
+        WHEN 'TRC_STL_PAID'   THEN '정산완료'
+        WHEN 'PAID'           THEN '정산완료'
+        ELSE TCS.TCS_STL_STATUS_CD
+        END                                      AS tcsStlStatusNm
+        , TCS.TCS_STL_EXPLN                       AS settlementExpln
+        , TO_CHAR(T.TRC_RQST_DT, 'YYYY-MM-DD')    AS requestDt
+
+        FROM TRAN_RCP T
+        LEFT JOIN OWNER O
+        ON O.OWR_ID = T.TRC_OWR_ID
+
+        /* 입고상태는 조회용으로 최신 1건만 붙인다. IN_DONE 조건을 여기서 걸지 않는다. */
+        LEFT JOIN (
+        SELECT *
+        FROM (
+        SELECT
+        W0.*
+        , ROW_NUMBER() OVER (
+        PARTITION BY W0.WIR_GG_NO
+        ORDER BY
+        CASE
+        WHEN W0.WIR_STATUS_CD = 'IN_DONE' OR W0.WIR_WH_REPLY_STATUS_CD = 'IN_DONE' THEN 1
+        WHEN W0.WIR_STATUS_CD = 'REQ_SENT' OR W0.WIR_WH_REPLY_STATUS_CD = 'REQ_SENT' THEN 2
+        WHEN W0.WIR_STATUS_CD = 'REQ_FIX' OR W0.WIR_WH_REPLY_STATUS_CD = 'REQ_FIX' THEN 3
+        ELSE 4
+        END,
+        W0.WIR_IN_PLAN_DT DESC NULLS LAST,
+        W0.WIR_NO DESC
+        ) AS RN
+        FROM WH_IN_RPT W0
+        WHERE W0.WIR_IO_SE_CD = 'IMP'
+        )
+        WHERE RN = 1
+        ) W
+        ON W.WIR_GG_NO = T.TRC_TFG_NO
+
+        LEFT JOIN WAREHOUSE_MANAGER WM
+        ON WM.WM_ID = W.WIR_WM_ID
+
+        LEFT JOIN DO_ISSUANCE DI
+        ON DI.DI_TRC_NO = T.TRC_NO
+        AND NVL(DI.DI_TRDE_SE_CD, 'IMP') IN ('IMP', 'IMPORT')
+
+        LEFT JOIN COM_CODE DO_CODE
+        ON DO_CODE.CC_CCG_ID = 'DO_STATUS'
+        AND DO_CODE.CC_CD = DI.DI_STATUS_CD
+        AND NVL(DO_CODE.CC_USE_YN, 'Y') = 'Y'
+
+        LEFT JOIN (
+        SELECT
+        FM.TFM_TFG_NO
+        , LISTAGG(TO_CHAR(FD.DFI_FILE_NO), ', ') WITHIN GROUP (ORDER BY FM.TFM_NO) AS DFI_FILE_NO
+        , LISTAGG(FD.DFI_ORG_NM, ', ') WITHIN GROUP (ORDER BY FM.TFM_NO) AS DFI_ORG_NM
+        FROM TACS_FILE_MAP FM
+        INNER JOIN DOCS_FILE_DATA FD
+        ON FD.DFI_FILE_NO = FM.TFM_DFI_NO
+        AND FD.DFI_DEL_YN = 'N'
+        WHERE (
+        NVL(FM.TFM_DOC_TY_CD, 'IMP_DO') = 'IMP_DO'
+        OR FD.DFI_BIZ_TY_CD = 'IMP_DO'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%do%'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%d/o%'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%delivery%'
+        OR FD.DFI_ORG_NM LIKE '%딜리버리%'
+        )
+        AND NOT (
+        NVL(FM.TFM_DOC_TY_CD, 'X') = 'IMP_DO_CERT'
+        OR FD.DFI_BIZ_TY_CD = 'IMP_DO_CERT'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%cert%'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%declaration%'
+        OR FD.DFI_ORG_NM LIKE '%신고%'
+        OR FD.DFI_ORG_NM LIKE '%필증%'
+        )
+        GROUP BY FM.TFM_TFG_NO
+        ) DO_PDF_FILE
+        ON DO_PDF_FILE.TFM_TFG_NO = DI.DI_TFG_NO
+
+        LEFT JOIN (
+        SELECT
+        FM.TFM_TFG_NO
+        , LISTAGG(TO_CHAR(FD.DFI_FILE_NO), ', ') WITHIN GROUP (ORDER BY FM.TFM_NO) AS DFI_FILE_NO
+        , LISTAGG(FD.DFI_ORG_NM, ', ') WITHIN GROUP (ORDER BY FM.TFM_NO) AS DFI_ORG_NM
+        FROM TACS_FILE_MAP FM
+        INNER JOIN DOCS_FILE_DATA FD
+        ON FD.DFI_FILE_NO = FM.TFM_DFI_NO
+        AND FD.DFI_DEL_YN = 'N'
+        WHERE NVL(FM.TFM_DOC_TY_CD, 'X') = 'IMP_DO_CERT'
+        OR FD.DFI_BIZ_TY_CD = 'IMP_DO_CERT'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%cert%'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%declaration%'
+        OR FD.DFI_ORG_NM LIKE '%신고%'
+        OR FD.DFI_ORG_NM LIKE '%필증%'
+        GROUP BY FM.TFM_TFG_NO
+        ) DO_CERT_FILE
+        ON DO_CERT_FILE.TFM_TFG_NO = DI.DI_TFG_NO
+
+        LEFT JOIN TRAN_COST_STL TCS
+        ON TCS.TCS_TRC_NO = T.TRC_NO
+
+        LEFT JOIN BL_ISSU BI
+        ON BI.BI_TRE_ID = T.TRC_NO
+
+        LEFT JOIN (
+        SELECT
+        ICM_GG_NO
+        , ICM_MBL_NO
+        , ICM_HBL_NO
+        FROM (
+        SELECT
+        ICM_GG_NO
+        , ICM_MBL_NO
+        , ICM_HBL_NO
+        , ROW_NUMBER() OVER (PARTITION BY ICM_GG_NO ORDER BY ICM_SBMSN_DT DESC NULLS LAST, ICM_NO DESC) AS RN
+        FROM IMP_CARGO_MANIFEST
+        )
+        WHERE RN = 1
+        ) M
+        ON M.ICM_GG_NO = T.TRC_TFG_NO
+
+        WHERE T.TRC_SE_CD = 'IMPORT'
+        <if test="tmId != null and tmId != ''">
+            AND T.TRC_TM_NO = (
+            SELECT TM.TM_NO
+            FROM TRANSPORT_MANAGER TM
+            WHERE TM.TM_ID = #{tmId}
+            )
+        </if>
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        AND W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        ORDER BY T.TRC_RQST_DT DESC NULLS LAST, T.TRC_NO DESC
+    </select>
+  <update id="updateImpDoDelivered">
+        UPDATE DO_ISSUANCE
+        SET
+        DI_STATUS_CD      = 'TRC_DO_REQ'
+        , DI_TRDE_SE_CD   = 'IMP'
+        , DI_DLVRY_DT     = TO_DATE(#{deliveryDt}, 'YYYY-MM-DD')
+        , DI_DLVRY_OWR_NM = COALESCE(
+        NULLIF(#{deliveryTargetNm}, ''),
+        (
+        SELECT NVL(O.OWR_NM, T.TRC_OWR_ID)
+        FROM TRAN_RCP T
+        LEFT JOIN OWNER O
+        ON O.OWR_ID = T.TRC_OWR_ID
+        WHERE T.TRC_NO = #{trcNo}
+        ),
+        DI_DLVRY_OWR_NM
+        )
+        , DI_DLVRY_MTHD_CD = COALESCE(
+        NULLIF(#{deliveryMethodCd}, ''),
+        (
+        SELECT W.WIR_WZ_NO
+        FROM TRAN_RCP T
+        JOIN WH_IN_RPT W
+        ON W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMP'
+        WHERE T.TRC_NO = #{trcNo}
+        ORDER BY W.WIR_NO DESC
+        FETCH FIRST 1 ROW ONLY
+        ),
+        DI_DLVRY_MTHD_CD
+        )
+        WHERE DI_TRC_NO = #{trcNo}
+        AND NVL(DI_TRDE_SE_CD, 'IMP') = 'IMP'
+        AND EXISTS (
+        SELECT 1
+        FROM TRAN_RCP T
+        JOIN WH_IN_RPT W
+        ON W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMP'
+        AND W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD = 'IMPORT'
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        )
+    </update>
+  <update id="updateImpDoIssued">
+        /*
+        * D/O 발급 처리.
+        * 기존 D/O가 있으면 UPDATE, 없으면 INSERT 한다.
+        * 입고완료(IN_DONE/IN_DONE) 조건을 만족해야만 발급된다.
+        */
+        BEGIN
+        UPDATE DO_ISSUANCE D
+        SET D.DI_DO_NO = COALESCE(NULLIF(#{doNo,jdbcType=VARCHAR}, ''), D.DI_DO_NO,
+        'DO-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' ||
+        LPAD((
+        SELECT NVL(MAX(TO_NUMBER(SUBSTR(DI_DO_NO, -3))), 0) + 1
+        FROM DO_ISSUANCE
+        WHERE DI_DO_NO LIKE 'DO-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-%'
+        ), 3, '0'))
+        , D.DI_STATUS_CD = 'TRC_DO_ISSUED'
+        , D.DI_REQ_DT = NVL(D.DI_REQ_DT, SYSDATE)
+        , D.DI_RECEIVE_DT = TO_DATE(NVL(#{receiveDt}, TO_CHAR(SYSDATE, 'YYYY-MM-DD')), 'YYYY-MM-DD')
+        , D.DI_TFG_NO = NVL(#{doTfgNo,jdbcType=NUMERIC}, D.DI_TFG_NO)
+        , D.DI_ISSU_OWR_NM = NVL(D.DI_ISSU_OWR_NM, (
+        SELECT NVL(WM.WM_NM, W.WIR_WM_ID)
+        FROM TRAN_RCP T
+        JOIN WH_IN_RPT W
+        ON W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMP'
+        AND W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        LEFT JOIN WAREHOUSE_MANAGER WM
+        ON WM.WM_ID = W.WIR_WM_ID
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD = 'IMPORT'
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        FETCH FIRST 1 ROW ONLY
+        ))
+        WHERE D.DI_TRC_NO = #{trcNo}
+        AND NVL(D.DI_TRDE_SE_CD, 'IMP') = 'IMP'
+        AND NVL(D.DI_STATUS_CD, 'TRC_DO_READY') = 'TRC_DO_READY'
+        AND EXISTS (
+        SELECT 1
+        FROM TRAN_RCP T
+        JOIN WH_IN_RPT W
+        ON W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMP'
+        AND W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD = 'IMPORT'
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        AND EXISTS (
+        SELECT 1
+        FROM TRAN_COST_STL TCS
+        WHERE TCS.TCS_TRC_NO = T.TRC_NO
+        AND TCS.TCS_STL_STATUS_CD IN ('TRC_STL_PAID', 'PAID')
+        )
+        );
+
+        IF SQL%ROWCOUNT = 0 THEN
+        INSERT INTO DO_ISSUANCE (
+        DI_DO_NO,
+        DI_TRAN_NO,
+        DI_TRC_NO,
+        DI_TRDE_SE_CD,
+        DI_STATUS_CD,
+        DI_HBL_PRESENT_YN,
+        DI_REQ_DT,
+        DI_RECEIVE_DT,
+        DI_TFG_NO,
+        DI_ISSU_OWR_NM
+        )
+        SELECT
+        COALESCE(NULLIF(#{doNo,jdbcType=VARCHAR}, ''), 'DO-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' ||
+        LPAD((
+        SELECT NVL(MAX(TO_NUMBER(SUBSTR(DI_DO_NO, -3))), 0) + 1
+        FROM DO_ISSUANCE
+        WHERE DI_DO_NO LIKE 'DO-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-%'
+        ), 3, '0')),
+        (SELECT NVL(MAX(DI_TRAN_NO), 0) + 1 FROM DO_ISSUANCE),
+        T.TRC_NO,
+        'IMP',
+        'TRC_DO_ISSUED',
+        'Y',
+        SYSDATE,
+        TO_DATE(NVL(#{receiveDt}, TO_CHAR(SYSDATE, 'YYYY-MM-DD')), 'YYYY-MM-DD'),
+        #{doTfgNo,jdbcType=NUMERIC},
+        (
+        SELECT NVL(WM.WM_NM, W.WIR_WM_ID)
+        FROM WH_IN_RPT W
+        LEFT JOIN WAREHOUSE_MANAGER WM
+        ON WM.WM_ID = W.WIR_WM_ID
+        WHERE W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMP'
+        AND W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        FETCH FIRST 1 ROW ONLY
+        )
+        FROM TRAN_RCP T
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD = 'IMPORT'
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        AND EXISTS (
+        SELECT 1
+        FROM WH_IN_RPT W
+        WHERE W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMP'
+        AND W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        )
+        AND EXISTS (
+        SELECT 1
+        FROM TRAN_COST_STL TCS
+        WHERE TCS.TCS_TRC_NO = T.TRC_NO
+        AND TCS.TCS_STL_STATUS_CD IN ('TRC_STL_PAID', 'PAID')
+        )
+        AND NOT EXISTS (
+        SELECT 1
+        FROM DO_ISSUANCE D
+        WHERE D.DI_TRC_NO = T.TRC_NO
+        AND NVL(D.DI_TRDE_SE_CD, 'IMP') = 'IMP'
+        );
+        END IF;
+        END;
+    </update>
+  <update id="updateImpDoUploadedFiles">
+        /*
+        * 첨부문서 업로드 전용.
+        * - 파일만 DI_TFG_NO에 연결한다.
+        * - DB 제약상 DI_DO_NO는 생성하되 화면 조회에서는 TRC_DO_ISSUED 전까지 숨긴다.
+        * - 기존 D/O row가 없으면 발급대기(TRC_DO_READY) row만 준비한다.
+        */
+        BEGIN
+        UPDATE DO_ISSUANCE D
+        SET
+        D.DI_TFG_NO = #{doTfgNo,jdbcType=NUMERIC}
+        , D.DI_TRDE_SE_CD = 'IMP'
+        , D.DI_STATUS_CD = NVL(D.DI_STATUS_CD, 'TRC_DO_READY')
+        WHERE D.DI_TRC_NO = #{trcNo}
+        AND NVL(D.DI_TRDE_SE_CD, 'IMP') = 'IMP'
+        AND NVL(D.DI_STATUS_CD, 'TRC_DO_READY') IN ('TRC_DO_READY', 'TRC_DO_ISSUED', 'TRC_DO_REQ')
+        AND EXISTS (
+        SELECT 1
+        FROM TRAN_RCP T
+        JOIN WH_IN_RPT W
+        ON W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMP'
+        AND W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        JOIN TRAN_COST_STL TCS
+        ON TCS.TCS_TRC_NO = T.TRC_NO
+        AND TCS.TCS_STL_STATUS_CD IN ('TRC_STL_PAID', 'PAID')
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD = 'IMPORT'
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        );
+
+        IF SQL%ROWCOUNT = 0 THEN
+        INSERT INTO DO_ISSUANCE (
+        DI_DO_NO,
+        DI_TRAN_NO,
+        DI_TRC_NO,
+        DI_TRDE_SE_CD,
+        DI_STATUS_CD,
+        DI_HBL_PRESENT_YN,
+        DI_TFG_NO
+        )
+        SELECT
+        'DO-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' ||
+        LPAD((
+        SELECT NVL(MAX(TO_NUMBER(SUBSTR(DI_DO_NO, -3))), 0) + 1
+        FROM DO_ISSUANCE
+        WHERE DI_DO_NO LIKE 'DO-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-%'
+        ), 3, '0'),
+        (SELECT NVL(MAX(DI_TRAN_NO), 0) + 1 FROM DO_ISSUANCE),
+        T.TRC_NO,
+        'IMP',
+        'TRC_DO_READY',
+        'Y',
+        #{doTfgNo,jdbcType=NUMERIC}
+        FROM TRAN_RCP T
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD = 'IMPORT'
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        AND EXISTS (
+        SELECT 1
+        FROM WH_IN_RPT W
+        WHERE W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMP'
+        AND W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        )
+        AND EXISTS (
+        SELECT 1
+        FROM TRAN_COST_STL TCS
+        WHERE TCS.TCS_TRC_NO = T.TRC_NO
+        AND TCS.TCS_STL_STATUS_CD IN ('TRC_STL_PAID', 'PAID')
+        )
+        AND NOT EXISTS (
+        SELECT 1
+        FROM DO_ISSUANCE D
+        WHERE D.DI_TRC_NO = T.TRC_NO
+        AND NVL(D.DI_TRDE_SE_CD, 'IMP') = 'IMP'
+        );
+        END IF;
+        END;
+    </update>
+  <update id="updateImpDoCertFile">
+        UPDATE DO_ISSUANCE
+        SET
+        DI_TFG_NO = #{doTfgNo,jdbcType=NUMERIC}
+        WHERE DI_TRC_NO = #{trcNo}
+        AND NVL(DI_TRDE_SE_CD, 'IMP') = 'IMP'
+        AND DI_STATUS_CD IN ('TRC_DO_ISSUED', 'TRC_DO_REQ')
+        AND EXISTS (
+        SELECT 1
+        FROM TRAN_RCP T
+        JOIN WH_IN_RPT W
+        ON W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMP'
+        AND W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        WHERE T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD = 'IMPORT'
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        )
+    </update>
+  <select id="selectIssuedImpDoNo" resultType="String">
+        SELECT DI_DO_NO
+        FROM DO_ISSUANCE
+        WHERE DI_TRC_NO = #{trcNo}
+        AND NVL(DI_TRDE_SE_CD, 'IMP') = 'IMP'
+        AND DI_STATUS_CD IN ('TRC_DO_ISSUED', 'TRC_DO_REQ')
+        ORDER BY DI_RECEIVE_DT DESC NULLS LAST, DI_DO_NO DESC
+        FETCH FIRST 1 ROW ONLY
+    </select>
+  <update id="updateImpDoSettlementPaid">
+        /*
+        * D/O 정산요청 처리.
+        * 운송담당자가 누르는 버튼은 정산완료가 아니라 정산요청(TRC_STL_REQ)까지만 처리한다.
+        * 정산완료(TRC_STL_PAID)는 화주 납부 처리 후 별도 흐름에서만 들어가야 한다.
+        */
+        BEGIN
+        UPDATE TRAN_COST_STL TCS
+        SET TCS.TCS_STL_STATUS_CD = 'TRC_STL_PAID',
+        TCS.TCS_FRGT_AMT = NVL(#{freightAmt}, 0),
+        TCS.TCS_WH_AMT = NVL(#{warehouseAmt}, 0),
+        TCS.TCS_TOT_BILL_AMT = NVL(#{totalBillAmt}, NVL(#{freightAmt}, 0) + NVL(#{warehouseAmt}, 0)),
+        TCS.TCS_STL_EXPLN = #{settlementExpln}
+        WHERE TCS.TCS_TRC_NO = #{trcNo};
+
+        IF SQL%ROWCOUNT = 0 THEN
+        INSERT INTO TRAN_COST_STL (
+        TCS_NO,
+        TCS_TRC_NO,
+        TCS_OWR_ID,
+        TCS_GG_NO,
+        TCS_MBL_NO,
+        TCS_HBL_NO,
+        TCS_BL_STATUS_CD,
+        TCS_STL_STATUS_CD,
+        TCS_FRGT_AMT,
+        TCS_WH_AMT,
+        TCS_TOT_BILL_AMT,
+        TCS_STL_EXPLN
+        )
+        SELECT
+        'TCS-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' ||
+        LPAD((
+        SELECT NVL(MAX(TO_NUMBER(REGEXP_SUBSTR(X.TCS_NO, '[0-9]+$'))), 0) + 1
+        FROM TRAN_COST_STL X
+        WHERE X.TCS_NO LIKE 'TCS-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-%'
+        ), 3, '0') AS TCS_NO,
+        TR.TRC_NO,
+        TR.TRC_OWR_ID,
+        TR.TRC_TFG_NO,
+        NVL(M.ICM_MBL_NO, TR.TRC_BI_NO),
+        M.ICM_HBL_NO,
+        'UNPAID',
+        'TRC_STL_PAID',
+        NVL(#{freightAmt}, 0),
+        NVL(#{warehouseAmt}, 0),
+        NVL(#{totalBillAmt}, NVL(#{freightAmt}, 0) + NVL(#{warehouseAmt}, 0)),
+        #{settlementExpln}
+        FROM TRAN_RCP TR
+        LEFT JOIN (
+        SELECT ICM_GG_NO, ICM_OWR_ID, ICM_MBL_NO, ICM_HBL_NO
+        FROM (
+        SELECT M0.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY M0.ICM_GG_NO, M0.ICM_OWR_ID
+        ORDER BY M0.ICM_SBMSN_DT DESC NULLS LAST, M0.ICM_NO DESC
+        ) AS RN
+        FROM IMP_CARGO_MANIFEST M0
+        )
+        WHERE RN = 1
+        ) M
+        ON M.ICM_GG_NO = TR.TRC_TFG_NO
+        AND M.ICM_OWR_ID = TR.TRC_OWR_ID
+        WHERE TR.TRC_NO = #{trcNo}
+        AND TR.TRC_SE_CD = 'IMPORT';
+        END IF;
+        END;
+    </update>
+  <select id="countImpDoSettlementPaid" resultType="int">
+        /*
+        * 메서드명은 기존 Java 코드 호환 때문에 Paid로 유지하지만,
+        * 운송담당자 버튼은 정산완료가 아니라 정산요청 처리다.
+        * 그래서 성공 확인은 TRC_STL_REQ까지 인정해야 한다.
+        */
+        SELECT COUNT(1)
+        FROM TRAN_COST_STL TCS
+        WHERE TCS.TCS_TRC_NO = #{trcNo}
+        AND TCS.TCS_STL_STATUS_CD IN ('TRC_STL_PAID', 'PAID')
+        AND EXISTS (
+        SELECT 1
+        FROM TRAN_RCP T
+        LEFT JOIN WH_IN_RPT W
+        ON W.WIR_GG_NO = T.TRC_TFG_NO
+        AND W.WIR_IO_SE_CD = 'IMP'
+        WHERE T.TRC_NO = TCS.TCS_TRC_NO
+        AND T.TRC_NO = #{trcNo}
+        AND T.TRC_SE_CD = 'IMPORT'
+        AND T.TRC_STATUS_CD = 'TRC_DONE'
+        AND W.WIR_STATUS_CD = 'IN_DONE'
+        AND W.WIR_WH_REPLY_STATUS_CD = 'IN_DONE'
+        )
+    </select>
+  <select id="countImpDoPdfFile" resultType="int">
+        SELECT COUNT(1)
+        FROM DO_ISSUANCE DI
+        JOIN TACS_FILE_MAP FM
+        ON FM.TFM_TFG_NO = DI.DI_TFG_NO
+        JOIN DOCS_FILE_DATA FD
+        ON FD.DFI_FILE_NO = FM.TFM_DFI_NO
+        AND NVL(FD.DFI_DEL_YN, 'N') = 'N'
+        WHERE DI.DI_TRC_NO = #{trcNo}
+        AND NVL(DI.DI_TRDE_SE_CD, 'IMP') IN ('IMP', 'IMPORT')
+        AND (
+        NVL(FM.TFM_DOC_TY_CD, 'IMP_DO') = 'IMP_DO'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%do%'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%d/o%'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%delivery%'
+        OR FD.DFI_ORG_NM LIKE '%딜리버리%'
+        )
+        AND NOT (
+        NVL(FM.TFM_DOC_TY_CD, 'X') = 'IMP_DO_CERT'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%cert%'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%declaration%'
+        OR FD.DFI_ORG_NM LIKE '%신고%'
+        OR FD.DFI_ORG_NM LIKE '%필증%'
+        )
+    </select>
+  <select id="countImpDoCertFile" resultType="int">
+        SELECT COUNT(1)
+        FROM DO_ISSUANCE DI
+        JOIN TACS_FILE_MAP FM
+        ON FM.TFM_TFG_NO = DI.DI_TFG_NO
+        JOIN DOCS_FILE_DATA FD
+        ON FD.DFI_FILE_NO = FM.TFM_DFI_NO
+        AND NVL(FD.DFI_DEL_YN, 'N') = 'N'
+        WHERE DI.DI_TRC_NO = #{trcNo}
+        AND NVL(DI.DI_TRDE_SE_CD, 'IMP') IN ('IMP', 'IMPORT')
+        AND (
+        NVL(FM.TFM_DOC_TY_CD, 'X') = 'IMP_DO_CERT'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%cert%'
+        OR LOWER(FD.DFI_ORG_NM) LIKE '%declaration%'
+        OR FD.DFI_ORG_NM LIKE '%신고%'
+        OR FD.DFI_ORG_NM LIKE '%필증%'
+        )
+    </select>
+
+    <!-- updateImpReleaseReqData는 importTransport_release_Mapper.xml에만 둔다. 중복 매핑 방지. -->
+    <!-- retriveImpReleaseReqList는 importTransport_release_Mapper.xml에만 둔다. 중복 매핑 방지. -->
+    <!-- selectImpReleaseReqDetail는 importTransport_release_Mapper.xml에만 둔다. 중복 매핑 방지. -->
+    <!-- retriveImpReleaseReqGoodsList는 importTransport_release_Mapper.xml에만 둔다. 중복 매핑 방지. -->
+</mapper>

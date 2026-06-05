@@ -1,0 +1,46 @@
+/* Settlement specific styles */
+.settlement-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.settlement-card {
+  background: #fff;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #565e74;
+}
+
+.settlement-card.pending {
+  border-left-color: #d97706;
+}
+
+.settlement-card.overdue {
+  border-left-color: #9f403d;
+}
+
+.settlement-card.completed {
+  border-left-color: #1d6b4f;
+}
+
+.settlement-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.settlement-value {
+  font-size: 28px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.settlement-desc {
+  font-size: 12px;
+  color: #94a3b8;
+}

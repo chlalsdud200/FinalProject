@@ -1,0 +1,39 @@
+package kr.or.tacs.officer.basicscreen.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import kr.or.tacs.dto.officer.BasicScreenListDTO;
+import kr.or.tacs.officer.basicscreen.mapper.IScreenListMapper;
+
+@Service
+public class ScreenListImpl implements IScreenListService {
+
+    @Autowired
+    private IScreenListMapper mapper;
+
+    @Autowired
+    private IAiRiskService aiRiskService;
+
+    @Override
+    public List<BasicScreenListDTO> selectBasicList(String loginOfficerId) {
+
+        List<BasicScreenListDTO> list = mapper.selectBasicList(loginOfficerId);
+
+        for (BasicScreenListDTO item : list) {
+
+            if (item.getRiskStatusCd() == null) {
+
+                String bizTypeCd = "수입".equals(item.getDeclareType())
+                        ? "IMPORT"
+                        : "EXPORT";
+
+                aiRiskService.aiResultSave(bizTypeCd, item.getReqNo());
+            }
+        }
+
+        return mapper.selectBasicList(loginOfficerId);
+    }
+}

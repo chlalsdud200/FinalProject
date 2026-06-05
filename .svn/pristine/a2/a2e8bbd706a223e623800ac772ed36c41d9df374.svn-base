@@ -1,0 +1,215 @@
+package kr.or.tacs.owner.payment.service;
+
+import kr.or.tacs.cmmenums.TacsPayRcTy;
+import kr.or.tacs.cmmenums.TacsPaySt;
+import kr.or.tacs.cmmenums.TacsTrSt;
+import kr.or.tacs.dto.owner.OwnerPayDTO;
+import kr.or.tacs.dto.owner.OwnerPayRecordDTO;
+import kr.or.tacs.dto.owner.OwnerPaymentTargetDTO;
+import kr.or.tacs.dto.owner.TossConfirmResponseDTO;
+import kr.or.tacs.owner.payment.mapper.IOwnerPaymentMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class OwnerPaymentServiceImpl implements IOwnerPaymentService{
+
+    @Value("${toss.client-key}")
+    private String tossClientKey;
+
+    @Value("${toss.secret-key}")
+    private String tossSecretKey;
+
+    @Autowired
+    private IOwnerPaymentMapper paymentMapper;
+
+    /**
+     * 결제 준비
+     * - tcsNo로 실제 운임정산 청구건 조회
+     * - OWNER_PAY_RECORD에 PAY_READY 이력 생성
+     * - 토스 결제창 호출에 필요한 값 반환
+     */
+    @Override
+    @Transactional
+    public Map<String, Object> ready(OwnerPayDTO payDTO, String owrId) {
+
+        OwnerPaymentTargetDTO target;
+
+        String orderName;
+
+        if (TacsPayRcTy.FREIGHT.getCode().equals(payDTO.getRecordTy())) {
+            target = paymentMapper.selectFreightPaymentTarget(payDTO.getClaimNo(), owrId);
+            orderName = TacsPayRcTy.FREIGHT.getLabel();
+
+        } else if (TacsPayRcTy.BROKER_CHARGE.getCode().equals(payDTO.getRecordTy())) {
+            target = paymentMapper.selectBrokerPaymentTarget(payDTO.getClaimNo(), owrId);
+            orderName = TacsPayRcTy.BROKER_CHARGE.getLabel();
+
+        } else {
+            throw new IllegalArgumentException("지원하지 않는 결제 유형입니다.");
+        }
+
+        if (target == null) {
+            throw new IllegalArgumentException("결제 대상 청구 건을 찾을 수 없습니다.");
+        }
+
+        if (TacsPayRcTy.FREIGHT.getCode().equals(payDTO.getRecordTy())
+                && !TacsTrSt.TRC_STL_REQ.getCode().equals(target.getStatusCd())) {
+            throw new IllegalStateException("결제 가능한 운임정산 상태가 아닙니다.");
+        }
+
+        if (TacsPayRcTy.BROKER_CHARGE.getCode().equals(payDTO.getRecordTy())
+                && !TacsPaySt.BC_CHARGED.getCode().equals(target.getStatusCd())) {
+            throw new IllegalStateException("결제 가능한 관세사 청구 상태가 아닙니다.");
+        }
+
+        if (target.getAmount() == null || target.getAmount() <= 0) {
+            throw new IllegalStateException("결제 금액이 올바르지 않습니다.");
+        }
+
+        String orderId = "PAY-" + System.currentTimeMillis();
+        String oprNo = "OPR" + System.currentTimeMillis();
+
+
+        OwnerPayRecordDTO payRecord = new OwnerPayRecordDTO();
+        payRecord.setOprNo(oprNo);
+        payRecord.setOprClaimNo(target.getClaimNo());
+        payRecord.setOprPaymentId(orderId);
+        payRecord.setOprAmt(target.getAmount());
+        payRecord.setOprRecordTy(payDTO.getRecordTy());
+        payRecord.setOprPayStatusCd(TacsPaySt.PAY_READY.getCode());
+
+        paymentMapper.insertPayReady(payRecord);
+
+        Map<String, Object> resultMap = new HashMap<>();
+        resultMap.put("clientKey", tossClientKey);
+        resultMap.put("customerKey", owrId);
+        resultMap.put("orderId", orderId);
+        resultMap.put("orderName", orderName);
+        resultMap.put("amount", target.getAmount());
+
+        return resultMap;
+    }
+    @Override
+    @Transactional
+    public TossConfirmResponseDTO confirm(String paymentKey, String orderId, Long amount) {
+        OwnerPayRecordDTO payRecord = paymentMapper.selectPayRecordByPaymentId(orderId);
+
+        if (payRecord == null) {
+            throw new IllegalArgumentException("결제 대기 이력을 찾을 수 없습니다.");
+        }
+
+        if (!TacsPaySt.PAY_READY.getCode().equals(payRecord.getOprPayStatusCd())) {
+            throw new IllegalStateException("이미 처리된 결제입니다.");
+        }
+
+        if (!payRecord.getOprAmt().equals(amount)) {
+            throw new IllegalStateException("결제 금액이 일치하지 않습니다.");
+        }
+
+        TossConfirmResponseDTO tossResult = requestTossConfirm(paymentKey, orderId, amount);
+
+        if (tossResult == null || !"DONE".equals(tossResult.getStatus())) {
+            throw new IllegalStateException("토스 결제 승인이 완료되지 않았습니다.");
+        }
+
+
+        OwnerPayRecordDTO updateRecord = new OwnerPayRecordDTO();
+        updateRecord.setOprNo(payRecord.getOprNo());
+        updateRecord.setOprHandleStatusCd(tossResult.getStatus());
+        updateRecord.setOprPayStatusCd(TacsPaySt.PAY_DONE.getCode());
+        updateRecord.setOprPayMethodCd(tossResult.getMethod());
+        updateRecord.setOprApprovedDt(parseTossDate(tossResult.getApprovedAt()));
+
+        paymentMapper.updatePayDone(updateRecord);
+
+        if (TacsPayRcTy.FREIGHT.getCode().equals(payRecord.getOprRecordTy())) {
+            payRecord.setStatusCd(TacsTrSt.TRC_STL_PAID.getCode());
+            paymentMapper.updateFreightPaid(payRecord);
+
+        } else if (TacsPayRcTy.BROKER_CHARGE.getCode().equals(payRecord.getOprRecordTy())) {
+            payRecord.setStatusCd(TacsPaySt.PAY_DONE.getCode());
+            paymentMapper.updateBrokerPaid(payRecord);
+        }
+
+        return tossResult;
+    }
+
+    @Override
+    @Transactional
+    public void fail(String code, String message, String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            return;
+        }
+
+        OwnerPayRecordDTO payRecord = paymentMapper.selectPayRecordByPaymentId(orderId);
+
+        if (payRecord == null) {
+            return;
+        }
+
+        paymentMapper.updatePayFail(payRecord.getOprNo());
+
+        Map<String, Object> failMap = new HashMap<>();
+        failMap.put("opfNo", "OPF" + System.currentTimeMillis());
+        failMap.put("oprNo", payRecord.getOprNo());
+        failMap.put("failCd", code);
+        failMap.put("failMsg", message);
+
+        paymentMapper.insertPayFailed(failMap);
+    }
+
+    private TossConfirmResponseDTO requestTossConfirm(String paymentKey, String orderId, Long amount) {
+        RestTemplate restTemplate = new RestTemplate();
+
+        String encodedAuth = Base64.getEncoder()
+                .encodeToString((tossSecretKey + ":").getBytes(StandardCharsets.UTF_8));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Basic " + encodedAuth);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("paymentKey", paymentKey);
+        body.put("orderId", orderId);
+        body.put("amount", amount);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        ResponseEntity<TossConfirmResponseDTO> response = restTemplate.postForEntity(
+                "https://api.tosspayments.com/v1/payments/confirm",
+                request,
+                TossConfirmResponseDTO.class
+        );
+
+        return response.getBody();
+    }
+
+    private Date parseTossDate(String approvedAt) {
+        if (approvedAt == null || approvedAt.isBlank()) {
+            return null;
+        }
+
+        try {
+            return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(approvedAt);
+        } catch (ParseException e) {
+            return null;
+        }
+    }
+
+}

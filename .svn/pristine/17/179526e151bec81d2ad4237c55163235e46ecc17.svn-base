@@ -1,0 +1,11 @@
+package kr.or.tacs.officer.basicscreen.service;
+
+import java.util.List;
+import kr.or.tacs.dto.officer.WorkHistoryDTO;
+
+public interface IWorkHistoryService {
+    WorkHistoryDTO save(WorkHistoryDTO dto);
+    WorkHistoryDTO cancel(String reqNo, String workType);
+    List<WorkHistoryDTO> getList(String reqNo);
+    WorkHistoryDTO findActive(String reqNo);
+}

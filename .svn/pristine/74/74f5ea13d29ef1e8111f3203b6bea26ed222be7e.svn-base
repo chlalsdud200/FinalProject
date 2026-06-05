@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.officer.basicscreen.mapper.IScreenListMapper">
+
+  <!--
+    ── 공통 검색 WHERE 조건 (수입 / 수출 각 UNION 쪽에서 include) ────────────
+    파라미터 타입이 BasicScreenSearchDTO 이므로 search.xxx 로 참조한다.
+  -->
+
+  <!-- =========================================================
+       1. 기본심사목록 페이징 조회
+       Notice 패턴과 동일하게 외부 쿼리에서 RN BETWEEN startRow AND endRow 적용
+       ========================================================= -->
+  <select id="selectBasicList" resultType="kr.or.tacs.dto.officer.BasicScreenListDTO">
+
+    SELECT
+        ROWNUM_WRAP.RN          AS no,
+        ROWNUM_WRAP.reqNo,
+        ROWNUM_WRAP.declareType,
+        ROWNUM_WRAP.companyName,
+        ROWNUM_WRAP.itemName,
+        ROWNUM_WRAP.amount,
+        ROWNUM_WRAP.requestDate,
+        ROWNUM_WRAP.statusCd,
+        ROWNUM_WRAP.officerId,
+        ROWNUM_WRAP.officerName,
+        ROWNUM_WRAP.riskGradeCd,
+        ROWNUM_WRAP.riskStatusCd,
+        ROWNUM_WRAP.riskScore
+    FROM (
+        SELECT
+            ROW_NUMBER() OVER (
+                ORDER BY
+                    CASE WHEN A.officerId = #{loginOfficerId} THEN 0 ELSE 1 END,
+                    A.requestDateRaw DESC
+            ) AS RN,
+            A.reqNo,
+            A.declareType,
+            A.companyName,
+            A.itemName,
+            A.amount,
+            A.requestDate,
+            A.statusCd,
+            A.officerId,
+            A.officerName,
+            A.riskGradeCd,
+            A.riskStatusCd,
+            A.riskScore
+        FROM (
+
+            /* ===================== 수입 ===================== */
+            SELECT
+                IR.IR_NO                                                            AS reqNo,
+                '수입'                                                               AS declareType,
+                NVL(ID.ID_IMPR_NM, IR.IR_OWR_ID)                                   AS companyName,
+                (
+                    SELECT IDI.IDI_DCLR_GDSNM
+                    FROM IMP_DCLR_ITEM IDI
+                    WHERE IDI.IDI_IR_NO = IR.IR_NO
+                      AND IDI.IDI_SN = (
+                          SELECT MIN(IDI2.IDI_SN)
+                          FROM IMP_DCLR_ITEM IDI2
+                          WHERE IDI2.IDI_IR_NO = IR.IR_NO
+                      )
+                )                                                                   AS itemName,
+                TO_CHAR(NVL(ID.ID_STLM_AMT, IR.IR_INVC_AMT), 'FM999,999,999,999') AS amount,
+                TO_CHAR(NVL(ID.ID_RCEPT_DT, IR.IR_DT), 'YYYY-MM-DD HH24:MI')      AS requestDate,
+                NVL(ID.ID_RCEPT_DT, IR.IR_DT)                                      AS requestDateRaw,
+                ID.ID_STATUS_CD                                                     AS statusCd,
+                ID.ID_OFFICER_ID                                                    AS officerId,
+                O.OFFICER_NM                                                        AS officerName,
+                ARR.ARR_GRADE_CD                                                    AS riskGradeCd,
+                ARR.ARR_STATUS_CD                                                   AS riskStatusCd,
+                ARR.ARR_SCORE                                                       AS riskScore
+            FROM IMP_RQST IR
+            LEFT JOIN (
+                SELECT *
+                FROM (
+                    SELECT D.*,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY D.ID_IR_NO
+                               ORDER BY NVL(D.ID_RCEPT_DT, D.ID_DCLR_DT) DESC
+                           ) AS RN
+                    FROM IMP_DCLR D
+                )
+                WHERE RN = 1
+            ) ID ON ID.ID_IR_NO = IR.IR_NO
+            LEFT JOIN OFFICER O
+                ON ID.ID_OFFICER_ID = O.OFFICER_ID
+            LEFT JOIN (
+                SELECT *
+                FROM (
+                    SELECT A.*,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY A.ARR_BIZ_TYPE_CD, A.ARR_REF_NO
+                               ORDER BY A.ARR_REGIST_DT DESC
+                           ) AS RN
+                    FROM AI_RISK_RESULT A
+                    WHERE A.ARR_BIZ_TYPE_CD = 'IMPORT'
+                )
+                WHERE RN = 1
+            ) ARR ON ARR.ARR_REF_NO = IR.IR_NO
+            WHERE IR.IR_USE_YN = 'Y'
+              AND ID.ID_STATUS_CD IN (
+                  'DCLR_REVIEW', 'DCLR_DONE',
+                  'DCLR_SUPP_REQ', 'DCLR_SUPP_SUB', 'DCLR_REJ',
+                  'TAX_UNPAID', 'TAX_PAID'
+              )
+
+              <if test="search != null and search.reqNo != null and search.reqNo != ''">
+                  AND IR.IR_NO LIKE '%' || #{search.reqNo} || '%'
+              </if>
+              <if test="search != null and search.declareType != null and search.declareType != ''">
+                  AND '수입' = #{search.declareType}
+              </if>
+              <if test="search != null and search.companyName != null and search.companyName != ''">
+                  AND NVL(ID.ID_IMPR_NM, IR.IR_OWR_ID) LIKE '%' || #{search.companyName} || '%'
+              </if>
+              <if test="search != null and search.statusCd != null and search.statusCd != ''">
+                  AND ID.ID_STATUS_CD = #{search.statusCd}
+              </if>
+              <if test="search != null and search.riskGradeCd != null and search.riskGradeCd != ''">
+                  AND ARR.ARR_GRADE_CD = #{search.riskGradeCd}
+              </if>
+
+            UNION ALL
+
+            /* ===================== 수출 ===================== */
+            SELECT
+                ED.ED_ER_NO                                                             AS reqNo,
+                '수출'                                                                   AS declareType,
+                NVL(ER.ER_ONER_NM, ER.ER_OWR_ID)                                       AS companyName,
+                (
+                    SELECT EDI.EDI_EXPT_GDS_NM
+                    FROM EXP_DCLR_ITEM EDI
+                    WHERE EDI.EDI_ER_NO = ED.ED_ER_NO
+                      AND EDI.EDI_SN = (
+                          SELECT MIN(EDI2.EDI_SN)
+                          FROM EXP_DCLR_ITEM EDI2
+                          WHERE EDI2.EDI_ER_NO = ED.ED_ER_NO
+                      )
+                )                                                                       AS itemName,
+                TO_CHAR(ED.ED_DCLR_TOT_AMT_KRW, 'FM999,999,999,999')                  AS amount,
+                TO_CHAR(NVL(ED.ED_RECEPT_DT, ED.ED_DCLR_DT), 'YYYY-MM-DD HH24:MI')   AS requestDate,
+                NVL(ED.ED_RECEPT_DT, ED.ED_DCLR_DT)                                   AS requestDateRaw,
+                NVL(ED.ED_STATUS_CD, ER.ER_STATUS_CD)                                  AS statusCd,
+                ED.OFFICER_ID                                                           AS officerId,
+                O.OFFICER_NM                                                            AS officerName,
+                ARR.ARR_GRADE_CD                                                        AS riskGradeCd,
+                ARR.ARR_STATUS_CD                                                       AS riskStatusCd,
+                ARR.ARR_SCORE                                                           AS riskScore
+            FROM EXP_DCLR ED
+            JOIN EXP_RQST ER ON ED.ED_ER_NO = ER.ER_NO
+            LEFT JOIN OFFICER O ON ED.OFFICER_ID = O.OFFICER_ID
+            LEFT JOIN (
+                SELECT *
+                FROM (
+                    SELECT A.*,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY A.ARR_BIZ_TYPE_CD, A.ARR_REF_NO
+                               ORDER BY A.ARR_REGIST_DT DESC
+                           ) AS RN
+                    FROM AI_RISK_RESULT A
+                    WHERE A.ARR_BIZ_TYPE_CD = 'EXPORT'
+                )
+                WHERE RN = 1
+            ) ARR ON ARR.ARR_REF_NO = ED.ED_ER_NO
+            WHERE ER.ER_USE_YN = 'Y'
+              AND NVL(ED.ED_STATUS_CD, ER.ER_STATUS_CD) IN (
+                  'DCLR_REVIEW', 'DCLR_DONE',
+                  'DCLR_SUPP_REQ', 'DCLR_SUPP_SUB', 'DCLR_REJ',
+                  'TAX_UNPAID', 'TAX_PAID'
+              )
+
+              <if test="search != null and search.reqNo != null and search.reqNo != ''">
+                  AND ED.ED_ER_NO LIKE '%' || #{search.reqNo} || '%'
+              </if>
+              <if test="search != null and search.declareType != null and search.declareType != ''">
+                  AND '수출' = #{search.declareType}
+              </if>
+              <if test="search != null and search.companyName != null and search.companyName != ''">
+                  AND NVL(ER.ER_ONER_NM, ER.ER_OWR_ID) LIKE '%' || #{search.companyName} || '%'
+              </if>
+              <if test="search != null and search.statusCd != null and search.statusCd != ''">
+                  AND NVL(ED.ED_STATUS_CD, ER.ER_STATUS_CD) = #{search.statusCd}
+              </if>
+              <if test="search != null and search.riskGradeCd != null and search.riskGradeCd != ''">
+                  AND ARR.ARR_GRADE_CD = #{search.riskGradeCd}
+              </if>
+
+        ) A
+    ) ROWNUM_WRAP
+    WHERE ROWNUM_WRAP.RN BETWEEN #{search.startRow} AND #{search.endRow}
+    ORDER BY ROWNUM_WRAP.RN
+
+  </select>
+
+
+  <!-- =========================================================
+       2. 기본심사목록 전체 건수 (페이지 계산용)
+       UNION ALL 로 수입 + 수출 전체 카운트
+       ========================================================= -->
+  <select id="selectBasicCount" resultType="int">
+
+    SELECT COUNT(1)
+    FROM (
+
+        SELECT IR.IR_NO AS reqNo
+        FROM IMP_RQST IR
+        LEFT JOIN (
+            SELECT *
+            FROM (
+                SELECT D.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY D.ID_IR_NO
+                           ORDER BY NVL(D.ID_RCEPT_DT, D.ID_DCLR_DT) DESC
+                       ) AS RN
+                FROM IMP_DCLR D
+            )
+            WHERE RN = 1
+        ) ID ON ID.ID_IR_NO = IR.IR_NO
+        LEFT JOIN (
+            SELECT *
+            FROM (
+                SELECT A.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY A.ARR_BIZ_TYPE_CD, A.ARR_REF_NO
+                           ORDER BY A.ARR_REGIST_DT DESC
+                       ) AS RN
+                FROM AI_RISK_RESULT A
+                WHERE A.ARR_BIZ_TYPE_CD = 'IMPORT'
+            )
+            WHERE RN = 1
+        ) ARR ON ARR.ARR_REF_NO = IR.IR_NO
+        WHERE IR.IR_USE_YN = 'Y'
+          AND ID.ID_STATUS_CD IN (
+              'DCLR_REVIEW', 'DCLR_DONE',
+              'DCLR_SUPP_REQ', 'DCLR_SUPP_SUB', 'DCLR_REJ',
+                  'TAX_UNPAID', 'TAX_PAID'
+          )
+          <if test="search != null and search.reqNo != null and search.reqNo != ''">
+              AND IR.IR_NO LIKE '%' || #{search.reqNo} || '%'
+          </if>
+          <if test="search != null and search.declareType != null and search.declareType != ''">
+              AND '수입' = #{search.declareType}
+          </if>
+          <if test="search != null and search.companyName != null and search.companyName != ''">
+              AND NVL(ID.ID_IMPR_NM, IR.IR_OWR_ID) LIKE '%' || #{search.companyName} || '%'
+          </if>
+          <if test="search != null and search.statusCd != null and search.statusCd != ''">
+              AND ID.ID_STATUS_CD = #{search.statusCd}
+          </if>
+          <if test="search != null and search.riskGradeCd != null and search.riskGradeCd != ''">
+              AND ARR.ARR_GRADE_CD = #{search.riskGradeCd}
+          </if>
+
+        UNION ALL
+
+        SELECT ED.ED_ER_NO AS reqNo
+        FROM EXP_DCLR ED
+        JOIN EXP_RQST ER ON ED.ED_ER_NO = ER.ER_NO
+        LEFT JOIN (
+            SELECT *
+            FROM (
+                SELECT A.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY A.ARR_BIZ_TYPE_CD, A.ARR_REF_NO
+                           ORDER BY A.ARR_REGIST_DT DESC
+                       ) AS RN
+                FROM AI_RISK_RESULT A
+                WHERE A.ARR_BIZ_TYPE_CD = 'EXPORT'
+            )
+            WHERE RN = 1
+        ) ARR ON ARR.ARR_REF_NO = ED.ED_ER_NO
+        WHERE ER.ER_USE_YN = 'Y'
+          AND NVL(ED.ED_STATUS_CD, ER.ER_STATUS_CD) IN (
+              'DCLR_REVIEW', 'DCLR_DONE',
+              'DCLR_SUPP_REQ', 'DCLR_SUPP_SUB', 'DCLR_REJ',
+                  'TAX_UNPAID', 'TAX_PAID'
+          )
+          <if test="search != null and search.reqNo != null and search.reqNo != ''">
+              AND ED.ED_ER_NO LIKE '%' || #{search.reqNo} || '%'
+          </if>
+          <if test="search != null and search.declareType != null and search.declareType != ''">
+              AND '수출' = #{search.declareType}
+          </if>
+          <if test="search != null and search.companyName != null and search.companyName != ''">
+              AND NVL(ER.ER_ONER_NM, ER.ER_OWR_ID) LIKE '%' || #{search.companyName} || '%'
+          </if>
+          <if test="search != null and search.statusCd != null and search.statusCd != ''">
+              AND NVL(ED.ED_STATUS_CD, ER.ER_STATUS_CD) = #{search.statusCd}
+          </if>
+          <if test="search != null and search.riskGradeCd != null and search.riskGradeCd != ''">
+              AND ARR.ARR_GRADE_CD = #{search.riskGradeCd}
+          </if>
+
+    ) TOTAL
+
+  </select>
+
+</mapper>

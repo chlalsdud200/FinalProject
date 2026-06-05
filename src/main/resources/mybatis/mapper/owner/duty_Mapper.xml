@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.tacs.owner.tariff.mapper.ITariffDutyMapper">
+
+    <!-- 관세 납부 목록 공통 검색 조건 -->
+    <sql id="brokerChargeSearchCondition">
+        <if test="keyword != null and keyword != ''">
+            AND (
+            UPPER(bc.bc_no) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(bc.bc_ir_no) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(bc.bc_broker_id) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(b.broker_nm) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(b.broker_office_nm) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(bc.bc_order_nm) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(tcs.tcs_mbl_no) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(tcs.tcs_hbl_no) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(bi.bi_mbl_no) LIKE '%' || UPPER(#{keyword}) || '%'
+            OR UPPER(bi.bi_hbl_no) LIKE '%' || UPPER(#{keyword}) || '%'
+            )
+        </if>
+
+        <if test="statusCd != null and statusCd != ''">
+            AND bc.bc_status_cd = #{statusCd}
+        </if>
+
+        <if test="startDate != null and startDate != ''">
+            <choose>
+                <when test="dateType == 'PAY_REQ'">
+                    AND bc.bc_pay_req_dt <![CDATA[>=]]> TO_DATE(#{startDate}, 'YYYY-MM-DD')
+                </when>
+                <when test="dateType == 'PAY_CMPL'">
+                    AND bc.bc_pay_cmpl_dt <![CDATA[>=]]> TO_DATE(#{startDate}, 'YYYY-MM-DD')
+                </when>
+                <otherwise>
+                    AND bc.bc_charge_dt <![CDATA[>=]]> TO_DATE(#{startDate}, 'YYYY-MM-DD')
+                </otherwise>
+            </choose>
+        </if>
+
+        <if test="endDate != null and endDate != ''">
+            <choose>
+                <when test="dateType == 'PAY_REQ'">
+                    AND bc.bc_pay_req_dt <![CDATA[<]]> TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+                </when>
+                <when test="dateType == 'PAY_CMPL'">
+                    AND bc.bc_pay_cmpl_dt <![CDATA[<]]> TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+                </when>
+                <otherwise>
+                    AND bc.bc_charge_dt <![CDATA[<]]> TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
+
+    <!-- 관세 납부 목록 총 개수 -->
+    <select id="selectBrokerChargeCount"
+            parameterType="kr.or.tacs.dto.owner.OwnerDutySearchDTO"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM broker_charge bc
+        LEFT JOIN broker b
+        ON bc.bc_broker_id = b.broker_id
+        LEFT JOIN com_code cc
+        ON bc.bc_status_cd = cc.cc_cd
+        LEFT JOIN tran_cost_stl tcs
+        ON tcs.tcs_trc_no = bc.bc_ir_no
+        OR tcs.tcs_trc_no = 'TRC-' || bc.bc_ir_no
+        OR REPLACE(tcs.tcs_trc_no, 'TRC-', '') = bc.bc_ir_no
+        LEFT JOIN tran_rcp tr
+        ON tr.trc_no = tcs.tcs_trc_no
+        LEFT JOIN bl_issu bi
+        ON bi.bi_no = tr.trc_bi_no
+        OR bi.bi_tre_id = tcs.tcs_trc_no
+        WHERE bc.bc_owr_id = #{owrId}
+
+        <include refid="brokerChargeSearchCondition"/>
+    </select>
+
+
+    <!-- 관세 납부 목록 -->
+    <select id="selectBrokerChargeList"
+            parameterType="kr.or.tacs.dto.owner.OwnerDutySearchDTO"
+            resultType="kr.or.tacs.dto.owner.OwnerBrokerChargeDTO">
+        SELECT
+        bc_no
+        , bc_ct_no
+        , bc_ir_no
+        , bc_owr_id
+        , bc_broker_id
+        , bc_bfp_no
+        , bc_tax_amt
+        , bc_broker_fee_amt
+        , bc_fee_vat_amt
+        , bc_total_amt
+        , bc_status_cd
+        , bc_status_nm
+        , bc_order_nm
+        , bc_payment_id
+        , bc_charge_dt
+        , bc_pay_cmpl_dt
+        , bc_regist_dt
+        , bc_updt_dt
+        , bc_mbl_no
+        , bc_hbl_no
+        , broker_nm
+        , broker_office_nm
+        FROM (
+        SELECT
+        list_query.bc_no
+        , list_query.bc_ct_no
+        , list_query.bc_ir_no
+        , list_query.bc_owr_id
+        , list_query.bc_broker_id
+        , list_query.bc_bfp_no
+        , list_query.bc_tax_amt
+        , list_query.bc_broker_fee_amt
+        , list_query.bc_fee_vat_amt
+        , list_query.bc_total_amt
+        , list_query.bc_status_cd
+        , list_query.bc_status_nm
+        , list_query.bc_order_nm
+        , list_query.bc_payment_id
+        , list_query.bc_charge_dt
+        , list_query.bc_pay_cmpl_dt
+        , list_query.bc_regist_dt
+        , list_query.bc_updt_dt
+        , list_query.bc_mbl_no
+        , list_query.bc_hbl_no
+        , list_query.broker_nm
+        , list_query.broker_office_nm
+        , ROW_NUMBER() OVER (
+        ORDER BY
+        CASE list_query.bc_status_cd
+        WHEN 'BC_CHARGED' THEN 1
+        WHEN 'BC_PAID' THEN 2
+        WHEN 'BC_CANCEL' THEN 3
+        ELSE 9
+        END
+        , NVL(list_query.bc_charge_dt, list_query.bc_regist_dt) DESC
+        , list_query.bc_no DESC
+        ) AS rn
+        FROM (
+        SELECT
+        bc.bc_no
+        , bc.bc_ct_no
+        , bc.bc_ir_no
+        , bc.bc_owr_id
+        , bc.bc_broker_id
+        , bc.bc_bfp_no
+        , bc.bc_tax_amt
+        , bc.bc_broker_fee_amt
+        , bc.bc_fee_vat_amt
+        , bc.bc_total_amt
+        , bc.bc_status_cd
+        , cc.cc_nm AS bc_status_nm
+        , bc.bc_order_nm
+        , bc.bc_payment_id
+        , bc.bc_charge_dt
+        , bc.bc_pay_cmpl_dt
+        , bc.bc_regist_dt
+        , bc.bc_updt_dt
+        , COALESCE(tcs.tcs_mbl_no, bi.bi_mbl_no, m.icm_mbl_no, ir.ir_bl_awb_no, TO_CHAR(tr.trc_bi_no)) AS bc_mbl_no
+        , COALESCE(tcs.tcs_hbl_no, bi.bi_hbl_no, m.icm_hbl_no, tcs.tcs_mbl_no, bi.bi_mbl_no, m.icm_mbl_no, ir.ir_bl_awb_no, TO_CHAR(tr.trc_bi_no)) AS bc_hbl_no
+        , b.broker_nm
+        , b.broker_office_nm
+        FROM broker_charge bc
+        LEFT JOIN broker b
+        ON bc.bc_broker_id = b.broker_id
+        LEFT JOIN com_code cc
+        ON bc.bc_status_cd = cc.cc_cd
+        LEFT JOIN imp_rqst ir
+        ON ir.ir_no = bc.bc_ir_no
+        LEFT JOIN tran_cost_stl tcs
+        ON tcs.tcs_trc_no = bc.bc_ir_no
+        OR tcs.tcs_trc_no = 'TRC-' || bc.bc_ir_no
+        OR REPLACE(tcs.tcs_trc_no, 'TRC-', '') = bc.bc_ir_no
+        LEFT JOIN tran_rcp tr
+        ON tr.trc_no = tcs.tcs_trc_no
+        LEFT JOIN bl_issu bi
+        ON bi.bi_no = tr.trc_bi_no
+        OR bi.bi_tre_id = tcs.tcs_trc_no
+        LEFT JOIN (
+            SELECT
+                icm_gg_no
+                , icm_owr_id
+                , icm_mbl_no
+                , icm_hbl_no
+            FROM (
+                SELECT
+                    m0.*
+                    , ROW_NUMBER() OVER (
+                        PARTITION BY m0.icm_gg_no, m0.icm_owr_id
+                        ORDER BY m0.icm_sbmsn_dt DESC NULLS LAST, m0.icm_no DESC
+                    ) AS rn
+                FROM imp_cargo_manifest m0
+            )
+            WHERE rn = 1
+        ) m
+        ON m.icm_gg_no = tcs.tcs_gg_no
+        AND m.icm_owr_id = bc.bc_owr_id
+        WHERE bc.bc_owr_id = #{owrId}
+
+        <include refid="brokerChargeSearchCondition"/>
+        ) list_query
+        )
+        WHERE rn BETWEEN #{startRow} AND #{endRow}
+    </select>
+
+    <select id="selectBrokerChargeDetail" resultType="kr.or.tacs.dto.owner.OwnerBrokerChargeDTO">
+        SELECT
+            bc.bc_no
+             , bc.bc_ct_no
+             , bc.bc_ir_no
+             , bc.bc_owr_id
+             , bc.bc_broker_id
+             , bc.bc_bfp_no
+             , bc.bc_tax_amt
+             , bc.bc_broker_fee_amt
+             , bc.bc_fee_vat_amt
+             , bc.bc_total_amt
+             , bc.bc_status_cd
+             , cc.cc_nm AS bc_status_nm
+             , bc.bc_order_nm
+             , bc.bc_payment_id
+             , bc.bc_charge_dt
+             , bc.bc_pay_cmpl_dt
+             , bc.bc_regist_dt
+             , bc.bc_updt_dt
+             , COALESCE(tcs.tcs_mbl_no, bi.bi_mbl_no, m.icm_mbl_no, ir.ir_bl_awb_no, TO_CHAR(tr.trc_bi_no)) AS bc_mbl_no
+             , COALESCE(tcs.tcs_hbl_no, bi.bi_hbl_no, m.icm_hbl_no, tcs.tcs_mbl_no, bi.bi_mbl_no, m.icm_mbl_no, ir.ir_bl_awb_no, TO_CHAR(tr.trc_bi_no)) AS bc_hbl_no
+             , b.broker_nm
+             , b.broker_office_nm
+        FROM broker_charge bc
+                 LEFT JOIN broker b
+                           ON bc.bc_broker_id = b.broker_id
+                 LEFT JOIN com_code cc
+                           ON bc.bc_status_cd = cc.cc_cd
+                 LEFT JOIN imp_rqst ir
+                           ON ir.ir_no = bc.bc_ir_no
+                 LEFT JOIN tran_cost_stl tcs
+                           ON tcs.tcs_trc_no = bc.bc_ir_no
+                           OR tcs.tcs_trc_no = 'TRC-' || bc.bc_ir_no
+                           OR REPLACE(tcs.tcs_trc_no, 'TRC-', '') = bc.bc_ir_no
+                 LEFT JOIN tran_rcp tr
+                           ON tr.trc_no = tcs.tcs_trc_no
+                 LEFT JOIN bl_issu bi
+                           ON bi.bi_no = tr.trc_bi_no
+                           OR bi.bi_tre_id = tcs.tcs_trc_no
+                 LEFT JOIN (
+                     SELECT
+                         icm_gg_no
+                         , icm_owr_id
+                         , icm_mbl_no
+                         , icm_hbl_no
+                     FROM (
+                         SELECT
+                             m0.*
+                             , ROW_NUMBER() OVER (
+                                 PARTITION BY m0.icm_gg_no, m0.icm_owr_id
+                                 ORDER BY m0.icm_sbmsn_dt DESC NULLS LAST, m0.icm_no DESC
+                             ) AS rn
+                         FROM imp_cargo_manifest m0
+                     )
+                     WHERE rn = 1
+                 ) m
+                           ON m.icm_gg_no = tcs.tcs_gg_no
+                           AND m.icm_owr_id = bc.bc_owr_id
+        WHERE bc.bc_no = #{bcNo}
+          AND bc.bc_owr_id = #{owrId}
+    </select>
+
+</mapper>

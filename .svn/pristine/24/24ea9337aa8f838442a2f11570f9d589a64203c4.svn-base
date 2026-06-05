@@ -1,0 +1,9 @@
+// exportAndFulfillment.js - 이행·반출 관리 전용
+(function () {
+  function bindEvents() {
+    // 현재 페이지 전용 JS 없음
+    // 사이드바 관련 코드는 절대 넣지 않음
+  }
+
+  document.addEventListener('DOMContentLoaded', bindEvents);
+})();

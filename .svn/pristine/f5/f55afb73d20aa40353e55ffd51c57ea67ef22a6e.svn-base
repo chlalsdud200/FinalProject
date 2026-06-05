@@ -1,0 +1,110 @@
+// Inventory 페이지 스크립트
+
+var _wh3dConnectedUrl = null;
+var _wh3dLoadTimer = null;
+
+function toggle3DView() {
+  const view2d = document.getElementById('inventory-2d-view');
+  const view3d = document.getElementById('inventory-3d-view');
+  const btn = document.getElementById('btn-3d-toggle');
+
+  if (!view2d || !view3d || !btn) return;
+
+  const isClosed = view3d.style.display === 'none' || view3d.style.display === '';
+
+  if (isClosed) {
+    view2d.style.display = 'none';
+    view3d.style.display = 'block';
+
+    btn.innerHTML =
+      '<span class="material-symbols-outlined">table_rows</span>보관 현황 목록 보기';
+
+    ensure3DConnected(false);
+  } else {
+    view2d.style.display = 'block';
+    view3d.style.display = 'none';
+
+    btn.innerHTML =
+      '<span class="material-symbols-outlined">3d_rotation</span>3D 창고 보기';
+  }
+}
+
+function getThreeUrlFromQuery() {
+  try {
+    const qs = new URLSearchParams(window.location.search);
+    const u = (qs.get('threeUrl') || '').trim();
+    return u || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function normalizeBaseUrl(u) {
+  if (!u) return u;
+  return u.endsWith('/') ? u : u + '/';
+}
+
+function getDefaultThreeUrl() {
+  return normalizeBaseUrl(getThreeUrlFromQuery() || 'http://localhost:5173/');
+}
+
+function open3DInNewTab() {
+  const preferred = _wh3dConnectedUrl || getDefaultThreeUrl();
+  window.open(preferred, '_blank', 'noopener');
+}
+
+function retry3DConnect() {
+  ensure3DConnected(true);
+}
+
+function ensure3DConnected(forceRetry) {
+  const frame = document.getElementById('wh3d-frame');
+  const overlay = document.getElementById('wh3d-overlay');
+  const status = document.getElementById('wh3d-status');
+
+  if (!frame || !overlay || !status) return;
+
+  overlay.style.display = 'flex';
+  status.textContent = '3D 창고 화면을 불러오고 있습니다...';
+
+  if (_wh3dLoadTimer) {
+    clearTimeout(_wh3dLoadTimer);
+    _wh3dLoadTimer = null;
+  }
+
+  const targetUrl = getDefaultThreeUrl();
+
+  if (!_wh3dConnectedUrl || forceRetry) {
+    _wh3dConnectedUrl = targetUrl;
+  }
+
+  frame.onload = function () {
+    overlay.style.display = 'none';
+
+    if (_wh3dLoadTimer) {
+      clearTimeout(_wh3dLoadTimer);
+      _wh3dLoadTimer = null;
+    }
+  };
+
+  if (forceRetry || frame.src === 'about:blank' || frame.src !== _wh3dConnectedUrl) {
+    frame.src = _wh3dConnectedUrl;
+  }
+
+  status.textContent = '3D 창고 화면을 불러오고 있습니다... (' + _wh3dConnectedUrl + ')';
+
+  _wh3dLoadTimer = setTimeout(function () {
+    if (overlay.style.display === 'none') return;
+
+    status.innerHTML =
+      '3D 창고 화면이 로드되지 않았습니다. 아래를 확인하세요.<br>' +
+      '1) React 3D 프로젝트에서 <b>npm run dev</b> 실행<br>' +
+      '2) 터미널의 Local 주소가 <b>http://localhost:5173/</b>인지 확인<br>' +
+      '3) 포트가 다르면 주소 뒤에 <b>?threeUrl=http://localhost:5174/</b>처럼 지정<br>' +
+      '4) React 파일 <b>BondedWarehouseDigitalTwin_v4.jsx</b>가 App에서 렌더링되는지 확인';
+  }, 1800);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  console.log('Inventory page initialized');
+});
