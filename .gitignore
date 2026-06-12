@@ -33,3 +33,21 @@ build/
 application-secret.properties
 ### VS Code ###
 .vscode/
+
+# SVN metadata
+.svn/
+**/.svn/
+
+# AI assistant workspace / learning notes
+.claude/
+**/.claude/
+.codex
+**/.codex
+AGENTS.md
+**/AGENTS.md
+GEMINI.md
+**/GEMINI.md
+
+# Local artifacts
+*.zip
+*.prej
