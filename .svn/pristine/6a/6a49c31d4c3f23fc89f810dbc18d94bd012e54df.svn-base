@@ -1,8 +1,0 @@
-(function () {
-  'use strict';
-  window.__TACS_EXPORT_REQUEST_LEGACY_BLOCKED = true;
-  window.__TACS_EXPORT_SINGLE_REQUEST_SCREEN = true;
-  window.__TACS_EXPORT_IMPORT_LEGACY_COMPAT_DISABLED = true;
-  // 기존 export-import-legacy-compat.js가 운송의뢰 화면을 한 번 더 그려서
-  // 수출 화면이 2개 공존하던 문제를 막기 위한 no-op 파일입니다.
-})();

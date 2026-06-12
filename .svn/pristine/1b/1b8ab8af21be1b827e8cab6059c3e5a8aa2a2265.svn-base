@@ -1,9 +1,0 @@
-@charset "UTF-8";
-
-/* ── Alert bars ── */
-.alert-bar { padding: 10px 14px; margin-bottom: 16px; font-size: 12px; display: flex; align-items: center; gap: 8px; font-weight: 500; }
-.alert-bar .material-symbols-outlined { font-size: 16px; }
-.alert-bar.info { background: #eff6ff; color: #1e40af; border-left: 3px solid #565e74; }
-.alert-bar.warn { background: #fff7ed; color: #9a3412; border-left: 3px solid #d97706; }
-.alert-bar.error { background: #fff1f2; color: #9f1239; border-left: 3px solid #9f403d; }
-.alert-bar.success { background: #f0fdf4; color: #14532d; border-left: 3px solid #1d6b4f; }
